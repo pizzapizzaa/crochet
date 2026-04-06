@@ -1,0 +1,134 @@
+---
+const navLinks = [
+  { label: 'Home', href: '/' },
+  { label: 'Shop', href: '/store' },
+  { label: 'Gallery', href: '/gallery' },
+  { label: 'Pattern Generator', href: '/pattern-generator' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header class="sticky top-0 z-50 bg-cream-100/90 backdrop-blur-md border-b border-cream-300">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 md:h-20">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 group">
+        <svg
+          class="w-8 h-8 text-rose-dust transition-transform group-hover:rotate-12"
+          viewBox="0 0 32 32"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2" />
+          <path
+            d="M10 16 Q13 10 16 16 Q19 22 22 16"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            fill="none"
+          />
+          <path
+            d="M8 20 Q12 14 16 20 Q20 26 24 20"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            fill="none"
+            opacity="0.5"
+          />
+        </svg>
+        <span class="font-serif text-xl font-semibold text-brown-dark tracking-tight">
+          Loopy <span class="text-rose-dust">&</span> Co.
+        </span>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center gap-8">
+        {
+          navLinks.map((link) => (
+            <a
+              href={link.href}
+              class={`text-sm font-medium transition-colors duration-200 hover:text-rose-dust ${
+                currentPath === link.href
+                  ? 'text-rose-dust border-b-2 border-rose-dust pb-0.5'
+                  : 'text-brown-warm'
+              }`}
+            >
+              {link.label}
+            </a>
+          ))
+        }
+      </nav>
+
+      <!-- Right side actions -->
+      <div class="flex items-center gap-3">
+        <a
+          href="/store"
+          class="hidden md:inline-flex items-center gap-2 bg-rose-dust text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-rose-dark transition-colors duration-200"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z"
+            />
+          </svg>
+          Shop Now
+        </a>
+
+        <!-- Mobile menu button -->
+        <button
+          id="mobile-menu-btn"
+          class="md:hidden p-2 rounded-lg text-brown-warm hover:bg-cream-200 transition-colors"
+          aria-label="Toggle menu"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              id="menu-icon"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Nav -->
+  <div
+    id="mobile-menu"
+    class="hidden md:hidden border-t border-cream-300 bg-cream-100 px-4 py-4 space-y-3"
+  >
+    {
+      navLinks.map((link) => (
+        <a
+          href={link.href}
+          class={`block text-sm font-medium py-2 px-3 rounded-lg transition-colors ${
+            currentPath === link.href
+              ? 'bg-rose-dust/10 text-rose-dust'
+              : 'text-brown-warm hover:bg-cream-200'
+          }`}
+        >
+          {link.label}
+        </a>
+      ))
+    }
+    <a
+      href="/store"
+      class="block text-center bg-rose-dust text-white text-sm font-medium px-4 py-2.5 rounded-full hover:bg-rose-dark transition-colors mt-2"
+    >
+      Shop Now
+    </a>
+  </div>
+</header>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
+  btn?.addEventListener('click', () => {
+    menu?.classList.toggle('hidden');
+  });
+</script>

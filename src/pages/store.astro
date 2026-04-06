@@ -1,0 +1,189 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ProductCard from '../components/ProductCard.astro';
+import { mockProducts } from '../lib/mockData';
+
+const categories = ['All', 'Bags', 'Clothing', 'Accessories', 'Home', 'Toys'];
+const urlCategory = Astro.url.searchParams.get('category') ?? 'All';
+const urlSort = Astro.url.searchParams.get('sort') ?? 'featured';
+const urlSearch = Astro.url.searchParams.get('q') ?? '';
+
+// In production, replace with Supabase query filtered by category/sort/search
+let products = [...mockProducts].filter((p) => p.is_active);
+
+if (urlCategory !== 'All') {
+  products = products.filter((p) => p.category === urlCategory);
+}
+
+if (urlSearch) {
+  const q = urlSearch.toLowerCase();
+  products = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.tags.some((t) => t.toLowerCase().includes(q)),
+  );
+}
+
+if (urlSort === 'price-asc') products.sort((a, b) => a.price - b.price);
+else if (urlSort === 'price-desc') products.sort((a, b) => b.price - a.price);
+else if (urlSort === 'newest')
+  products.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+---
+
+<Layout title="Shop" description="Browse handcrafted crochet bags, clothing, accessories, home decor, and toys.">
+  <!-- Page Header -->
+  <section class="bg-white border-b border-cream-300 py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <nav class="text-xs text-brown-light mb-1 flex items-center gap-1.5">
+            <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
+            <span>/</span>
+            <span class="text-brown-warm">Shop</span>
+          </nav>
+          <h1 class="font-serif text-4xl font-semibold text-brown-dark">Shop</h1>
+          <p class="text-brown-warm text-sm mt-1">
+            {products.length} item{products.length !== 1 ? 's' : ''}
+            {urlCategory !== 'All' ? ` in ${urlCategory}` : ''}
+          </p>
+        </div>
+
+        <!-- Search -->
+        <form method="GET" action="/store" class="flex gap-2 w-full sm:w-auto max-w-xs">
+          <div class="relative flex-1">
+            <svg
+              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brown-light"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="search"
+              name="q"
+              value={urlSearch}
+              placeholder="Search items…"
+              class="w-full pl-9 pr-4 py-2.5 rounded-full border border-cream-300 bg-cream-50 text-sm text-brown-dark focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
+            />
+          </div>
+          <button
+            type="submit"
+            class="bg-rose-dust hover:bg-rose-dark text-white text-sm font-medium px-4 py-2.5 rounded-full transition-colors"
+          >
+            Go
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex flex-col lg:flex-row gap-10">
+      <!-- Sidebar Filters -->
+      <aside class="w-full lg:w-56 shrink-0">
+        <!-- Category filter -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+          <h3 class="font-serif font-semibold text-brown-dark mb-4">Category</h3>
+          <ul class="space-y-1">
+            {
+              categories.map((cat) => (
+                <li>
+                  <a
+                    href={`/store?category=${cat}&sort=${urlSort}`}
+                    class={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                      urlCategory === cat
+                        ? 'bg-rose-dust/10 text-rose-dust font-medium'
+                        : 'text-brown-warm hover:bg-cream-100'
+                    }`}
+                  >
+                    {cat}
+                    {cat !== 'All' && (
+                      <span class="text-xs text-brown-light">
+                        {mockProducts.filter((p) => p.is_active && p.category === cat).length}
+                      </span>
+                    )}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <!-- Sort -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm mt-4">
+          <h3 class="font-serif font-semibold text-brown-dark mb-4">Sort By</h3>
+          <ul class="space-y-1">
+            {
+              [
+                { value: 'featured', label: 'Featured' },
+                { value: 'newest', label: 'Newest First' },
+                { value: 'price-asc', label: 'Price: Low → High' },
+                { value: 'price-desc', label: 'Price: High → Low' },
+              ].map((opt) => (
+                <li>
+                  <a
+                    href={`/store?category=${urlCategory}&sort=${opt.value}`}
+                    class={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                      urlSort === opt.value
+                        ? 'bg-rose-dust/10 text-rose-dust font-medium'
+                        : 'text-brown-warm hover:bg-cream-100'
+                    }`}
+                  >
+                    {opt.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <!-- Price range note -->
+        <div class="bg-rose-dust/5 rounded-2xl p-5 mt-4 border border-rose-dust/10">
+          <p class="text-xs text-brown-warm leading-relaxed">
+            All items are one-of-a-kind and handmade to order. Custom commissions welcome — <a
+              href="/contact"
+              class="text-rose-dust hover:underline">get in touch!</a
+            >
+          </p>
+        </div>
+      </aside>
+
+      <!-- Product Grid -->
+      <div class="flex-1">
+        {
+          products.length === 0 ? (
+            <div class="text-center py-24">
+              <div class="text-5xl mb-4">🧶</div>
+              <h3 class="font-serif text-2xl text-brown-dark font-semibold">Nothing here yet</h3>
+              <p class="text-brown-warm mt-2 text-sm">
+                {urlSearch
+                  ? `No results for "${urlSearch}".`
+                  : 'No items in this category right now.'}
+              </p>
+              <a
+                href="/store"
+                class="mt-6 inline-block bg-rose-dust text-white text-sm font-medium px-6 py-2.5 rounded-full hover:bg-rose-dark transition-colors"
+              >
+                View All Items
+              </a>
+            </div>
+          ) : (
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              {products.map((product) => (
+                <ProductCard product={product} />
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</Layout>

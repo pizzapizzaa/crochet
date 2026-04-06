@@ -1,0 +1,126 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { mockGalleryItems, mockProducts } from '../lib/mockData';
+
+// In production: const { data: items } = await supabase.from('gallery_items').select('*, products(*)').order('display_order');
+const items = mockGalleryItems;
+
+// Build a map of product slugs for linking
+const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]));
+---
+
+<Layout
+  title="Gallery"
+  description="A visual showcase of handcrafted crochet pieces — bags, clothing, home decor, toys, and more."
+>
+  <!-- Header -->
+  <section class="bg-white border-b border-cream-300 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <nav class="text-xs text-brown-light mb-3 flex items-center justify-center gap-1.5">
+        <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
+        <span>/</span>
+        <span class="text-brown-warm">Gallery</span>
+      </nav>
+      <h1 class="font-serif text-5xl font-semibold text-brown-dark">The Gallery</h1>
+      <p class="mt-4 text-brown-warm max-w-md mx-auto text-sm leading-relaxed">
+        Every stitch tells a story. Browse the collection and click any piece to shop or learn more.
+      </p>
+    </div>
+  </section>
+
+  <!-- Masonry-style gallery grid -->
+  <section class="py-16 bg-cream-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Featured items row -->
+      {
+        items.filter((i) => i.is_featured).length > 0 && (
+          <div class="mb-6">
+            <span class="text-rose-dust text-xs font-semibold tracking-widest uppercase">
+              Featured
+            </span>
+          </div>
+        )
+      }
+
+      <!-- Pin-style masonry grid using CSS columns -->
+      <div class="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5 space-y-5">
+        {
+          items.map((item) => {
+            const productSlug = item.product_id ? productSlugMap[item.product_id] : null;
+            const href = productSlug ? `/store/${productSlug}` : '#';
+            return (
+              <article class="break-inside-avoid group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 bg-white inline-block w-full">
+                <a href={href} class="block">
+                  <div class="overflow-hidden">
+                    <img
+                      src={item.image_url}
+                      alt={item.alt_text}
+                      class="w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  {/* Overlay on hover */}
+                  <div class="absolute inset-0 bg-gradient-to-t from-brown-dark/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
+                    <div>
+                      {item.is_featured && (
+                        <span class="inline-block text-xs bg-rose-dust text-white px-2.5 py-1 rounded-full mb-2 font-medium">
+                          Featured
+                        </span>
+                      )}
+                      <h3 class="text-white font-serif font-semibold text-lg leading-snug">
+                        {item.title}
+                      </h3>
+                      {item.description && (
+                        <p class="text-cream-200 text-sm mt-1 leading-relaxed">{item.description}</p>
+                      )}
+                      {productSlug && (
+                        <span class="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full hover:bg-rose-dust transition-colors">
+                          Shop This Piece →
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </a>
+
+                {/* Bottom card info (visible when not hovering) */}
+                <div class="p-4 group-hover:opacity-0 transition-opacity duration-200">
+                  <h3 class="font-serif font-medium text-brown-dark text-sm leading-snug">
+                    {item.title}
+                  </h3>
+                  {item.description && (
+                    <p class="text-brown-light text-xs mt-1 truncate">{item.description}</p>
+                  )}
+                  {productSlug && (
+                    <span class="mt-2 inline-block text-xs text-rose-dust font-medium">
+                      Available in shop
+                    </span>
+                  )}
+                </div>
+              </article>
+            );
+          })
+        }
+      </div>
+
+      <!-- CTA -->
+      <div class="text-center mt-16">
+        <p class="text-brown-warm text-sm mb-4">Want something custom? I love special orders.</p>
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <a
+            href="/store"
+            class="bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors text-sm"
+          >
+            Shop All Items
+          </a>
+          <a
+            href="/contact"
+            class="border border-brown-light/40 hover:border-rose-dust hover:text-rose-dust text-brown-warm font-medium px-8 py-3.5 rounded-full transition-all text-sm"
+          >
+            Request Custom Order
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

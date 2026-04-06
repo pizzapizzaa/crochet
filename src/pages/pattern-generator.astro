@@ -1,0 +1,109 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PatternGenerator from '../components/PatternGenerator';
+---
+
+<Layout
+  title="Pattern Generator"
+  description="Free crochet pattern generator — calculate stitch counts, rows, and yarn estimates from your gauge. Export a printable pattern instantly."
+>
+  <!-- Header -->
+  <section class="bg-white border-b border-cream-300 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="text-xs text-brown-light mb-3 flex items-center gap-1.5">
+        <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
+        <span>/</span>
+        <span class="text-brown-warm">Pattern Generator</span>
+      </nav>
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span class="text-sage text-sm font-medium tracking-widest uppercase">Free Tool</span>
+          <h1 class="font-serif text-5xl font-semibold text-brown-dark mt-1">
+            Pattern Generator
+          </h1>
+          <p class="mt-3 text-brown-warm max-w-lg text-sm leading-relaxed">
+            Enter your gauge swatch numbers and project dimensions — I'll calculate your stitch
+            count, rows, yarn estimate, and generate a printable pattern in seconds.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-3 shrink-0">
+          {
+            [
+              { icon: '📏', label: 'Gauge-based' },
+              { icon: '🧶', label: 'Yarn estimate' },
+              { icon: '📄', label: 'Downloadable' },
+            ].map((b) => (
+              <div class="flex items-center gap-2 bg-cream-100 px-4 py-2 rounded-full text-xs font-medium text-brown-warm">
+                <span>{b.icon}</span>
+                {b.label}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Generator -->
+  <section class="py-12 bg-cream-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <PatternGenerator client:load />
+    </div>
+  </section>
+
+  <!-- How-to guide -->
+  <section class="py-16 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-10">
+        <h2 class="font-serif text-3xl font-semibold text-brown-dark">How to use this tool</h2>
+        <p class="mt-2 text-brown-warm text-sm">Getting started is easy — here's a quick guide.</p>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-8">
+        {
+          [
+            {
+              step: '01',
+              title: 'Make a gauge swatch',
+              desc: "Crochet a 10cm × 10cm square with your yarn and hook. Lay it flat and count the stitches and rows per 10cm.",
+              icon: '🧶',
+            },
+            {
+              step: '02',
+              title: 'Enter your details',
+              desc: 'Input your gauge numbers, project dimensions, stitch type, and yarn weight. Add any personal notes.',
+              icon: '✍️',
+            },
+            {
+              step: '03',
+              title: 'Generate & download',
+              desc: 'Click Generate Pattern to get your custom instructions including cast-on count, row count, and a yarn estimate. Download as a .txt file.',
+              icon: '📄',
+            },
+          ].map((step) => (
+            <div class="text-center">
+              <div class="text-4xl mb-3">{step.icon}</div>
+              <div class="text-rose-dust text-sm font-bold mb-2">{step.step}</div>
+              <h3 class="font-serif font-semibold text-brown-dark mb-2">{step.title}</h3>
+              <p class="text-brown-light text-sm leading-relaxed">{step.desc}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Shop CTA -->
+  <section class="py-12 bg-cream-200">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <p class="text-brown-warm text-sm">
+        Want a finished piece instead? Browse the shop for ready-made crochet items.
+      </p>
+      <a
+        href="/store"
+        class="mt-4 inline-flex items-center gap-2 bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors text-sm"
+      >
+        Visit the Shop →
+      </a>
+    </div>
+  </section>
+</Layout>
