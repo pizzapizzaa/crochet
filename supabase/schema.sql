@@ -1,5 +1,5 @@
 -- =========================================================
--- Loopy & Co. — Supabase Database Schema
+-- ZippyZack.com — Supabase Database Schema
 -- Run this in your Supabase SQL editor to set up all tables
 -- =========================================================
 

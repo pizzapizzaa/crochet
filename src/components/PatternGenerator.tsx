@@ -81,7 +81,7 @@ function generatePattern(
 
   const lines: string[] = [
     `═══════════════════════════════════════`,
-    `  LOOPY & CO. PATTERN GENERATOR`,
+    `  ZIPPYZACK.COM PATTERN GENERATOR`,
     `═══════════════════════════════════════`,
     ``,
     `Project: ${project.projectType}`,
@@ -139,8 +139,8 @@ function generatePattern(
       ? [`───────────────────────────────────────`, `NOTES`, `  ${project.notes}`, ``]
       : []),
     `═══════════════════════════════════════`,
-    `  Made with Loopy & Co. Pattern Generator`,
-    `  loopyandco.com/pattern-generator`,
+    `  Made with ZippyZack.com Pattern Generator`,
+    `  zippyzack.com/pattern-generator`,
     `═══════════════════════════════════════`,
   ];
 
@@ -194,7 +194,7 @@ export default function PatternGenerator() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `loopy-pattern-${Date.now()}.txt`;
+    a.download = `zippyzack-pattern-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }, [result]);
