@@ -22,6 +22,7 @@ interface PatternResult {
   totalRows: number;
   totalStitches: number;
   estimatedYarnMeters: number;
+  estimatedSkeins: number;
   pattern: string[];
 }
 
@@ -62,14 +63,14 @@ const PROJECT_TYPES = [
 ];
 
 const STITCH_PATTERNS = [
-  { label: 'Single Crochet (sc)', value: 'sc', heightFactor: 1.0 },
-  { label: 'Half Double Crochet (hdc)', value: 'hdc', heightFactor: 1.3 },
-  { label: 'Double Crochet (dc)', value: 'dc', heightFactor: 1.6 },
-  { label: 'Treble Crochet (tr)', value: 'tr', heightFactor: 2.0 },
-  { label: 'Moss / Granite Stitch', value: 'moss', heightFactor: 1.0 },
-  { label: 'Granny Square', value: 'granny', heightFactor: 1.0 },
-  { label: 'Shell Stitch', value: 'shell', heightFactor: 1.6 },
-  { label: 'V-Stitch', value: 'vstitch', heightFactor: 1.6 },
+  { label: 'Single Crochet (sc)', value: 'sc', heightFactor: 1.0, yarnFactor: 1.0 },
+  { label: 'Half Double Crochet (hdc)', value: 'hdc', heightFactor: 1.3, yarnFactor: 1.4 },
+  { label: 'Double Crochet (dc)', value: 'dc', heightFactor: 1.6, yarnFactor: 1.8 },
+  { label: 'Treble Crochet (tr)', value: 'tr', heightFactor: 2.0, yarnFactor: 2.4 },
+  { label: 'Moss / Granite Stitch', value: 'moss', heightFactor: 1.0, yarnFactor: 1.1 },
+  { label: 'Granny Square', value: 'granny', heightFactor: 1.0, yarnFactor: 1.6 },
+  { label: 'Shell Stitch', value: 'shell', heightFactor: 1.6, yarnFactor: 2.0 },
+  { label: 'V-Stitch', value: 'vstitch', heightFactor: 1.6, yarnFactor: 1.8 },
 ];
 
 // Granny square patterns -- place images in /public/granny-patterns/
@@ -91,7 +92,13 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
   const castOn = Math.round((gauge.stitchesPer10cm / 10) * project.widthCm);
   const totalRows = Math.round(adjustedRowsPerCm * project.heightCm);
   const totalStitches = castOn * totalRows;
-  const estimatedYarnMeters = Math.round(totalStitches * 0.025 * yarnData.multiplier * 10) / 10;
+
+  // Yarn estimate: each sc stitch uses ~0.3cm of yarn per mm of hook size equivalent.
+  // Base: 3cm per stitch for sc with worsted, scaled by yarn weight multiplier and stitch yarn factor.
+  const yarnPerStitchCm = 3.0 * yarnData.multiplier * stitchData.yarnFactor;
+  const estimatedYarnMeters = Math.round((totalStitches * yarnPerStitchCm) / 100 * 10) / 10;
+  // Assume a standard 100m skein for skein count
+  const estimatedSkeins = Math.ceil(estimatedYarnMeters / 100);
 
   const stAbbr = stitchData.value.toUpperCase();
   const ch = project.stitchPattern === 'dc' ? 3 : project.stitchPattern === 'hdc' ? 2 : 1;
@@ -153,7 +160,7 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `  Cast-on stitches: ${castOn}`,
     `  Total rows: ${totalRows}`,
     `  Total stitches worked: ${totalStitches.toLocaleString()}`,
-    `  Yarn estimate: ~${estimatedYarnMeters}m`,
+    `  Yarn estimate: ~${estimatedYarnMeters}m (~${estimatedSkeins} x 100m skein${estimatedSkeins !== 1 ? 's' : ''})`,
     ``,
     ...(project.notes
       ? [`-------------------------------------------`, `NOTES`, `  ${project.notes}`, ``]
@@ -164,7 +171,7 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `===========================================`,
   ];
 
-  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnMeters, pattern: lines };
+  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnMeters, estimatedSkeins, pattern: lines };
 }
 
 function buildImagePrompt(project: ProjectInputs, grannyPatternName?: string): string {
@@ -598,12 +605,13 @@ export default function PatternGenerator() {
           {/* Pattern Output */}
           {result ? (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="grid grid-cols-2 gap-px bg-cream-300">
+              <div className="grid grid-cols-3 gap-px bg-cream-300">
                 {[
                   { label: 'Cast-On Stitches', value: result.castOnStitches.toString() },
                   { label: 'Total Rows', value: result.totalRows.toString() },
                   { label: 'Total Stitches', value: result.totalStitches.toLocaleString() },
                   { label: 'Yarn Estimate', value: `~${result.estimatedYarnMeters}m` },
+                  { label: 'Skeins (100m)', value: `~${result.estimatedSkeins}` },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-cream-50 p-5 text-center">
                     <p className="text-2xl font-bold text-rose-dust font-serif">{stat.value}</p>
