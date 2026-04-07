@@ -3,16 +3,39 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 
-// If already authenticated, redirect straight to the tool
 const adminPassword = import.meta.env.ADMIN_PASSWORD;
-const authCookie = Astro.cookies.get('admin_auth')?.value;
 const expectedToken = adminPassword ? btoa(adminPassword) : null;
 
-if (expectedToken && authCookie === expectedToken) {
-  return Astro.redirect('/pattern-generator');
-}
+// Handle POST submission directly in this page
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const password = formData.get('password')?.toString() ?? '';
 
-const hasError = Astro.url.searchParams.get('error') === '1';
+  if (!adminPassword) {
+    return new Response('Server misconfiguration: ADMIN_PASSWORD is not set.', { status: 500 });
+  }
+
+  if (password === adminPassword) {
+    Astro.cookies.set('admin_auth', btoa(adminPassword), {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
+    return Astro.redirect('/pattern-generator');
+  }
+
+  // Wrong password — fall through to render with error
+  var loginError = true;
+} else {
+  // If already authenticated, skip login
+  const authCookie = Astro.cookies.get('admin_auth')?.value;
+  if (expectedToken && authCookie === expectedToken) {
+    return Astro.redirect('/pattern-generator');
+  }
+  var loginError = false;
+}
 ---
 
 <Layout title="Admin Login" description="">
@@ -24,7 +47,7 @@ const hasError = Astro.url.searchParams.get('error') === '1';
         <p class="mt-2 text-brown-light text-sm">Enter your admin password to continue.</p>
       </div>
 
-      <form method="POST" action="/api/admin-login" class="bg-white rounded-2xl shadow-sm border border-cream-300 p-8 space-y-5">
+      <form method="POST" class="bg-white rounded-2xl shadow-sm border border-cream-300 p-8 space-y-5">
         <div>
           <label for="password" class="block text-xs font-medium text-brown-warm uppercase tracking-widest mb-2">
             Password
@@ -40,7 +63,7 @@ const hasError = Astro.url.searchParams.get('error') === '1';
           />
         </div>
 
-        {hasError && (
+        {loginError && (
           <p class="text-rose-dust text-xs font-medium">Incorrect password. Please try again.</p>
         )}
 
