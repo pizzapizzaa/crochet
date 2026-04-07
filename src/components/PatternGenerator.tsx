@@ -38,14 +38,27 @@ const YARN_WEIGHTS = [
 const HOOK_SIZES: Record<string, string[]> = {
   lace: ['0.75mm', '1.0mm', '1.5mm', '1.75mm'],
   fingering: ['1.75mm', '2.0mm', '2.25mm', '2.75mm'],
-  sport: ['2.75mm', '3.0mm', '3.5mm'],
-  dk: ['3.5mm', '4.0mm', '4.5mm'],
-  worsted: ['4.5mm', '5.0mm', '5.5mm', '6.0mm'],
+  sport: ['2.75mm', '3.0mm', '3.25mm', '3.5mm'],
+  dk: ['3.5mm', '3.75mm', '4.0mm', '4.25mm', '4.5mm'],
+  worsted: ['4.0mm', '4.5mm', '5.0mm', '5.5mm', '6.0mm'],
   bulky: ['6.0mm', '6.5mm', '7.0mm', '8.0mm', '9.0mm'],
   'super-bulky': ['9.0mm', '10.0mm', '12.0mm', '15.0mm'],
 };
 
-const PROJECT_TYPES = ['Blanket', 'Amigurumi', 'Hat', 'Scarf', 'Bag', 'Cardigan / Top', 'Other'];
+const PROJECT_TYPES = [
+  'Blanket',
+  'Amigurumi',
+  'Hat',
+  'Beanie',
+  'Scarf',
+  'Bag',
+  'Cross Bag',
+  'Hand Bag',
+  'Cardigan / Top',
+  'Crop Top',
+  'Cardigan Top',
+  'Other',
+];
 
 const STITCH_PATTERNS = [
   { label: 'Single Crochet (sc)', value: 'sc', heightFactor: 1.0 },
