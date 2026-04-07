@@ -74,12 +74,12 @@ const STITCH_PATTERNS = [
 
 // Granny square patterns -- place images in /public/granny-patterns/
 const GRANNY_PATTERNS = [
-  { id: 'classic', name: 'Classic Granny', file: 'classic.jpg' },
-  { id: 'solid', name: 'Solid Square', file: 'solid.jpg' },
-  { id: 'flower', name: 'Flower Granny', file: 'flower.jpg' },
-  { id: 'rainbow', name: 'Rainbow Layer', file: 'rainbow.jpg' },
-  { id: 'sunburst', name: 'Sunburst', file: 'sunburst.jpg' },
-  { id: 'mini', name: 'Mini Granny', file: 'mini.jpg' },
+  { id: 'granny-01', name: 'Granny Pattern 1', file: 'granny-01.png' },
+  { id: 'granny-02', name: 'Granny Pattern 2', file: 'granny-02.png' },
+  { id: 'granny-03', name: 'Granny Pattern 3', file: 'granny-03.png' },
+  { id: 'granny-04', name: 'Granny Pattern 4', file: 'granny-04.png' },
+  { id: 'granny-05', name: 'Granny Pattern 5', file: 'granny-05.png' },
+  { id: 'granny-06', name: 'Granny Pattern 6', file: 'granny-06.png' },
 ];
 
 // --- Helpers ---
@@ -254,7 +254,7 @@ function GrannyModal({
 
         <div className="px-6 pb-6">
           <p className="text-xs text-brown-light text-center">
-            Upload images to <code className="bg-cream-100 px-1 rounded">/public/granny-patterns/</code> named: classic.jpg, solid.jpg, flower.jpg, rainbow.jpg, sunburst.jpg, mini.jpg
+            Upload images to <code className="bg-cream-100 px-1 rounded">/public/granny-patterns/</code> named: granny-01.png, granny-02.png, ..., granny-06.png
           </p>
         </div>
       </div>
@@ -279,7 +279,7 @@ export default function PatternGenerator() {
   const [copied, setCopied] = useState(false);
 
   const [grannyModalOpen, setGrannyModalOpen] = useState(false);
-  const [selectedGrannyId, setSelectedGrannyId] = useState('classic');
+  const [selectedGrannyId, setSelectedGrannyId] = useState('granny-01');
   const selectedGrannyPattern = GRANNY_PATTERNS.find((p) => p.id === selectedGrannyId);
 
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
