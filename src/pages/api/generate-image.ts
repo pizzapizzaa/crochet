@@ -30,13 +30,13 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt }],
-        parameters: { sampleCount: 1, aspectRatio: '1:1' },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
       }),
     },
   );
@@ -50,8 +50,11 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const data = await res.json();
-  const imageData: string | undefined = data.predictions?.[0]?.bytesBase64Encoded;
-  const mimeType: string = data.predictions?.[0]?.mimeType ?? 'image/png';
+  const parts: { inlineData?: { data: string; mimeType: string } }[] =
+    data.candidates?.[0]?.content?.parts ?? [];
+  const imagePart = parts.find((p) => p.inlineData);
+  const imageData: string | undefined = imagePart?.inlineData?.data;
+  const mimeType: string = imagePart?.inlineData?.mimeType ?? 'image/png';
 
   if (!imageData) {
     return new Response(JSON.stringify({ error: 'No image returned from Gemini.' }), {
