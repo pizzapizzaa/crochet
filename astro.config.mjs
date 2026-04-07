@@ -7,4 +7,7 @@ export default defineConfig({
   integrations: [tailwind(), react()],
   output: 'static',
   adapter: vercel(),
+  security: {
+    checkOrigin: false,
+  },
 });
