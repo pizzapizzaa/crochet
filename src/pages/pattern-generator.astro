@@ -1,6 +1,16 @@
 ---
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
 import PatternGenerator from '../components/PatternGenerator';
+
+const adminPassword = import.meta.env.ADMIN_PASSWORD;
+const authCookie = Astro.cookies.get('admin_auth')?.value;
+const expectedToken = adminPassword ? btoa(adminPassword) : null;
+
+if (!expectedToken || authCookie !== expectedToken) {
+  return Astro.redirect('/admin/login');
+}
 ---
 
 <Layout
@@ -17,7 +27,7 @@ import PatternGenerator from '../components/PatternGenerator';
       </nav>
       <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <span class="text-sage text-sm font-medium tracking-widest uppercase">Free Tool</span>
+          <span class="text-sage text-sm font-medium tracking-widest uppercase">Admin Tool</span>
           <h1 class="font-serif text-5xl font-semibold text-brown-dark mt-1">
             Pattern Generator
           </h1>
@@ -39,6 +49,12 @@ import PatternGenerator from '../components/PatternGenerator';
               </div>
             ))
           }
+          <a
+            href="/api/admin-logout"
+            class="flex items-center gap-2 bg-white border border-cream-300 hover:border-rose-dust px-4 py-2 rounded-full text-xs font-medium text-brown-light hover:text-rose-dust transition-colors"
+          >
+            Sign out
+          </a>
         </div>
       </div>
     </div>

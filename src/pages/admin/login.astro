@@ -1,0 +1,60 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+
+// If already authenticated, redirect straight to the tool
+const adminPassword = import.meta.env.ADMIN_PASSWORD;
+const authCookie = Astro.cookies.get('admin_auth')?.value;
+const expectedToken = adminPassword ? btoa(adminPassword) : null;
+
+if (expectedToken && authCookie === expectedToken) {
+  return Astro.redirect('/pattern-generator');
+}
+
+const hasError = Astro.url.searchParams.get('error') === '1';
+---
+
+<Layout title="Admin Login" description="">
+  <section class="min-h-[80vh] flex items-center justify-center bg-cream-100 px-4">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-8">
+        <span class="text-rose-dust text-sm font-medium tracking-widest uppercase">Admin</span>
+        <h1 class="font-serif text-4xl font-semibold text-brown-dark mt-1">Pattern Generator</h1>
+        <p class="mt-2 text-brown-light text-sm">Enter your admin password to continue.</p>
+      </div>
+
+      <form method="POST" action="/api/admin-login" class="bg-white rounded-2xl shadow-sm border border-cream-300 p-8 space-y-5">
+        <div>
+          <label for="password" class="block text-xs font-medium text-brown-warm uppercase tracking-widest mb-2">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autofocus
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light"
+            placeholder="Enter admin password"
+          />
+        </div>
+
+        {hasError && (
+          <p class="text-rose-dust text-xs font-medium">Incorrect password. Please try again.</p>
+        )}
+
+        <button
+          type="submit"
+          class="w-full bg-rose-dust hover:bg-rose-dark text-white font-medium py-3 rounded-full transition-colors duration-200 text-sm"
+        >
+          Sign In →
+        </button>
+      </form>
+
+      <p class="text-center mt-6">
+        <a href="/" class="text-xs text-brown-light hover:text-rose-dust transition-colors">← Back to site</a>
+      </p>
+    </div>
+  </section>
+</Layout>
