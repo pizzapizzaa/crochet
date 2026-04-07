@@ -30,7 +30,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-003:predict?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
