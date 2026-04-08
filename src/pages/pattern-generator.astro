@@ -60,51 +60,61 @@ if (!expectedToken || authCookie !== expectedToken) {
     </div>
   </section>
 
+  <!-- How-to guide (collapsible) -->
+  <section class="bg-white border-b border-cream-300">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <details class="group">
+        <summary class="flex items-center justify-between gap-4 py-4 cursor-pointer list-none select-none">
+          <span class="font-serif text-lg font-semibold text-brown-dark">How to use this tool</span>
+          <svg
+            class="w-4 h-4 text-brown-light shrink-0 transition-transform group-open:rotate-180"
+            fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div class="pb-8 pt-2">
+          <p class="text-brown-warm text-sm mb-6 text-center">Getting started is easy — here's a quick guide.</p>
+          <div class="grid sm:grid-cols-3 gap-8">
+            {
+              [
+                {
+                  step: '01',
+                  title: 'Make a gauge swatch',
+                  desc: "Crochet a 10cm × 10cm square with your yarn and hook. Lay it flat and count the stitches and rows per 10cm.",
+                  icon: '🧶',
+                },
+                {
+                  step: '02',
+                  title: 'Enter your details',
+                  desc: 'Input your gauge numbers, project dimensions, stitch type, and yarn weight. Add any personal notes.',
+                  icon: '✍️',
+                },
+                {
+                  step: '03',
+                  title: 'Generate & download',
+                  desc: 'Click Generate Pattern to get your custom instructions including cast-on count, row count, and a yarn estimate. Download as a .txt file.',
+                  icon: '📄',
+                },
+              ].map((step) => (
+                <div class="text-center">
+                  <div class="text-4xl mb-3">{step.icon}</div>
+                  <div class="text-rose-dust text-sm font-bold mb-2">{step.step}</div>
+                  <h3 class="font-serif font-semibold text-brown-dark mb-2">{step.title}</h3>
+                  <p class="text-brown-light text-sm leading-relaxed">{step.desc}</p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <!-- Generator -->
   <section class="py-12 bg-cream-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <PatternGenerator client:load />
-    </div>
-  </section>
-
-  <!-- How-to guide -->
-  <section class="py-16 bg-white">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-10">
-        <h2 class="font-serif text-3xl font-semibold text-brown-dark">How to use this tool</h2>
-        <p class="mt-2 text-brown-warm text-sm">Getting started is easy — here's a quick guide.</p>
-      </div>
-      <div class="grid sm:grid-cols-3 gap-8">
-        {
-          [
-            {
-              step: '01',
-              title: 'Make a gauge swatch',
-              desc: "Crochet a 10cm × 10cm square with your yarn and hook. Lay it flat and count the stitches and rows per 10cm.",
-              icon: '🧶',
-            },
-            {
-              step: '02',
-              title: 'Enter your details',
-              desc: 'Input your gauge numbers, project dimensions, stitch type, and yarn weight. Add any personal notes.',
-              icon: '✍️',
-            },
-            {
-              step: '03',
-              title: 'Generate & download',
-              desc: 'Click Generate Pattern to get your custom instructions including cast-on count, row count, and a yarn estimate. Download as a .txt file.',
-              icon: '📄',
-            },
-          ].map((step) => (
-            <div class="text-center">
-              <div class="text-4xl mb-3">{step.icon}</div>
-              <div class="text-rose-dust text-sm font-bold mb-2">{step.step}</div>
-              <h3 class="font-serif font-semibold text-brown-dark mb-2">{step.title}</h3>
-              <p class="text-brown-light text-sm leading-relaxed">{step.desc}</p>
-            </div>
-          ))
-        }
-      </div>
     </div>
   </section>
 
