@@ -21,9 +21,9 @@ export default {
           dark: '#6E8169',
         },
         brown: {
-          warm: '#8B6E5F',
-          dark: '#3D3530',
-          light: '#B5978A',
+          warm: '#5C3D2E',
+          dark: '#2A1F1A',
+          light: '#6B4F42',
         },
       },
       fontFamily: {

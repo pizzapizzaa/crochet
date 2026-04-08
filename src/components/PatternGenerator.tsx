@@ -96,6 +96,8 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
   const yarnPerStitchCm = 3.0 * yarnData.multiplier * stitchData.yarnFactor;
   const estimatedYarnMeters = (totalStitches * yarnPerStitchCm) / 100;
   const estimatedYarnGrams = Math.ceil(estimatedYarnMeters / yarnData.metersPerGram);
+  const rollSizes = [50, 100, 125, 150] as const;
+  const rollsNeeded = Object.fromEntries(rollSizes.map((s) => [s, Math.ceil(estimatedYarnGrams / s)])) as Record<50|100|125|150, number>;
 
   const stAbbr = stitchData.value.toUpperCase();
   const ch = project.stitchPattern === 'dc' ? 3 : project.stitchPattern === 'hdc' ? 2 : 1;
@@ -129,6 +131,7 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `  . ${project.hookSize} crochet hook`,
     `  . Stitch markers, yarn needle`,
     `  . ~${estimatedYarnGrams}g of yarn (estimate)`,
+    `     Rolls needed: ${rollsNeeded[50]}x 50g  |  ${rollsNeeded[100]}x 100g  |  ${rollsNeeded[125]}x 125g  |  ${rollsNeeded[150]}x 150g`,
     ``,
     `ABBREVIATIONS`,
     `  ch = chain`,
@@ -651,6 +654,17 @@ export default function PatternGenerator() {
                         <p className="text-xs text-brown-light mt-1">{stat.label}</p>
                       </div>
                     ))}
+                  </div>
+                  <div className="bg-cream-50 border-b border-cream-200 px-5 py-3">
+                    <p className="text-xs text-brown-light text-center mb-2">Rolls needed</p>
+                    <div className="flex justify-center gap-6">
+                      {([50, 100, 125, 150] as const).map((size) => (
+                        <div key={size} className="text-center">
+                          <p className="text-lg font-bold text-rose-dust font-serif">{Math.ceil(result.estimatedYarnGrams / size)}</p>
+                          <p className="text-xs text-brown-light">{size}g roll</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-3">
