@@ -2,8 +2,8 @@
 
 // --- Types ---
 interface GaugeInputs {
-  stitchesPer10cm: number;
-  rowsPer10cm: number;
+  stitchesPer5cm: number;
+  rowsPer5cm: number;
 }
 
 interface ProjectInputs {
@@ -87,8 +87,8 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
   const stitchData = STITCH_PATTERNS.find((s) => s.value === project.stitchPattern) ?? STITCH_PATTERNS[0];
   const yarnData = YARN_WEIGHTS.find((y) => y.value === project.yarnWeight) ?? YARN_WEIGHTS[4];
 
-  const adjustedRowsPerCm = (gauge.rowsPer10cm / 10) / stitchData.heightFactor;
-  const castOn = Math.round((gauge.stitchesPer10cm / 10) * project.widthCm);
+  const adjustedRowsPerCm = (gauge.rowsPer5cm / 5) / stitchData.heightFactor;
+  const castOn = Math.round((gauge.stitchesPer5cm / 5) * project.widthCm);
   const totalRows = Math.round(adjustedRowsPerCm * project.heightCm);
   const totalStitches = castOn * totalRows;
 
@@ -115,10 +115,10 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `Dimensions: ${project.widthCm}cm wide x ${project.heightCm}cm tall`,
     ``,
     `-------------------------------------------`,
-    `GAUGE (per 10cm)`,
+    `GAUGE (per 5cm)`,
     `-------------------------------------------`,
-    `  Stitches: ${gauge.stitchesPer10cm}`,
-    `  Rows: ${gauge.rowsPer10cm}`,
+    `  Stitches: ${gauge.stitchesPer5cm}`,
+    `  Rows: ${gauge.rowsPer5cm}`,
     ``,
     `-------------------------------------------`,
     `YOUR PATTERN`,
@@ -268,7 +268,7 @@ function GrannyModal({
 
 // --- Main Component ---
 export default function PatternGenerator() {
-  const [gauge, setGauge] = useState<GaugeInputs>({ stitchesPer10cm: 16, rowsPer10cm: 20 });
+  const [gauge, setGauge] = useState<GaugeInputs>({ stitchesPer5cm: 8, rowsPer5cm: 10 });
   const [project, setProject] = useState<ProjectInputs>({
     widthCm: 30,
     heightCm: 30,
@@ -372,32 +372,32 @@ export default function PatternGenerator() {
           <div className="bg-white rounded-2xl p-6 shadow-sm">
             <h2 className="font-serif text-xl font-semibold text-brown-dark mb-1">Your Gauge</h2>
             <p className="text-brown-light text-xs mb-5">
-              Crochet a 10cm x 10cm swatch and count your stitches and rows.
+              Crochet a 5cm x 5cm swatch and count your stitches and rows.
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-brown-warm mb-1.5">
-                  Stitches per 10cm
+                  Stitches per 5cm
                 </label>
                 <input
                   type="number"
                   min={1}
-                  max={60}
-                  value={gauge.stitchesPer10cm}
-                  onChange={(e) => setGauge((g) => ({ ...g, stitchesPer10cm: Number(e.target.value) }))}
+                  max={30}
+                  value={gauge.stitchesPer5cm}
+                  onChange={(e) => setGauge((g) => ({ ...g, stitchesPer5cm: Number(e.target.value) }))}
                   className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-brown-warm mb-1.5">
-                  Rows per 10cm
+                  Rows per 5cm
                 </label>
                 <input
                   type="number"
                   min={1}
-                  max={80}
-                  value={gauge.rowsPer10cm}
-                  onChange={(e) => setGauge((g) => ({ ...g, rowsPer10cm: Number(e.target.value) }))}
+                  max={40}
+                  value={gauge.rowsPer5cm}
+                  onChange={(e) => setGauge((g) => ({ ...g, rowsPer5cm: Number(e.target.value) }))}
                   className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
                 />
               </div>
