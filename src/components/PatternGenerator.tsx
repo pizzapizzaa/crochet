@@ -55,7 +55,6 @@ const PROJECT_TYPES = [
   'Bag',
   'Cross Bag',
   'Hand Bag',
-  'Cardigan / Top',
   'Crop Top',
   'Cardigan Top',
   'Other',
@@ -70,6 +69,7 @@ const STITCH_PATTERNS = [
   { label: 'Granny Square', value: 'granny', heightFactor: 1.0, yarnFactor: 1.6 },
   { label: 'Shell Stitch', value: 'shell', heightFactor: 1.6, yarnFactor: 2.0 },
   { label: 'V-Stitch', value: 'vstitch', heightFactor: 1.6, yarnFactor: 1.8 },
+  { label: 'Tunisian Simple Stitch (Tss)', value: 'tunisian', heightFactor: 0.8, yarnFactor: 1.2 },
 ];
 
 // Granny square patterns -- place images in /public/granny-patterns/
@@ -99,7 +99,7 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
   const rollSizes = [50, 100, 125, 150] as const;
   const rollsNeeded = Object.fromEntries(rollSizes.map((s) => [s, Math.ceil(estimatedYarnGrams / s)])) as Record<50|100|125|150, number>;
 
-  const stAbbr = stitchData.value.toUpperCase();
+  const stAbbr = stitchData.value === 'tunisian' ? 'Tss' : stitchData.value.toUpperCase();
   const ch = project.stitchPattern === 'dc' ? 3 : project.stitchPattern === 'hdc' ? 2 : 1;
 
   const grannyNote = grannyPatternName ? `\nSelected Granny Pattern: ${grannyPatternName}` : '';
