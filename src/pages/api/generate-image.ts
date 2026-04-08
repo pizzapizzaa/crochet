@@ -42,8 +42,20 @@ export const POST: APIRoute = async ({ request }) => {
   );
 
   if (!res.ok) {
-    const errText = await res.text();
-    return new Response(JSON.stringify({ error: errText }), {
+    const errJson = await res.json().catch(() => null);
+    const status = errJson?.error?.status;
+    let message: string;
+    if (res.status === 429 || status === 'RESOURCE_EXHAUSTED') {
+      message =
+        'Image generation requires a paid Gemini API plan. Enable billing at https://aistudio.google.com/apikey and link a billing account in Google Cloud Console.';
+    } else if (res.status === 400 || status === 'INVALID_ARGUMENT') {
+      message = 'Invalid request sent to Gemini. Please try a different prompt.';
+    } else if (res.status === 403 || status === 'PERMISSION_DENIED') {
+      message = 'Gemini API key is invalid or does not have permission to generate images.';
+    } else {
+      message = errJson?.error?.message ?? `Gemini API error (${res.status}).`;
+    }
+    return new Response(JSON.stringify({ error: message }), {
       status: res.status,
       headers: { 'Content-Type': 'application/json' },
     });

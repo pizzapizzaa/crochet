@@ -580,6 +580,16 @@ export default function PatternGenerator() {
                       Add <code className="bg-cream-200 px-1 rounded">GEMINI_API_KEY</code> to your Vercel environment variables.
                     </p>
                   )}
+                  {imageError.includes('paid Gemini API plan') && (
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-rose-dust underline mt-1"
+                    >
+                      Enable billing in Google AI Studio →
+                    </a>
+                  )}
                 </div>
               ) : imageLoading ? (
                 <div className="aspect-square rounded-xl bg-cream-100 flex flex-col items-center justify-center gap-3">
