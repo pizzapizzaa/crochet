@@ -292,6 +292,7 @@ export default function PatternGenerator() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'visualise' | 'pattern'>('visualise');
 
   const hookOptions = HOOK_SIZES[project.yarnWeight] ?? HOOK_SIZES['worsted'];
 
@@ -310,6 +311,7 @@ export default function PatternGenerator() {
     setResult(generatePattern(gauge, project, grannyName));
     setGeneratedImage(null);
     setImageError(null);
+    setActiveTab('pattern');
   }, [gauge, project, selectedGrannyPattern]);
 
   const visualise = useCallback(async () => {
@@ -538,131 +540,158 @@ export default function PatternGenerator() {
         </div>
 
         {/* Output Panel */}
-        <div className="sticky top-24 space-y-6">
-          {/* AI Visualisation */}
+        <div className="sticky top-24">
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-cream-200">
-              <div>
-                <h3 className="font-serif font-semibold text-brown-dark">AI Visualisation</h3>
-                <p className="text-xs text-brown-light mt-0.5">See what your project could look like</p>
-              </div>
+            {/* Tabs */}
+            <div className="flex border-b border-cream-200">
               <button
-                onClick={visualise}
-                disabled={imageLoading}
-                className="flex items-center gap-2 bg-sage/10 hover:bg-sage/20 text-brown-dark font-medium px-4 py-2 rounded-full text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setActiveTab('visualise')}
+                className={`flex-1 py-3.5 text-xs font-semibold tracking-wide transition-colors ${
+                  activeTab === 'visualise'
+                    ? 'text-brown-dark border-b-2 border-rose-dust bg-white'
+                    : 'text-brown-light hover:text-brown-warm bg-cream-50'
+                }`}
               >
-                {imageLoading ? (
-                  <>
-                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                    </svg>
-                    Generating...
-                  </>
-                ) : (
-                  <>✨ Visualise</>
-                )}
+                ✨ AI Visualisation
+              </button>
+              <button
+                onClick={() => setActiveTab('pattern')}
+                className={`flex-1 py-3.5 text-xs font-semibold tracking-wide transition-colors ${
+                  activeTab === 'pattern'
+                    ? 'text-brown-dark border-b-2 border-rose-dust bg-white'
+                    : 'text-brown-light hover:text-brown-warm bg-cream-50'
+                }`}
+              >
+                📄 Your Pattern
               </button>
             </div>
-            <div className="p-6">
-              {generatedImage ? (
-                <img
-                  src={generatedImage}
-                  alt="AI-generated project visualisation"
-                  className="w-full rounded-xl object-cover aspect-square"
-                />
-              ) : imageError ? (
-                <div className="aspect-square rounded-xl bg-cream-100 flex flex-col items-center justify-center gap-2 text-center p-6">
-                  <span className="text-3xl">⚠️</span>
-                  <p className="text-xs text-brown-light leading-relaxed">{imageError}</p>
-                  {imageError.includes('GEMINI_API_KEY') && (
-                    <p className="text-xs text-brown-light mt-1">
-                      Add <code className="bg-cream-200 px-1 rounded">GEMINI_API_KEY</code> to your Vercel environment variables.
-                    </p>
-                  )}
-                  {imageError.includes('paid Gemini API plan') && (
-                    <a
-                      href="https://aistudio.google.com/apikey"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-rose-dust underline mt-1"
-                    >
-                      Enable billing in Google AI Studio →
-                    </a>
+
+            {/* AI Visualisation Tab */}
+            {activeTab === 'visualise' && (
+              <>
+                <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-cream-200">
+                  <p className="text-xs text-brown-light">See what your project could look like</p>
+                  <button
+                    onClick={visualise}
+                    disabled={imageLoading}
+                    className="flex items-center gap-2 bg-sage/10 hover:bg-sage/20 text-brown-dark font-medium px-4 py-2 rounded-full text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {imageLoading ? (
+                      <>
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>✨ Visualise</>
+                    )}
+                  </button>
+                </div>
+                <div className="p-6">
+                  {generatedImage ? (
+                    <img
+                      src={generatedImage}
+                      alt="AI-generated project visualisation"
+                      className="w-full rounded-xl object-cover aspect-square"
+                    />
+                  ) : imageError ? (
+                    <div className="aspect-square rounded-xl bg-cream-100 flex flex-col items-center justify-center gap-2 text-center p-6">
+                      <span className="text-3xl">⚠️</span>
+                      <p className="text-xs text-brown-light leading-relaxed">{imageError}</p>
+                      {imageError.includes('GEMINI_API_KEY') && (
+                        <p className="text-xs text-brown-light mt-1">
+                          Add <code className="bg-cream-200 px-1 rounded">GEMINI_API_KEY</code> to your Vercel environment variables.
+                        </p>
+                      )}
+                      {imageError.includes('paid Gemini API plan') && (
+                        <a
+                          href="https://aistudio.google.com/apikey"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-rose-dust underline mt-1"
+                        >
+                          Enable billing in Google AI Studio →
+                        </a>
+                      )}
+                    </div>
+                  ) : imageLoading ? (
+                    <div className="aspect-square rounded-xl bg-cream-100 flex flex-col items-center justify-center gap-3">
+                      <svg className="w-8 h-8 animate-spin text-rose-dust/40" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      <p className="text-xs text-brown-light">Imagining your project...</p>
+                    </div>
+                  ) : (
+                    <div className="aspect-square rounded-xl bg-cream-100 flex flex-col items-center justify-center gap-2 text-center p-6">
+                      <span className="text-4xl">✨</span>
+                      <p className="text-sm font-medium text-brown-dark">Visualise your project</p>
+                      <p className="text-xs text-brown-light leading-relaxed">
+                        Click <strong>Visualise</strong> above to generate an AI image of your finished piece.
+                        Add a yarn colour for best results.
+                      </p>
+                    </div>
                   )}
                 </div>
-              ) : imageLoading ? (
-                <div className="aspect-square rounded-xl bg-cream-100 flex flex-col items-center justify-center gap-3">
-                  <svg className="w-8 h-8 animate-spin text-rose-dust/40" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                  </svg>
-                  <p className="text-xs text-brown-light">Imagining your project...</p>
-                </div>
+              </>
+            )}
+
+            {/* Pattern Tab */}
+            {activeTab === 'pattern' && (
+              result ? (
+                <>
+                  <div className="grid grid-cols-3 gap-px bg-cream-300">
+                    {[
+                      { label: 'Cast-On Stitches', value: result.castOnStitches.toString() },
+                      { label: 'Total Rows', value: result.totalRows.toString() },
+                      { label: 'Total Stitches', value: result.totalStitches.toLocaleString() },
+                      { label: 'Yarn Estimate', value: `~${result.estimatedYarnMeters}m` },
+                      { label: 'Skeins (100m)', value: `~${result.estimatedSkeins}` },
+                    ].map((stat) => (
+                      <div key={stat.label} className="bg-cream-50 p-5 text-center">
+                        <p className="text-2xl font-bold text-rose-dust font-serif">{stat.value}</p>
+                        <p className="text-xs text-brown-light mt-1">{stat.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-serif font-semibold text-brown-dark">Your Pattern</h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={copyToClipboard}
+                          className="flex items-center gap-1.5 text-xs bg-cream-100 hover:bg-cream-200 text-brown-warm px-3 py-1.5 rounded-full transition-colors"
+                        >
+                          {copied ? '✓ Copied!' : 'Copy'}
+                        </button>
+                        <button
+                          onClick={downloadPattern}
+                          className="flex items-center gap-1.5 text-xs bg-rose-dust hover:bg-rose-dark text-white px-3 py-1.5 rounded-full transition-colors"
+                        >
+                          Download
+                        </button>
+                      </div>
+                    </div>
+                    <pre className="bg-cream-100 rounded-xl p-4 text-xs text-brown-dark font-mono leading-relaxed overflow-auto max-h-[480px] whitespace-pre-wrap">
+                      {result.pattern.join('\n')}
+                    </pre>
+                  </div>
+                </>
               ) : (
-                <div className="aspect-square rounded-xl bg-cream-100 flex flex-col items-center justify-center gap-2 text-center p-6">
-                  <span className="text-4xl">✨</span>
-                  <p className="text-sm font-medium text-brown-dark">Visualise your project</p>
-                  <p className="text-xs text-brown-light leading-relaxed">
-                    Click <strong>Visualise</strong> above to generate an AI image of your finished piece.
-                    Add a yarn colour for best results.
+                <div className="p-12 text-center">
+                  <div className="text-6xl mb-4">🪝</div>
+                  <h3 className="font-serif text-2xl font-semibold text-brown-dark">
+                    Your pattern will appear here
+                  </h3>
+                  <p className="text-brown-light text-sm mt-3 max-w-xs mx-auto leading-relaxed">
+                    Fill in your gauge and project details on the left, then click Generate Pattern.
                   </p>
                 </div>
-              )}
-            </div>
+              )
+            )}
           </div>
-
-          {/* Pattern Output */}
-          {result ? (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="grid grid-cols-3 gap-px bg-cream-300">
-                {[
-                  { label: 'Cast-On Stitches', value: result.castOnStitches.toString() },
-                  { label: 'Total Rows', value: result.totalRows.toString() },
-                  { label: 'Total Stitches', value: result.totalStitches.toLocaleString() },
-                  { label: 'Yarn Estimate', value: `~${result.estimatedYarnMeters}m` },
-                  { label: 'Skeins (100m)', value: `~${result.estimatedSkeins}` },
-                ].map((stat) => (
-                  <div key={stat.label} className="bg-cream-50 p-5 text-center">
-                    <p className="text-2xl font-bold text-rose-dust font-serif">{stat.value}</p>
-                    <p className="text-xs text-brown-light mt-1">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-serif font-semibold text-brown-dark">Your Pattern</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={copyToClipboard}
-                      className="flex items-center gap-1.5 text-xs bg-cream-100 hover:bg-cream-200 text-brown-warm px-3 py-1.5 rounded-full transition-colors"
-                    >
-                      {copied ? 'v Copied!' : 'Copy'}
-                    </button>
-                    <button
-                      onClick={downloadPattern}
-                      className="flex items-center gap-1.5 text-xs bg-rose-dust hover:bg-rose-dark text-white px-3 py-1.5 rounded-full transition-colors"
-                    >
-                      Download
-                    </button>
-                  </div>
-                </div>
-                <pre className="bg-cream-100 rounded-xl p-4 text-xs text-brown-dark font-mono leading-relaxed overflow-auto max-h-[480px] whitespace-pre-wrap">
-                  {result.pattern.join('\n')}
-                </pre>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4">🪝</div>
-              <h3 className="font-serif text-2xl font-semibold text-brown-dark">
-                Your pattern will appear here
-              </h3>
-              <p className="text-brown-light text-sm mt-3 max-w-xs mx-auto leading-relaxed">
-                Fill in your gauge and project details on the left, then click Generate Pattern.
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </>
