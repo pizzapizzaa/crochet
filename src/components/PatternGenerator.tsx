@@ -21,20 +21,19 @@ interface PatternResult {
   castOnStitches: number;
   totalRows: number;
   totalStitches: number;
-  estimatedYarnMeters: number;
-  estimatedSkeins: number;
+  estimatedYarnGrams: number;
   pattern: string[];
 }
 
 // --- Data tables ---
 const YARN_WEIGHTS = [
-  { label: 'Lace (0)', value: 'lace', multiplier: 0.7 },
-  { label: 'Super Fine / Fingering (1)', value: 'fingering', multiplier: 0.9 },
-  { label: 'Fine / Sport (2)', value: 'sport', multiplier: 1.0 },
-  { label: 'Light / DK (3)', value: 'dk', multiplier: 1.2 },
-  { label: 'Medium / Worsted (4)', value: 'worsted', multiplier: 1.5 },
-  { label: 'Bulky (5)', value: 'bulky', multiplier: 1.9 },
-  { label: 'Super Bulky (6)', value: 'super-bulky', multiplier: 2.5 },
+  { label: 'Lace (0)', value: 'lace', multiplier: 0.7, metersPerGram: 9.0 },
+  { label: 'Super Fine / Fingering (1)', value: 'fingering', multiplier: 0.9, metersPerGram: 4.0 },
+  { label: 'Fine / Sport (2)', value: 'sport', multiplier: 1.0, metersPerGram: 3.2 },
+  { label: 'Light / DK (3)', value: 'dk', multiplier: 1.2, metersPerGram: 2.3 },
+  { label: 'Medium / Worsted (4)', value: 'worsted', multiplier: 1.5, metersPerGram: 2.0 },
+  { label: 'Bulky (5)', value: 'bulky', multiplier: 1.9, metersPerGram: 1.1 },
+  { label: 'Super Bulky (6)', value: 'super-bulky', multiplier: 2.5, metersPerGram: 0.6 },
 ];
 
 const HOOK_SIZES: Record<string, string[]> = {
@@ -93,12 +92,10 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
   const totalRows = Math.round(adjustedRowsPerCm * project.heightCm);
   const totalStitches = castOn * totalRows;
 
-  // Yarn estimate: each sc stitch uses ~0.3cm of yarn per mm of hook size equivalent.
-  // Base: 3cm per stitch for sc with worsted, scaled by yarn weight multiplier and stitch yarn factor.
+  // Yarn estimate: base 3cm per stitch for sc with worsted, scaled by yarn weight multiplier and stitch yarn factor.
   const yarnPerStitchCm = 3.0 * yarnData.multiplier * stitchData.yarnFactor;
-  const estimatedYarnMeters = Math.round((totalStitches * yarnPerStitchCm) / 100 * 10) / 10;
-  // Assume a standard 100m skein for skein count
-  const estimatedSkeins = Math.ceil(estimatedYarnMeters / 100);
+  const estimatedYarnMeters = (totalStitches * yarnPerStitchCm) / 100;
+  const estimatedYarnGrams = Math.ceil(estimatedYarnMeters / yarnData.metersPerGram);
 
   const stAbbr = stitchData.value.toUpperCase();
   const ch = project.stitchPattern === 'dc' ? 3 : project.stitchPattern === 'hdc' ? 2 : 1;
@@ -131,7 +128,7 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `  . ${yarnData.label} weight yarn`,
     `  . ${project.hookSize} crochet hook`,
     `  . Stitch markers, yarn needle`,
-    `  . ~${estimatedYarnMeters}m of yarn (estimate)`,
+    `  . ~${estimatedYarnGrams}g of yarn (estimate)`,
     ``,
     `ABBREVIATIONS`,
     `  ch = chain`,
@@ -160,7 +157,7 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `  Cast-on stitches: ${castOn}`,
     `  Total rows: ${totalRows}`,
     `  Total stitches worked: ${totalStitches.toLocaleString()}`,
-    `  Yarn estimate: ~${estimatedYarnMeters}m (~${estimatedSkeins} x 100m skein${estimatedSkeins !== 1 ? 's' : ''})`,
+    `  Yarn estimate: ~${estimatedYarnGrams}g`,
     ``,
     ...(project.notes
       ? [`-------------------------------------------`, `NOTES`, `  ${project.notes}`, ``]
@@ -171,7 +168,7 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `===========================================`,
   ];
 
-  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnMeters, estimatedSkeins, pattern: lines };
+  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnGrams, pattern: lines };
 }
 
 function buildImagePrompt(project: ProjectInputs, grannyPatternName?: string): string {
@@ -642,13 +639,12 @@ export default function PatternGenerator() {
             {activeTab === 'pattern' && (
               result ? (
                 <>
-                  <div className="grid grid-cols-3 gap-px bg-cream-300">
+                  <div className="grid grid-cols-4 gap-px bg-cream-300">
                     {[
                       { label: 'Cast-On Stitches', value: result.castOnStitches.toString() },
                       { label: 'Total Rows', value: result.totalRows.toString() },
                       { label: 'Total Stitches', value: result.totalStitches.toLocaleString() },
-                      { label: 'Yarn Estimate', value: `~${result.estimatedYarnMeters}m` },
-                      { label: 'Skeins (100m)', value: `~${result.estimatedSkeins}` },
+                      { label: 'Yarn Estimate', value: `~${result.estimatedYarnGrams}g` },
                     ].map((stat) => (
                       <div key={stat.label} className="bg-cream-50 p-5 text-center">
                         <p className="text-2xl font-bold text-rose-dust font-serif">{stat.value}</p>
