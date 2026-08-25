@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",
-    "@astrojs/tailwind": "^5.1.0",
-    "@astrojs/vercel": "^8.2.11",
+    "@astrojs/tailwind": "^6.0.2",
+    "@astrojs/vercel": "^11.0.8",
     "@supabase/supabase-js": "^2.45.0",
-    "astro": "^5.18.1",
+    "astro": "^7.2.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.14"
@@ -26,5 +26,8 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "overrides": {
+    "path-to-regexp": "6.3.0"
   }
 }
