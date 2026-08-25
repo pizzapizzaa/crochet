@@ -9,17 +9,17 @@ import Layout from '../layouts/Layout.astro';
   <!-- Header -->
   <section class="bg-white border-b border-cream-300 py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <nav class="text-xs text-brown-light mb-3 flex items-center gap-1.5">
-        <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
+      <nav class="text-xs text-slate-light mb-3 flex items-center gap-1.5">
+        <a href="/" class="hover:text-mint-dark transition-colors">Home</a>
         <span>/</span>
-        <span class="text-brown-warm">Request Product</span>
+        <span class="text-slate-warm">Request Product</span>
       </nav>
       <div class="text-center max-w-2xl mx-auto">
-        <span class="text-rose-dust text-sm font-medium tracking-widest uppercase">We're listening</span>
-        <h1 class="font-serif text-5xl font-semibold text-brown-dark mt-2">
+        <span class="text-mint-dark text-sm font-medium tracking-widest uppercase">We're listening</span>
+        <h1 class="font-serif text-5xl font-semibold text-slate-dark mt-2">
           Request a Product
         </h1>
-        <p class="mt-4 text-brown-warm leading-relaxed">
+        <p class="mt-4 text-slate-warm leading-relaxed">
           Can't find the yarn, tool, or kit you're looking for? Let us know what you need and we'll do our best to source it or create it for you.
         </p>
       </div>
@@ -27,18 +27,18 @@ import Layout from '../layouts/Layout.astro';
   </section>
 
   <!-- Form Section -->
-  <section class="py-16 bg-cream-100">
+  <section class="py-16 bg-mint-muted/30">
     <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
       <form id="request-form" class="bg-white rounded-3xl shadow-xl p-8 sm:p-10">
         <!-- Request Type -->
         <div class="mb-6">
-          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+          <label class="text-xs font-medium text-slate-warm uppercase tracking-widest mb-2 block">
             What would you like to request?
           </label>
           <select
             name="request_type"
             required
-            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-slate-dark text-sm focus:outline-none focus:ring-2 focus:ring-mint/50 focus:border-mint bg-cream-100"
           >
             <option value="">Select a category...</option>
             <option value="crochet_design">New crochet design / pattern</option>
@@ -50,7 +50,7 @@ import Layout from '../layouts/Layout.astro';
 
         <!-- Name -->
         <div class="mb-6">
-          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+          <label class="text-xs font-medium text-slate-warm uppercase tracking-widest mb-2 block">
             Your Name
           </label>
           <input
@@ -58,13 +58,13 @@ import Layout from '../layouts/Layout.astro';
             name="name"
             required
             placeholder="Jane Doe"
-            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-slate-dark text-sm focus:outline-none focus:ring-2 focus:ring-mint/50 focus:border-mint bg-cream-100 placeholder-slate-muted"
           />
         </div>
 
         <!-- Email -->
         <div class="mb-6">
-          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+          <label class="text-xs font-medium text-slate-warm uppercase tracking-widest mb-2 block">
             Email Address
           </label>
           <input
@@ -72,13 +72,13 @@ import Layout from '../layouts/Layout.astro';
             name="email"
             required
             placeholder="jane@example.com"
-            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-slate-dark text-sm focus:outline-none focus:ring-2 focus:ring-mint/50 focus:border-mint bg-cream-100 placeholder-slate-muted"
           />
         </div>
 
         <!-- Product Description -->
         <div class="mb-6">
-          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+          <label class="text-xs font-medium text-slate-warm uppercase tracking-widest mb-2 block">
             Describe what you're looking for
           </label>
           <textarea
@@ -86,22 +86,22 @@ import Layout from '../layouts/Layout.astro';
             required
             rows="5"
             placeholder="Please describe the product you'd like us to add. Include details like colors, sizes, brands, or any specific requirements..."
-            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light resize-none"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-slate-dark text-sm focus:outline-none focus:ring-2 focus:ring-mint/50 focus:border-mint bg-cream-100 placeholder-slate-muted resize-none"
           ></textarea>
         </div>
 
         <!-- Reference Link (Optional) -->
         <div class="mb-8">
-          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
-            Reference Link <span class="text-brown-light font-normal">(optional)</span>
+          <label class="text-xs font-medium text-slate-warm uppercase tracking-widest mb-2 block">
+            Reference Link <span class="text-slate-light font-normal">(optional)</span>
           </label>
           <input
             type="url"
             name="reference_url"
             placeholder="https://example.com/product-reference"
-            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-slate-dark text-sm focus:outline-none focus:ring-2 focus:ring-mint/50 focus:border-mint bg-cream-100 placeholder-slate-muted"
           />
-          <p class="text-xs text-brown-light mt-2">
+          <p class="text-xs text-slate-light mt-2">
             Link to a similar product, Pinterest pin, or image for reference
           </p>
         </div>
@@ -109,15 +109,15 @@ import Layout from '../layouts/Layout.astro';
         <!-- Submit Button -->
         <button
           type="submit"
-          class="w-full bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors duration-200 text-sm"
+          class="w-full bg-neon hover:bg-neon-hover text-slate-dark font-semibold px-8 py-3.5 rounded-full transition-colors duration-200 text-sm"
         >
           Submit Request
         </button>
 
         <!-- Success Message (hidden by default) -->
-        <div id="success-message" class="hidden mt-6 p-4 bg-sage/10 border border-sage/30 rounded-xl text-center">
-          <p class="text-sage font-medium">Thank you for your request!</p>
-          <p class="text-sm text-brown-warm mt-1">We'll review it and get back to you soon.</p>
+        <div id="success-message" class="hidden mt-6 p-4 bg-mint/20 border border-mint/30 rounded-xl text-center">
+          <p class="text-mint-dark font-medium">Thank you for your request!</p>
+          <p class="text-sm text-slate-warm mt-1">We'll review it and get back to you soon.</p>
         </div>
       </form>
 
@@ -125,27 +125,27 @@ import Layout from '../layouts/Layout.astro';
       <div class="grid sm:grid-cols-2 gap-4 mt-8">
         <div class="bg-white rounded-2xl p-5 text-center shadow-sm">
           <div class="text-2xl mb-2">📬</div>
-          <h3 class="font-serif font-semibold text-brown-dark mb-1">We review everything</h3>
-          <p class="text-xs text-brown-light">Every request is personally reviewed</p>
+          <h3 class="font-serif font-semibold text-slate-dark mb-1">We review everything</h3>
+          <p class="text-xs text-slate-light">Every request is personally reviewed</p>
         </div>
         <div class="bg-white rounded-2xl p-5 text-center shadow-sm">
           <div class="text-2xl mb-2">⏱️</div>
-          <h3 class="font-serif font-semibold text-brown-dark mb-1">Quick response</h3>
-          <p class="text-xs text-brown-light">We'll get back to you within 48 hours</p>
+          <h3 class="font-serif font-semibold text-slate-dark mb-1">Quick response</h3>
+          <p class="text-xs text-slate-light">We'll get back to you within 48 hours</p>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Back to Shop CTA -->
-  <section class="py-12 bg-cream-200">
+  <section class="py-12 bg-sky-muted/40">
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <p class="text-brown-warm text-sm">
+      <p class="text-slate-warm text-sm">
         Want to browse what's already available?
       </p>
       <a
         href="/store"
-        class="mt-4 inline-flex items-center gap-2 bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors text-sm"
+        class="mt-4 inline-flex items-center gap-2 bg-neon hover:bg-neon-hover text-slate-dark font-semibold px-8 py-3.5 rounded-full transition-colors text-sm"
       >
         Visit the Shop
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
