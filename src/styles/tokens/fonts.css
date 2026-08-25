@@ -1,0 +1,5 @@
+/* ZippyZack webfonts — served from Google Fonts.
+   SUBSTITUTION NOTE: the upstream repo (pizzapizzaa/crochet) ships no tailwind.config
+   or font binaries, so these are the nearest Google Fonts matches to the live site's
+   rounded-display + friendly-sans + typewriter-mono system. Swap in real binaries when available. */
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito+Sans:ital,opsz,wght@0,6..12,300..900;1,6..12,300..900&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap");

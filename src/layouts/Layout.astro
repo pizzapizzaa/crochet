@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import '../styles/design-system.css';
 
 export interface Props {
   title: string;
@@ -10,7 +11,7 @@ export interface Props {
 
 const {
   title,
-  description = 'Handcrafted crochet pieces made with love — browse patterns, shop unique creations, and find your next favourite thing.',
+  description = 'Quality yarn kits and crochet tools for every project. Everything you need to create, bundled with care.',
   image = '/og-image.jpg',
 } = Astro.props;
 
@@ -33,13 +34,15 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? 'https://localhos
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Baloo 2 (display) · Nunito Sans (body) · Newsreader (the one italic word) · Space Mono (patterns) -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito+Sans:ital,opsz,wght@0,6..12,300..900;1,6..12,300..900&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
       rel="stylesheet"
     />
+    <meta name="theme-color" content="#005247" />
     <title>{title} | ZippyZack.com</title>
   </head>
-  <body class="bg-cream-100 text-brown-dark font-sans antialiased">
+  <body class="bg-cream-100 text-ink-body font-sans antialiased">
     <Header />
     <main>
       <slot />

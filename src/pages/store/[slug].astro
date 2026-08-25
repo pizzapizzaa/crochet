@@ -99,7 +99,7 @@ const inStock = product.stock > 3;
         <span class="text-sage text-xs font-semibold tracking-widest uppercase">
           {product.category}
         </span>
-        <h1 class="font-serif text-4xl font-semibold text-brown-dark mt-2 leading-tight">
+        <h1 class="font-display text-4xl font-semibold text-brown-dark mt-2 leading-tight">
           {product.name}
         </h1>
 
@@ -192,7 +192,7 @@ const inStock = product.stock > 3;
             class={`w-full py-4 rounded-full font-semibold text-sm transition-colors duration-200 ${
               isSoldOut
                 ? 'bg-cream-200 text-brown-light cursor-not-allowed'
-                : 'bg-btn-gradient text-paper hover:brightness-105'
+                : 'bg-btn-gradient text-ink hover:brightness-105'
             }`}
             disabled={isSoldOut}
           >
@@ -240,7 +240,7 @@ const inStock = product.stock > 3;
               <span class="text-rose-dust text-xs font-semibold tracking-widest uppercase">
                 You might also like
               </span>
-              <h2 class="font-serif text-3xl font-semibold text-brown-dark mt-1">
+              <h2 class="font-display text-3xl font-semibold text-brown-dark mt-1">
                 More from {product.category}
               </h2>
             </div>

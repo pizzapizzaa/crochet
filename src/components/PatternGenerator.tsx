@@ -206,7 +206,7 @@ function GrannyModal({
       >
         <div className="flex items-center justify-between p-6 border-b border-cream-300">
           <div>
-            <h2 className="font-serif text-xl font-semibold text-brown-dark">Granny Square Patterns</h2>
+            <h2 className="font-display text-xl font-semibold text-brown-dark">Granny Square Patterns</h2>
             <p className="text-xs text-brown-light mt-0.5">Choose a pattern to include in your project</p>
           </div>
           <button
@@ -373,7 +373,7 @@ export default function PatternGenerator() {
         {/* Input Panel */}
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="font-serif text-xl font-semibold text-brown-dark mb-1">Your Gauge</h2>
+            <h2 className="font-display text-xl font-semibold text-brown-dark mb-1">Your Gauge</h2>
             <p className="text-brown-light text-xs mb-5">
               Crochet a 5cm x 5cm swatch and count your stitches and rows.
             </p>
@@ -408,7 +408,7 @@ export default function PatternGenerator() {
           </div>
 
           <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="font-serif text-xl font-semibold text-brown-dark mb-5">Project Details</h2>
+            <h2 className="font-display text-xl font-semibold text-brown-dark mb-5">Project Details</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -530,7 +530,7 @@ export default function PatternGenerator() {
 
           <button
             onClick={generate}
-            className="w-full bg-btn-gradient text-paper hover:brightness-105 font-semibold py-4 rounded-full transition-all text-sm flex items-center justify-center gap-2"
+            className="w-full bg-btn-gradient text-ink hover:brightness-105 font-semibold py-4 rounded-full transition-all text-sm flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -650,7 +650,7 @@ export default function PatternGenerator() {
                       { label: 'Yarn Estimate', value: `~${result.estimatedYarnGrams}g` },
                     ].map((stat) => (
                       <div key={stat.label} className="bg-cream-50 p-5 text-center">
-                        <p className="text-2xl font-bold text-rose-dust font-serif">{stat.value}</p>
+                        <p className="text-2xl font-bold text-rose-dust font-display">{stat.value}</p>
                         <p className="text-xs text-brown-light mt-1">{stat.label}</p>
                       </div>
                     ))}
@@ -660,7 +660,7 @@ export default function PatternGenerator() {
                     <div className="flex justify-center gap-6">
                       {([50, 100, 125, 150] as const).map((size) => (
                         <div key={size} className="text-center">
-                          <p className="text-lg font-bold text-rose-dust font-serif">{Math.ceil(result.estimatedYarnGrams / size)}</p>
+                          <p className="text-lg font-bold text-rose-dust font-display">{Math.ceil(result.estimatedYarnGrams / size)}</p>
                           <p className="text-xs text-brown-light">{size}g roll</p>
                         </div>
                       ))}
@@ -668,7 +668,7 @@ export default function PatternGenerator() {
                   </div>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-serif font-semibold text-brown-dark">Your Pattern</h3>
+                      <h3 className="font-display font-semibold text-brown-dark">Your Pattern</h3>
                       <div className="flex gap-2">
                         <button
                           onClick={copyToClipboard}
@@ -678,7 +678,7 @@ export default function PatternGenerator() {
                         </button>
                         <button
                           onClick={downloadPattern}
-                          className="flex items-center gap-1.5 text-xs bg-btn-gradient text-paper hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
+                          className="flex items-center gap-1.5 text-xs bg-btn-gradient text-ink hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
                         >
                           Download
                         </button>
@@ -692,7 +692,7 @@ export default function PatternGenerator() {
               ) : (
                 <div className="p-12 text-center">
                   <div className="text-6xl mb-4">🪝</div>
-                  <h3 className="font-serif text-2xl font-semibold text-brown-dark">
+                  <h3 className="font-display text-2xl font-semibold text-brown-dark">
                     Your pattern will appear here
                   </h3>
                   <p className="text-brown-light text-sm mt-3 max-w-xs mx-auto leading-relaxed">

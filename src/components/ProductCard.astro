@@ -13,85 +13,87 @@ const discount = product.compare_at_price
   : null;
 const isSoldOut = product.stock === 0;
 const isLowStock = product.stock > 0 && product.stock <= 3;
+
+// Craft specifics are the trust signal — middot separator is part of the voice.
+const spec = product.yarn_weight
+  ? `${product.yarn_weight} weight · Hook ${product.hook_size}`
+  : product.dimensions;
 ---
 
+<!--
+  Paper fill, 1px cream hairline, 16px radius, shadow-sm at rest. Hover lifts
+  -2px to shadow-lg and zooms the photo to 1.04 over 600ms. No coloured border.
+-->
 <article
-  class={`group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col ${className}`}
+  class={`group flex flex-col overflow-hidden rounded-card border border-cream-300 bg-paper shadow-sm transition-all duration-base ease-out hover:-translate-y-0.5 hover:shadow-lg ${className}`}
 >
-  <a href={`/store/${product.slug}`} class="block overflow-hidden relative aspect-[3/4]">
+  <a
+    href={`/store/${product.slug}`}
+    class="relative block aspect-square overflow-hidden bg-cream-200"
+  >
     <img
       src={primaryImage}
       alt={product.name}
-      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      class="h-full w-full object-cover transition-transform duration-lazy ease-out group-hover:scale-[1.04]"
       loading="lazy"
     />
     {
       discount && (
-        <span class="absolute top-3 left-3 bg-rose-dust text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+        <span class="absolute left-3 top-3 rounded-pill bg-lemon px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-ink">
           -{discount}%
         </span>
       )
     }
     {
-      product.stock === 0 && (
-        <div class="absolute inset-0 bg-brown-dark/40 flex items-center justify-center">
-          <span class="bg-white/90 text-brown-dark text-sm font-semibold px-4 py-1.5 rounded-full">
-            Sold Out
-          </span>
-        </div>
-      )
-    }
-    {
-      isLowStock && (
-        <span class="absolute top-3 right-3 bg-amber-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+      isSoldOut ? (
+        <span class="absolute right-3 top-3 rounded-pill bg-forest-deep/80 px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-cream">
+          Sold out
+        </span>
+      ) : isLowStock ? (
+        <span class="absolute right-3 top-3 rounded-pill bg-lemon-deep px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-cream">
           Only {product.stock} left
         </span>
-      )
+      ) : null
     }
   </a>
 
-  <div class="p-4 flex flex-col gap-2 flex-1">
-    <div class="flex items-start justify-between gap-2">
-      <div>
-        <span class="text-xs font-medium text-sage uppercase tracking-wider">{product.category}</span>
-        <h3 class="font-serif font-medium text-brown-dark mt-0.5 leading-snug">
-          <a href={`/store/${product.slug}`} class="hover:text-rose-dust transition-colors">
-            {product.name}
-          </a>
-        </h3>
+  <div class="flex flex-1 flex-col gap-1.5 p-5">
+    <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+      {product.category}
+    </p>
+    <h3 class="font-display text-lg font-bold leading-snug text-ink">
+      <a
+        href={`/store/${product.slug}`}
+        class="text-inherit no-underline transition-colors duration-fast ease-out hover:text-mint-deep"
+      >
+        {product.name}
+      </a>
+    </h3>
+    {spec && <p class="text-xs text-ink-muted">{spec}</p>}
+
+    <div class="mt-auto flex items-center justify-between gap-3 pt-4">
+      <div class="flex items-baseline gap-2">
+        <span class="font-display text-lg font-extrabold text-ink">
+          ${product.price.toFixed(2)}
+        </span>
+        {
+          product.compare_at_price && (
+            <span class="text-sm text-ink-muted line-through">
+              ${product.compare_at_price.toFixed(2)}
+            </span>
+          )
+        }
       </div>
+      <a
+        href={`/store/${product.slug}`}
+        class={`shrink-0 rounded-pill px-4 py-2.5 text-xs font-bold transition-all duration-fast ease-out ${
+          isSoldOut
+            ? 'bg-cream-200 text-ink-muted'
+            : 'bg-btn-gradient text-ink shadow-sm hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97]'
+        }`}
+      >
+        {isSoldOut ? 'Sold out' : 'View Details'}
+      </a>
     </div>
-
-    {
-      product.yarn_weight && (
-        <p class="text-xs text-brown-light">
-          {product.yarn_weight} weight · Hook {product.hook_size}
-        </p>
-      )
-    }
-
-    <div class="flex items-center gap-2 mt-auto pt-2">
-      <span class="font-semibold text-brown-dark text-lg">
-        ${product.price.toFixed(2)}
-      </span>
-      {
-        product.compare_at_price && (
-          <span class="text-brown-light text-sm line-through">
-            ${product.compare_at_price.toFixed(2)}
-          </span>
-        )
-      }
-    </div>
-
-    <a
-      href={`/store/${product.slug}`}
-      class={`mt-2 w-full text-center text-sm font-medium py-2.5 rounded-full transition-colors duration-200 ${
-        isSoldOut
-          ? 'bg-cream-200 text-brown-light cursor-not-allowed'
-          : 'bg-btn-gradient text-paper hover:brightness-105'
-      }`}
-    >
-      {isSoldOut ? 'Out of Stock' : 'View Details'}
-    </a>
   </div>
 </article>

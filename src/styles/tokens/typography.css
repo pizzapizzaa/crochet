@@ -1,0 +1,27 @@
+:root{
+--font-display:"Baloo 2","Baloo2",ui-rounded,system-ui,sans-serif;
+--font-serif:"Newsreader",Georgia,"Times New Roman",serif;
+--font-sans:"Nunito Sans",ui-sans-serif,system-ui,sans-serif;
+--font-mono:"Space Mono",ui-monospace,"SFMono-Regular",monospace;
+
+--text-display-1:clamp(44px,5.4vw,72px);
+--text-display-2:clamp(34px,3.8vw,52px);
+--text-h1:36px;--text-h2:28px;--text-h3:22px;--text-h4:18px;
+--text-body-lg:17px;--text-body:15px;--text-body-sm:13.5px;
+--text-caption:12px;--text-micro:11px;
+
+--leading-tight:1.08;
+--leading-snug:1.25;
+--leading-normal:1.5;
+--leading-relaxed:1.7;
+--tracking-tight:-0.02em;
+--tracking-normal:0;
+--tracking-wide:0.04em;
+--tracking-eyebrow:0.16em;
+
+--weight-regular:400;
+--weight-medium:500;
+--weight-semibold:600;
+--weight-bold:700;
+--weight-black:800;
+}

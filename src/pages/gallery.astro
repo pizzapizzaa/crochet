@@ -21,7 +21,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
         <span>/</span>
         <span class="text-brown-warm">Gallery</span>
       </nav>
-      <h1 class="font-serif text-5xl font-semibold text-brown-dark">The Gallery</h1>
+      <h1 class="font-display text-5xl font-semibold text-brown-dark">The Gallery</h1>
       <p class="mt-4 text-brown-warm max-w-md mx-auto text-sm leading-relaxed">
         Every stitch tells a story. Browse the collection and click any piece to shop or learn more.
       </p>
@@ -68,7 +68,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
                           Featured
                         </span>
                       )}
-                      <h3 class="text-white font-serif font-semibold text-lg leading-snug">
+                      <h3 class="text-white font-display font-semibold text-lg leading-snug">
                         {item.title}
                       </h3>
                       {item.description && (
@@ -85,7 +85,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
 
                 {/* Bottom card info (visible when not hovering) */}
                 <div class="p-4 group-hover:opacity-0 transition-opacity duration-200">
-                  <h3 class="font-serif font-medium text-brown-dark text-sm leading-snug">
+                  <h3 class="font-display font-medium text-brown-dark text-sm leading-snug">
                     {item.title}
                   </h3>
                   {item.description && (
@@ -109,7 +109,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
         <div class="flex flex-wrap items-center justify-center gap-4">
           <a
             href="/store"
-            class="bg-btn-gradient text-paper hover:brightness-105 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
+            class="bg-btn-gradient text-ink hover:brightness-105 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
           >
             Shop All Items
           </a>

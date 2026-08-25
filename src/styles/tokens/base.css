@@ -1,0 +1,13 @@
+/* Element defaults from the ZippyZack design system.
+   NOTE: upstream `base.css` writes `color:var(--text-body)`, but tokens/colors.css
+   defines --text-body as a colour while tokens/typography.css redefines it as 15px.
+   Typography imports last, so the colour is unreachable under that name — the body
+   colour is therefore taken from its underlying token, --ink-body. */
+body{background:var(--surface-page);color:var(--ink-body);font-family:var(--font-sans);font-size:var(--text-body);line-height:var(--leading-normal);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-display);color:var(--text-strong);line-height:var(--leading-snug);margin:0}
+/* Wrapped in :where() so these defaults sit at zero specificity — an anchor that
+   carries a Tailwind colour utility keeps it in the hover state too. */
+:where(a){color:var(--text-link);text-decoration-color:var(--mint-soft);text-underline-offset:3px}
+:where(a:hover){color:var(--text-link-hover)}
+code,pre{font-family:var(--font-mono)}
+::selection{background:var(--lemon-soft);color:var(--ink)}

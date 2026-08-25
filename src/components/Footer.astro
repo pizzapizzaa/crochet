@@ -1,85 +1,84 @@
 ---
+const exploreLinks = [
+  { label: 'Shop All', href: '/store' },
+  { label: 'Gallery', href: '/gallery' },
+  { label: 'Pattern Generator', href: '/pattern-generator' },
+  { label: 'New Arrivals', href: '/store?sort=newest' },
+];
+
+const infoLinks = [
+  { label: 'About Me', href: '/#about' },
+  { label: 'Shipping & Returns', href: '/shipping' },
+  { label: 'Care Instructions', href: '/care' },
+  { label: 'Contact', href: '/contact' },
+];
+
+const socials = [
+  {
+    label: 'Instagram',
+    path: 'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z',
+  },
+  {
+    label: 'Pinterest',
+    path: 'M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z',
+  },
+  {
+    label: 'TikTok',
+    path: 'M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.53V6.76a4.85 4.85 0 01-1.02-.07z',
+  },
+];
 ---
 
-<footer class="bg-ink text-paper mt-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+<!-- Dark band: --dark-wash, cream type. The inverse of the gradient CTA. -->
+<footer class="bg-dark-wash text-cream">
+  <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8 py-20">
+    <div class="grid grid-cols-1 gap-10 md:grid-cols-4">
       <!-- Brand -->
       <div class="md:col-span-2">
-        <div class="flex items-center gap-2 mb-4">
-          <svg class="w-7 h-7 text-mint" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2" />
-            <path
-              d="M10 16 Q13 10 16 16 Q19 22 22 16"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              fill="none"
-            />
-          </svg>
-          <span class="font-serif text-xl font-semibold text-white">
-            ZippyZack<span class="text-mint">.com</span>
+        <div class="mb-4 flex items-center gap-3">
+          <!-- Light alternate: a forest tile would vanish on a forest band. -->
+          <img
+            src="/assets/logos/zippyzack-mark-light.svg"
+            alt=""
+            width="36"
+            height="36"
+            class="h-9 w-9 rounded-[10px]"
+          />
+          <span class="font-display text-xl font-extrabold tracking-tight text-cream">
+            Zippy<span class="text-lemon">Zack</span><span class="text-cream/70">.com</span>
           </span>
         </div>
-        <p class="text-slate-muted text-sm leading-relaxed max-w-xs">
+        <p class="max-w-xs text-sm leading-relaxed text-cream/75">
           Quality yarn kits and crochet tools for every project. Everything you need to create,
           bundled with care.
         </p>
-        <div class="flex items-center gap-4 mt-6">
-          <!-- Instagram -->
-          <a
-            href="#"
-            aria-label="Instagram"
-            class="w-9 h-9 rounded-full bg-slate-light/20 flex items-center justify-center hover:bg-mint transition-colors hover:text-paper"
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path
-                d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"
-              />
-            </svg>
-          </a>
-          <!-- Pinterest -->
-          <a
-            href="#"
-            aria-label="Pinterest"
-            class="w-9 h-9 rounded-full bg-slate-light/20 flex items-center justify-center hover:bg-mint transition-colors hover:text-paper"
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path
-                d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"
-              />
-            </svg>
-          </a>
-          <!-- TikTok -->
-          <a
-            href="#"
-            aria-label="TikTok"
-            class="w-9 h-9 rounded-full bg-slate-light/20 flex items-center justify-center hover:bg-mint transition-colors hover:text-paper"
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path
-                d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.53V6.76a4.85 4.85 0 01-1.02-.07z"
-              />
-            </svg>
-          </a>
+        <div class="mt-6 flex items-center gap-4">
+          {
+            socials.map((social) => (
+              <a
+                href="#"
+                aria-label={social.label}
+                class="flex h-9 w-9 items-center justify-center rounded-pill bg-cream/10 text-cream transition-all duration-fast ease-out hover:-translate-y-0.5 hover:bg-mint hover:text-ink"
+              >
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d={social.path} />
+                </svg>
+              </a>
+            ))
+          }
         </div>
       </div>
 
-      <!-- Quick Links -->
+      <!-- Explore -->
       <div>
-        <h4 class="font-serif font-semibold text-white mb-4">Explore</h4>
+        <h4 class="mb-4 font-display text-base font-bold text-cream">Explore</h4>
         <ul class="space-y-2.5">
           {
-            [
-              { label: 'Shop All', href: '/store' },
-              { label: 'Gallery', href: '/gallery' },
-              { label: 'Pattern Generator', href: '/pattern-generator' },
-              { label: 'New Arrivals', href: '/store?sort=newest' },
-            ].map((link) => (
+            exploreLinks.map((link) => (
               <li>
                 <a
                   href={link.href}
-                  class="text-slate-muted text-sm hover:text-mint transition-colors"
+                  class="text-sm text-cream/75 transition-colors duration-fast ease-out hover:text-mint"
                 >
                   {link.label}
                 </a>
@@ -91,19 +90,14 @@
 
       <!-- Info -->
       <div>
-        <h4 class="font-serif font-semibold text-white mb-4">Info</h4>
+        <h4 class="mb-4 font-display text-base font-bold text-cream">Info</h4>
         <ul class="space-y-2.5">
           {
-            [
-              { label: 'About Me', href: '/#about' },
-              { label: 'Shipping & Returns', href: '/shipping' },
-              { label: 'Care Instructions', href: '/care' },
-              { label: 'Contact', href: '/contact' },
-            ].map((link) => (
+            infoLinks.map((link) => (
               <li>
                 <a
                   href={link.href}
-                  class="text-slate-muted text-sm hover:text-mint transition-colors"
+                  class="text-sm text-cream/75 transition-colors duration-fast ease-out hover:text-mint"
                 >
                   {link.label}
                 </a>
@@ -114,15 +108,23 @@
       </div>
     </div>
 
-    <div class="border-t border-slate-light/20 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-slate-muted text-xs">
-        &copy; {new Date().getFullYear()} ZippyZack.com. All rights reserved. Made with ♥ and yarn.
+    <div
+      class="mt-12 flex flex-col items-center justify-between gap-4 border-t border-cream/[0.18] pt-8 sm:flex-row"
+    >
+      <p class="text-xs text-cream/75">
+        &copy; {new Date().getFullYear()} ZippyZack.com. All rights reserved. Made with <span
+          class="text-lemon">♥</span
+        > and yarn.
       </p>
       <div class="flex items-center gap-4">
-        <a href="/privacy" class="text-slate-muted text-xs hover:text-mint transition-colors"
+        <a
+          href="/privacy"
+          class="text-xs text-cream/75 transition-colors duration-fast ease-out hover:text-mint"
           >Privacy Policy</a
         >
-        <a href="/terms" class="text-slate-muted text-xs hover:text-mint transition-colors"
+        <a
+          href="/terms"
+          class="text-xs text-cream/75 transition-colors duration-fast ease-out hover:text-mint"
           >Terms</a
         >
       </div>

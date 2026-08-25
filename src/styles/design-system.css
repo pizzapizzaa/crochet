@@ -1,0 +1,74 @@
+/* ============================================================
+   ZippyZack Design System — project entry point.
+   Imported from src/layouts/Layout.astro. Token files under
+   ./tokens/ are copied verbatim from the Claude Design project
+   "ZippyZack Design System" (33a02c5c-704a-4020-a9f2-c2bd3287ad34);
+   re-sync by replacing them wholesale. Tailwind mirrors these
+   values in tailwind.config.mjs so utilities can take opacity
+   modifiers (CSS vars holding hex cannot).
+   ============================================================ */
+@import "./tokens/fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/radius.css";
+@import "./tokens/elevation.css";
+@import "./tokens/motion.css";
+@import "./tokens/base.css";
+
+/* --- Brand patterns that repeat across screens ------------- */
+
+/* Eyebrow: 12px / 700 / uppercase / 0.16em, with a ✦ leader. */
+.zz-eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.zz-eyebrow::before {
+  content: "✦";
+  color: var(--mint-deep);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.zz-eyebrow--on-accent { color: rgba(0, 59, 49, 0.72); }
+.zz-eyebrow--on-accent::before { color: var(--forest); }
+
+/* The signature move: exactly ONE emphasised word per headline,
+   Newsreader italic in mint-deep. Never a whole line. */
+.zz-emph {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: var(--weight-regular);
+  color: var(--text-accent);
+}
+
+/* Glass tiles sitting on the gradient CTA band — paper at 55%
+   so their ink labels stay above 4.5:1. */
+.zz-glass {
+  background: rgba(255, 251, 234, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+/* Focus: 3px mint-deep ring, never the browser default. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+  border-color: var(--border-accent);
+}
+
+/* Photo scrim, used only where text sits over an image. */
+.zz-scrim { background: var(--photo-scrim); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

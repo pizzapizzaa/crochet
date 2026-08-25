@@ -1,0 +1,71 @@
+:root{
+/* ============================================================
+   ZippyZack core palette — four brand colours.
+   Every derived value is a tint/shade of one of these four.
+   Contrast note: lemon and mint are HIGH-luminance. They are
+   fills, never text colours. Text on them is always --ink.
+   ============================================================ */
+--lemon:#FFEB6C;   /* brand yellow  */
+--mint:#21FFA8;    /* brand green   */
+--cream:#FBF1CA;   /* brand paper   */
+--forest:#005247;  /* brand deep    */
+
+/* --- Cream ramp (surfaces) --- */
+--cream-50:#FFFDF2;--cream-100:#FBF1CA;--cream-200:#F5E7B8;--cream-300:#EBD9A0;--cream-400:#DCC784;
+--paper:#FFFBEA;
+
+/* --- Forest ramp (ink + dark surfaces) --- */
+--forest-deep:#003B33;--forest-mid:#00695C;--forest-tint:#2E6A60;--forest-soft:#7FB3AA;--forest-wash:#E4F1EE;
+
+/* --- Ink (text) — warm-neutral darks pulled toward forest --- */
+--ink:#003B33;--ink-body:#005247;--ink-muted:#2E6A60;--ink-faint:#7FB3AA;
+
+/* --- Mint ramp — mint itself is a fill; mint-deep is the readable one --- */
+--mint-deep:#00695C;--mint-mid:#00A883;--mint-soft:#A8FFDC;--mint-wash:#E4FFF3;
+
+/* --- Lemon ramp — lemon itself is a fill; lemon-deep is the readable one --- */
+--lemon-deep:#7A5E00;--lemon-mid:#C9A400;--lemon-soft:#FFF4A6;--lemon-wash:#FFFBE4;
+
+/* --- Semantic: text (all >=4.8:1 on cream or paper) --- */
+--text-strong:var(--ink);          /* 9.5:1 on cream  */
+--text-body:var(--ink-body);       /* 7.2:1 on cream  */
+--text-muted:var(--ink-muted);     /* 4.8:1 on cream  */
+--text-inverse:var(--cream);       /* 7.2:1 on forest */
+--text-inverse-muted:#CFE3DE;      /* 5.4:1 on forest */
+--text-on-accent:var(--forest);    /* 7.4:1 on lemon or mint */
+--text-accent:var(--mint-deep);    /* 5.7:1 on cream  */
+--text-link:var(--mint-deep);
+--text-link-hover:var(--ink);
+
+/* --- Semantic: surface --- */
+--surface-page:var(--cream-100);
+--surface-card:var(--paper);
+--surface-sunken:var(--cream-200);
+--surface-inset:var(--cream-50);
+--surface-inverse:var(--forest);
+--surface-inverse-deep:var(--forest-deep);
+--surface-accent:var(--mint-wash);
+--surface-highlight:var(--lemon-wash);
+
+/* --- Semantic: border --- */
+--border-hairline:var(--cream-300);
+--border-strong:var(--cream-400);
+--border-accent:var(--mint-deep);
+--border-inverse:rgba(251,241,202,.18);
+--border-focus:rgba(0,105,92,.45);
+
+/* --- Semantic: status — fills are bright, labels are always ink --- */
+--status-sale:var(--lemon);
+--status-sale-text:var(--ink);
+--status-low:var(--lemon-deep);
+--status-out:rgba(0,59,49,.78);
+--status-new:var(--mint);
+--status-new-text:var(--ink);
+
+/* --- Gradients — light gradients, so they always carry ink text --- */
+--btn-gradient:linear-gradient(135deg,#21FFA8 0%,#8CFAC4 52%,#FFEB6C 100%);
+--btn-gradient-hover:linear-gradient(135deg,#00F09A 0%,#79F5B9 52%,#FFE23F 100%);
+--hero-wash:linear-gradient(180deg,#FBF1CA 0%,#F5E7B8 100%);
+--dark-wash:linear-gradient(160deg,#005247 0%,#003B33 100%);
+--photo-scrim:linear-gradient(180deg,rgba(0,59,49,0) 38%,rgba(0,59,49,.74) 100%);
+}

@@ -6,6 +6,7 @@ import { mockProducts } from '../lib/mockData';
 // In production, replace with: const { data: products } = await supabase.from('products').select().eq('is_featured', true).limit(3);
 const featuredProducts = mockProducts.filter((p) => p.is_featured).slice(0, 3);
 
+// Emoji carry the categorical load — 🧶 yarn, 🪝 hook, ✂️ tools, 📦 bundles, 📄 patterns.
 const categories = [
   { name: 'Yarn Only', icon: '🧶', href: '/store?category=Yarn' },
   { name: 'Yarn + Tools', icon: '🪝', href: '/store?category=Kits' },
@@ -13,44 +14,57 @@ const categories = [
   { name: 'Project Bundles', icon: '📦', href: '/store?category=Bundles' },
   { name: 'Patterns', icon: '📄', href: '/store?category=Patterns' },
 ];
+
+const trustPoints = ['Project-Ready Bundles', 'Ships Worldwide', 'Quality Yarn & Tools'];
+
+const patternTools = [
+  { icon: '🧮', label: 'Stitch Calculator' },
+  { icon: '📏', label: 'Gauge Guide' },
+  { icon: '🪝', label: 'Hook Size Chart' },
+  { icon: '🔢', label: 'Row Counter' },
+  { icon: '📄', label: 'Pattern Export' },
+  { icon: '🧶', label: 'Yarn Weight' },
+];
+
+// Shared button recipes. Primary sits on a LIGHT gradient, so its label is ink.
+const btnPrimary =
+  'inline-flex items-center gap-2 rounded-pill bg-btn-gradient px-8 py-4 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97]';
+const btnSecondary =
+  'inline-flex items-center gap-2 rounded-pill border border-cream-300 bg-paper px-8 py-4 text-sm font-bold text-ink shadow-xs transition-all duration-fast ease-out hover:-translate-y-0.5 active:scale-[.97]';
+const btnSoft =
+  'inline-flex items-center gap-2 rounded-pill bg-mint-wash px-8 py-4 text-sm font-bold text-mint-deep transition-all duration-fast ease-out hover:-translate-y-0.5 hover:bg-mint-soft active:scale-[.97]';
+const btnGhost =
+  'group inline-flex items-center gap-2 rounded-pill px-4 py-2 text-sm font-bold text-ink-body transition-all duration-fast ease-out hover:bg-cream-200';
 ---
 
-<Layout title="Welcome" description="Quality yarn kits and crochet tools for every project — everything you need to create.">
-  <!-- Hero -->
-  <section class="relative min-h-[90vh] flex items-center overflow-hidden bg-brand-gradient">
-    <!-- Decorative yarn circles -->
+<Layout
+  title="Welcome"
+  description="Quality yarn kits and crochet tools for every project — everything you need to create."
+>
+  <!-- ============================================================
+       Hero — --hero-wash. No glow orbs: they read as noise at brand
+       scale. The one italic Newsreader word is the signature move.
+       ============================================================ -->
+  <section class="bg-hero-wash pb-24 pt-20">
     <div
-      class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-sky/20 blur-3xl pointer-events-none"
+      class="mx-auto grid max-w-container items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8"
     >
-    </div>
-    <div
-      class="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-mint/20 blur-3xl pointer-events-none"
-    >
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid lg:grid-cols-2 gap-16 items-center">
-      <!-- Text -->
       <div class="order-2 lg:order-1">
-        <span
-          class="inline-block text-mint-dark text-sm font-medium tracking-widest uppercase mb-4"
+        <span class="zz-eyebrow">Your next crochet project starts here</span>
+        <h1
+          class="mt-3 font-display text-display-1 font-extrabold text-ink"
         >
-          Your next crochet project starts here
-        </span>
-        <h1 class="font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold text-slate-dark leading-tight">
-          Everything you need to
-          <em class="text-mint-dark not-italic">create</em>
+          Everything you need to <span class="zz-emph">create</span>
         </h1>
-        <p class="mt-6 text-slate-warm text-lg leading-relaxed max-w-md">
-          Get project-ready yarn kits, quality tools, or shop separately — we bundle exactly what
+        <p class="mt-5 max-w-md text-[17px] leading-relaxed text-ink-body">
+          Get project-ready yarn kits, quality tools, or shop separately — I bundle exactly what
           you need for your next crochet masterpiece.
         </p>
-        <div class="mt-10 flex flex-wrap items-center gap-4">
-          <a
-            href="/store"
-            class="inline-flex items-center gap-2 bg-btn-gradient text-paper hover:brightness-105 font-semibold px-8 py-3.5 rounded-full transition-all duration-200 text-sm"
-          >
+
+        <div class="mt-8 flex flex-wrap items-center gap-4">
+          <a href="/store" class={btnPrimary}>
             Browse Yarn Kits
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -59,13 +73,10 @@ const categories = [
               />
             </svg>
           </a>
-          <a
-            href="/gallery"
-            class="inline-flex items-center gap-2 text-slate-warm hover:text-mint-dark font-medium text-sm transition-colors group"
-          >
+          <a href="/gallery" class={btnGhost}>
             View Gallery
             <svg
-              class="w-4 h-4 group-hover:translate-x-1 transition-transform"
+              class="h-4 w-4 transition-transform duration-base ease-out group-hover:translate-x-1"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -80,98 +91,94 @@ const categories = [
           </a>
         </div>
 
-        <!-- Trust badges -->
-        <div class="mt-12 flex flex-wrap gap-6">
+        <!-- Trust row — ✦ is the eyebrow leader glyph -->
+        <div class="mt-11 flex flex-wrap gap-6">
           {
-            [
-              { icon: '✦', text: 'Project-Ready Bundles' },
-              { icon: '✦', text: 'Ships Worldwide' },
-              { icon: '✦', text: 'Quality Yarn & Tools' },
-            ].map((badge) => (
-              <div class="flex items-center gap-2 text-sm text-slate-light">
-                <span class="text-mint-dark text-xs">{badge.icon}</span>
-                {badge.text}
+            trustPoints.map((point) => (
+              <div class="flex items-center gap-2 text-[13.5px] text-ink-muted">
+                <span class="text-[11px] text-mint-deep">✦</span>
+                {point}
               </div>
             ))
           }
         </div>
       </div>
 
-      <!-- Hero image collage -->
-      <div class="order-1 lg:order-2 relative">
+      <!-- Photo collage: 24px radius, shadow-lg, offset second column,
+           with a floating paper card breaking the bottom edge. -->
+      <div class="relative order-1 lg:order-2">
         <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-4">
-            <div class="rounded-3xl overflow-hidden aspect-[3/4] shadow-xl">
-              <img
-                src="/assets/homepage-photos/pexels-arina-krasnikova-5709862.jpg"
-                alt="Colorful yarn collection"
-                class="w-full h-full object-cover"
-              />
-            </div>
-            <div class="rounded-3xl overflow-hidden aspect-square shadow-lg">
-              <img
-                src="/assets/homepage-photos/pexels-kseniachernaya-5807027.jpg"
-                alt="Crochet project in progress"
-                class="w-full h-full object-cover"
-              />
-            </div>
+          <div class="grid gap-4">
+            <img
+              src="/assets/homepage-photos/pexels-arina-krasnikova-5709862.jpg"
+              alt="Colourful yarn collection"
+              class="aspect-[3/4] w-full rounded-photo object-cover shadow-lg"
+              loading="eager"
+            />
+            <img
+              src="/assets/homepage-photos/pexels-kseniachernaya-5807027.jpg"
+              alt="Crochet project in progress"
+              class="aspect-square w-full rounded-photo object-cover shadow-lg"
+              loading="lazy"
+            />
           </div>
-          <div class="space-y-4 mt-8">
-            <div class="rounded-3xl overflow-hidden aspect-square shadow-lg">
-              <img
-                src="/assets/homepage-photos/pexels-kumoknits-4601228.jpg"
-                alt="Yarn and crochet hooks"
-                class="w-full h-full object-cover"
-              />
-            </div>
-            <div class="rounded-3xl overflow-hidden aspect-[3/4] shadow-xl">
-              <img
-                src="/assets/homepage-photos/pexels-maria-sardar-15862201-6905162.jpg"
-                alt="Finished crochet piece"
-                class="w-full h-full object-cover"
-              />
-            </div>
+          <div class="mt-8 grid gap-4">
+            <img
+              src="/assets/homepage-photos/pexels-kumoknits-4601228.jpg"
+              alt="Yarn and crochet hooks"
+              class="aspect-square w-full rounded-photo object-cover shadow-lg"
+              loading="lazy"
+            />
+            <img
+              src="/assets/homepage-photos/pexels-maria-sardar-15862201-6905162.jpg"
+              alt="Finished crochet piece"
+              class="aspect-[3/4] w-full rounded-photo object-cover shadow-lg"
+              loading="lazy"
+            />
           </div>
         </div>
 
-        <!-- Floating badge -->
         <div
-          class="absolute -bottom-4 left-4 bg-white rounded-2xl shadow-xl px-5 py-4 flex items-center gap-3"
+          class="absolute -bottom-5 left-4 flex items-center gap-3 rounded-card bg-paper px-5 py-3.5 shadow-xl"
         >
-          <div class="w-10 h-10 bg-mint/20 rounded-full flex items-center justify-center text-mint-dark text-xl">
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-pill bg-lemon-wash text-xl"
+          >
             🧶
           </div>
           <div>
-            <p class="text-xs text-slate-light">New arrivals</p>
-            <p class="text-sm font-semibold text-slate-dark">Autumn Yarn Collection</p>
+            <p class="text-micro text-ink-muted">New arrivals</p>
+            <p class="text-[13.5px] font-bold text-ink">Autumn Yarn Collection</p>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Categories -->
-  <section class="py-20 bg-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-12">
-        <h2 class="font-serif text-4xl font-semibold text-slate-dark">Shop by Type</h2>
-        <p class="mt-3 text-slate-warm">Find the right supplies for your project</p>
+  <!-- ============================================================
+       Shop by Type — paper band
+       ============================================================ -->
+  <section class="bg-paper py-24">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      <div class="mb-9 text-center">
+        <h2 class="font-display text-[28px] font-extrabold text-ink">Shop by Type</h2>
+        <p class="mt-2 text-ink-body">Find the right supplies for your project</p>
       </div>
-      <div class="flex flex-wrap justify-center gap-4">
+      <div class="flex flex-wrap justify-center gap-3">
         {
           categories.map((cat) => (
             <a
               href={cat.href}
-              class="flex items-center gap-2 bg-mint-muted/50 hover:bg-mint hover:text-paper text-slate-warm font-medium px-6 py-3 rounded-full text-sm transition-all duration-200 group"
+              class="inline-flex items-center gap-2 rounded-pill bg-mint-wash px-5 py-3 text-sm font-bold text-mint-deep transition-all duration-fast ease-out hover:-translate-y-0.5 hover:bg-mint-soft"
             >
-              <span class="text-lg">{cat.icon}</span>
+              <span class="text-base">{cat.icon}</span>
               {cat.name}
             </a>
           ))
         }
         <a
           href="/store"
-          class="flex items-center gap-2 border border-slate-light/30 hover:border-mint hover:text-mint-dark text-slate-light font-medium px-6 py-3 rounded-full text-sm transition-all duration-200"
+          class="inline-flex items-center gap-2 rounded-pill border border-cream-300 px-5 py-3 text-sm font-bold text-ink-body transition-all duration-fast ease-out hover:-translate-y-0.5 hover:border-mint-deep hover:text-mint-deep"
         >
           View All →
         </a>
@@ -179,50 +186,60 @@ const categories = [
     </div>
   </section>
 
-  <!-- Featured Products -->
-  <section class="py-20 bg-sky-muted/30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+  <!-- ============================================================
+       Featured Kits — sunken band (cream-200)
+       ============================================================ -->
+  <section class="bg-cream-200 py-24">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <span class="text-sky-dark text-sm font-medium tracking-widest uppercase">Popular Picks</span>
-          <h2 class="font-serif text-4xl font-semibold text-slate-dark mt-1">Featured Kits</h2>
+          <span class="zz-eyebrow">Popular Picks</span>
+          <h2 class="mt-2 font-display text-[28px] font-extrabold text-ink">Featured Kits</h2>
         </div>
-        <a
-          href="/store"
-          class="text-slate-warm hover:text-mint-dark text-sm font-medium transition-colors shrink-0"
-        >
-          View all →
+        <a href="/store" class={`${btnGhost} shrink-0`}>
+          View all
+          <svg
+            class="h-4 w-4 transition-transform duration-base ease-out group-hover:translate-x-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 8l4 4m0 0l-4 4m4-4H3"
+            />
+          </svg>
         </a>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {featuredProducts.map((product) => <ProductCard product={product} />)}
       </div>
     </div>
   </section>
 
-  <!-- Pattern Generator CTA -->
-  <section class="py-20 bg-btn-gradient text-paper overflow-hidden relative">
+  <!-- ============================================================
+       Pattern generator — the one full-bleed --btn-gradient band.
+       It is a LIGHT gradient, so everything on it is ink dark.
+       ============================================================ -->
+  <section class="bg-btn-gradient py-[88px] text-ink">
     <div
-      class="absolute top-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2 pointer-events-none"
+      class="mx-auto grid max-w-container items-center gap-12 px-4 py-2 sm:px-6 lg:grid-cols-2 lg:px-8"
     >
-    </div>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-      <div class="grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <span class="text-paper/80 text-sm font-medium tracking-widest uppercase">Free Tool</span>
-          <h2 class="font-serif text-4xl sm:text-5xl font-semibold mt-2 leading-tight">
-            Generate your own crochet pattern
-          </h2>
-          <p class="mt-4 text-paper/90 leading-relaxed max-w-md">
-            Use my free pattern generator to calculate stitch counts, plan your hook size, and
-            export a printable pattern — no experience needed.
-          </p>
-          <a
-            href="/pattern-generator"
-            class="mt-8 inline-flex items-center gap-2 bg-paper text-ink font-semibold px-8 py-3.5 rounded-full hover:bg-white transition-all text-sm shadow-sm"
-          >
+      <div>
+        <span class="zz-eyebrow zz-eyebrow--on-accent">Free Tool</span>
+        <h2 class="mt-2 font-display text-display-2 font-extrabold text-ink">
+          Generate your own crochet pattern
+        </h2>
+        <p class="mt-4 max-w-md text-[17px] leading-relaxed text-forest-deep/90">
+          Use my free pattern generator to calculate stitch counts, plan your hook size, and export
+          a printable pattern — no experience needed.
+        </p>
+        <div class="mt-8">
+          <a href="/pattern-generator" class={btnSecondary}>
             Try Pattern Generator
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -232,110 +249,103 @@ const categories = [
             </svg>
           </a>
         </div>
-        <div class="hidden lg:grid grid-cols-3 gap-3">
-          {
-            [
-              { label: 'Stitch Calculator', icon: '🧮' },
-              { label: 'Gauge Guide', icon: '📏' },
-              { label: 'Hook Size Chart', icon: '🪝' },
-              { label: 'Row Counter', icon: '🔢' },
-              { label: 'Pattern Export', icon: '📄' },
-              { label: 'Yarn Weight', icon: '🧶' },
-            ].map((feature) => (
-              <div class="bg-white/40 backdrop-blur rounded-2xl p-4 text-center">
-                <div class="text-2xl mb-2">{feature.icon}</div>
-                <p class="text-xs font-medium text-slate-dark">{feature.label}</p>
-              </div>
-            ))
-          }
+      </div>
+
+      <!-- Glass tiles: paper at 55% + 6px blur keeps ink labels above 4.5:1. -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {
+          patternTools.map((tool) => (
+            <div class="zz-glass rounded-card px-3 py-4 text-center">
+              <div class="text-[22px]">{tool.icon}</div>
+              <p class="mt-1.5 text-micro font-bold text-ink">{tool.label}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       My Story — paper band
+       ============================================================ -->
+  <section id="about" class="bg-paper py-24">
+    <div
+      class="mx-auto grid max-w-container items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8"
+    >
+      <div class="relative">
+        <img
+          src="/assets/homepage-photos/pexels-rahimegul-29889872.jpg"
+          alt="Yarn collection and crochet supplies"
+          class="aspect-square w-full rounded-[32px] object-cover shadow-xl"
+          loading="lazy"
+        />
+        <!-- StatTile, breaking the photo edge -->
+        <div
+          class="absolute -bottom-6 right-0 rounded-card border border-cream-300 bg-paper px-6 py-5 shadow-xl lg:-right-6"
+        >
+          <p class="font-display text-[36px] font-extrabold leading-none text-mint-deep">100+</p>
+          <p class="mt-1.5 text-[13.5px] text-ink-muted">projects enabled</p>
+        </div>
+      </div>
+
+      <div>
+        <span class="zz-eyebrow">My Story</span>
+        <h2 class="mt-2 font-display text-[28px] font-extrabold leading-snug text-ink">
+          Made by hand, with intention
+        </h2>
+        <div class="mt-5 flex flex-col gap-3.5 leading-relaxed text-ink-body">
+          <p>
+            Hi! I'm the maker behind ZippyZack.com — a curated shop for crocheters who want quality
+            yarn and tools without the guesswork.
+          </p>
+          <p>
+            Every kit is carefully bundled with exactly what you need for a specific project — from
+            beginner-friendly amigurumi to advanced garments. Buy yarn only, add tools, or grab a
+            complete project bundle.
+          </p>
+          <p>
+            Can't find what you're looking for? Request a new product and I'll do my best to source
+            it for you!
+          </p>
+        </div>
+        <div class="mt-7 flex flex-wrap gap-4">
+          <a href="/store" class={btnPrimary}>Browse All Products</a>
+          <a href="/request-product" class={btnSoft}>Request a Product</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- About / Story -->
-  <section id="about" class="py-20 bg-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid lg:grid-cols-2 gap-16 items-center">
-        <div class="relative">
-          <div class="rounded-3xl overflow-hidden aspect-square shadow-2xl">
-            <img
-              src="/assets/homepage-photos/pexels-rahimegul-29889872.jpg"
-              alt="Yarn collection and crochet supplies"
-              class="w-full h-full object-cover"
-            />
-          </div>
-          <div
-            class="absolute -bottom-6 -right-6 bg-mint-muted rounded-2xl shadow-xl p-5 max-w-[200px]"
-          >
-            <p class="font-serif text-3xl font-bold text-mint-dark">100+</p>
-            <p class="text-sm text-slate-warm mt-1">projects enabled</p>
-          </div>
-        </div>
-        <div>
-          <span class="text-mint-dark text-sm font-medium tracking-widest uppercase"
-            >My Story</span
-          >
-          <h2 class="font-serif text-4xl font-semibold text-slate-dark mt-2 leading-tight">
-            Made by hand, with intention
-          </h2>
-          <div class="space-y-4 mt-6 text-slate-warm leading-relaxed">
-            <p>
-              Hi! I'm the maker behind ZippyZack.com — a curated shop for crocheters who want
-              quality yarn and tools without the guesswork.
-            </p>
-            <p>
-              Every kit is carefully bundled with exactly what you need for a specific project —
-              from beginner-friendly amigurumi to advanced garments. Buy yarn only, add tools, or
-              grab a complete project bundle.
-            </p>
-            <p>
-              Can't find what you're looking for? Request a new product and I'll do my best to
-              source it for you!
-            </p>
-          </div>
-          <div class="mt-8 flex flex-wrap gap-4">
-            <a
-              href="/store"
-              class="inline-flex items-center gap-2 bg-btn-gradient text-paper hover:brightness-105 font-semibold px-8 py-3.5 rounded-full transition-all text-sm"
-            >
-              Browse All Products
-            </a>
-            <a
-              href="/request-product"
-              class="inline-flex items-center gap-2 border border-slate-light/40 hover:border-mint hover:text-mint-dark text-slate-warm font-medium px-8 py-3.5 rounded-full transition-all text-sm"
-            >
-              Request a Product
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Newsletter -->
-  <section class="py-16 bg-sky-muted/40">
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <div class="text-4xl mb-4">💌</div>
-      <h2 class="font-serif text-3xl font-semibold text-slate-dark">Join the maker's list</h2>
-      <p class="mt-3 text-slate-warm text-sm">
+  <!-- ============================================================
+       Newsletter — --forest-wash band
+       ============================================================ -->
+  <section class="bg-forest-wash py-[72px] text-center">
+    <div class="mx-auto max-w-narrow px-4 sm:px-6 lg:px-8">
+      <div class="text-[34px]">💌</div>
+      <h2 class="mt-2 font-display text-[28px] font-extrabold text-ink">Join the maker's list</h2>
+      <p class="mx-auto mt-2 max-w-md text-ink-body">
         Get first access to new yarn arrivals, kit releases, and exclusive crochet tips.
       </p>
-      <form class="mt-8 flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onsubmit="return false;">
+      <form
+        class="mx-auto mt-7 flex max-w-md flex-col gap-3 sm:flex-row"
+        onsubmit="return false;"
+      >
+        <label for="newsletter-email" class="sr-only">Email address</label>
         <input
+          id="newsletter-email"
           type="email"
           placeholder="your@email.com"
-          class="flex-1 px-5 py-3 rounded-full border border-sky/30 bg-white text-slate-dark text-sm focus:outline-none focus:ring-2 focus:ring-mint/50"
+          class="flex-1 rounded-field border border-cream-300 bg-paper px-5 py-3.5 text-sm text-ink placeholder:text-ink-faint"
           required
         />
         <button
           type="submit"
-          class="bg-btn-gradient text-paper hover:brightness-105 font-semibold px-7 py-3 rounded-full text-sm transition-all whitespace-nowrap"
+          class="whitespace-nowrap rounded-pill bg-btn-gradient px-7 py-3.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97]"
         >
           Subscribe
         </button>
       </form>
-      <p class="mt-3 text-xs text-slate-light">No spam. Unsubscribe any time.</p>
+      <p class="mt-3 text-xs text-ink-muted">No spam. Unsubscribe any time.</p>
     </div>
   </section>
 </Layout>
