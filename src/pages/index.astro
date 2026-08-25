@@ -17,7 +17,7 @@ const categories = [
 
 <Layout title="Welcome" description="Quality yarn kits and crochet tools for every project — everything you need to create.">
   <!-- Hero -->
-  <section class="relative min-h-[90vh] flex items-center overflow-hidden bg-mint-muted/30">
+  <section class="relative min-h-[90vh] flex items-center overflow-hidden bg-brand-gradient">
     <!-- Decorative yarn circles -->
     <div
       class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-sky/20 blur-3xl pointer-events-none"
@@ -47,7 +47,7 @@ const categories = [
         <div class="mt-10 flex flex-wrap items-center gap-4">
           <a
             href="/store"
-            class="inline-flex items-center gap-2 bg-neon hover:bg-neon-hover text-slate-dark font-semibold px-8 py-3.5 rounded-full transition-colors duration-200 text-sm"
+            class="inline-flex items-center gap-2 bg-btn-gradient text-paper hover:brightness-105 font-semibold px-8 py-3.5 rounded-full transition-all duration-200 text-sm"
           >
             Browse Yarn Kits
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -162,7 +162,7 @@ const categories = [
           categories.map((cat) => (
             <a
               href={cat.href}
-              class="flex items-center gap-2 bg-mint-muted/50 hover:bg-mint hover:text-slate-dark text-slate-warm font-medium px-6 py-3 rounded-full text-sm transition-all duration-200 group"
+              class="flex items-center gap-2 bg-mint-muted/50 hover:bg-mint hover:text-paper text-slate-warm font-medium px-6 py-3 rounded-full text-sm transition-all duration-200 group"
             >
               <span class="text-lg">{cat.icon}</span>
               {cat.name}
@@ -201,7 +201,7 @@ const categories = [
   </section>
 
   <!-- Pattern Generator CTA -->
-  <section class="py-20 bg-mint text-slate-dark overflow-hidden relative">
+  <section class="py-20 bg-btn-gradient text-paper overflow-hidden relative">
     <div
       class="absolute top-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2 pointer-events-none"
     >
@@ -209,17 +209,17 @@ const categories = [
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
       <div class="grid lg:grid-cols-2 gap-12 items-center">
         <div>
-          <span class="text-mint-dark text-sm font-medium tracking-widest uppercase">Free Tool</span>
+          <span class="text-paper/80 text-sm font-medium tracking-widest uppercase">Free Tool</span>
           <h2 class="font-serif text-4xl sm:text-5xl font-semibold mt-2 leading-tight">
             Generate your own crochet pattern
           </h2>
-          <p class="mt-4 text-slate-warm leading-relaxed max-w-md">
+          <p class="mt-4 text-paper/90 leading-relaxed max-w-md">
             Use my free pattern generator to calculate stitch counts, plan your hook size, and
             export a printable pattern — no experience needed.
           </p>
           <a
             href="/pattern-generator"
-            class="mt-8 inline-flex items-center gap-2 bg-neon text-slate-dark font-semibold px-8 py-3.5 rounded-full hover:bg-neon-hover transition-colors text-sm"
+            class="mt-8 inline-flex items-center gap-2 bg-paper text-ink font-semibold px-8 py-3.5 rounded-full hover:bg-white transition-all text-sm shadow-sm"
           >
             Try Pattern Generator
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -297,7 +297,7 @@ const categories = [
           <div class="mt-8 flex flex-wrap gap-4">
             <a
               href="/store"
-              class="inline-flex items-center gap-2 bg-neon hover:bg-neon-hover text-slate-dark font-semibold px-8 py-3.5 rounded-full transition-colors text-sm"
+              class="inline-flex items-center gap-2 bg-btn-gradient text-paper hover:brightness-105 font-semibold px-8 py-3.5 rounded-full transition-all text-sm"
             >
               Browse All Products
             </a>
@@ -330,7 +330,7 @@ const categories = [
         />
         <button
           type="submit"
-          class="bg-neon hover:bg-neon-hover text-slate-dark font-semibold px-7 py-3 rounded-full text-sm transition-colors whitespace-nowrap"
+          class="bg-btn-gradient text-paper hover:brightness-105 font-semibold px-7 py-3 rounded-full text-sm transition-all whitespace-nowrap"
         >
           Subscribe
         </button>

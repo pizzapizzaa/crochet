@@ -72,7 +72,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
                         {item.title}
                       </h3>
                       {item.description && (
-                        <p class="text-cream-200 text-sm mt-1 leading-relaxed">{item.description}</p>
+                        <p class="text-paper/90 text-sm mt-1 leading-relaxed">{item.description}</p>
                       )}
                       {productSlug && (
                         <span class="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full hover:bg-rose-dust transition-colors">
@@ -109,7 +109,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
         <div class="flex flex-wrap items-center justify-center gap-4">
           <a
             href="/store"
-            class="bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors text-sm"
+            class="bg-btn-gradient text-paper hover:brightness-105 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
           >
             Shop All Items
           </a>

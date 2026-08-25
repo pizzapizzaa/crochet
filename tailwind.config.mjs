@@ -4,53 +4,59 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Backgrounds
+        // Core brand tokens
+        ink: '#330122', // text primary
+        paper: '#FAF5EC', // text secondary (on dark bg / gradient buttons)
+        blush: '#FFDDFA', // background solid primary
+        sand: '#FFF3DD', // background solid secondary
+
+        // Background surfaces (light -> deep)
         cream: {
-          50: '#FDFBF7',
-          100: '#F8FAFA',
-          200: '#EEF4F3',
-          300: '#E0EEEC',
+          50: '#FFFBF6', // near-white cards
+          100: '#FFDDFA', // background solid primary
+          200: '#FFF3DD', // background solid secondary
+          300: '#F5C9FB', // hairline borders / dividers
         },
-        // Pastel green - primary accent
+        // Magenta - primary accent (from button gradient)
         mint: {
-          DEFAULT: '#A8D5BA',
-          light: '#C5E6D2',
-          dark: '#7BC49A',
-          muted: '#D4EBE0',
+          DEFAULT: '#ED5AEC',
+          light: '#F9C8FB',
+          dark: '#B81E9C',
+          muted: '#FCE4FB',
         },
-        // Pastel blue - secondary accent
+        // Lavender - secondary accent (gradient tail)
         sky: {
-          DEFAULT: '#A8D4E6',
-          light: '#C5E4F0',
-          dark: '#7BC0D9',
-          muted: '#D4ECF5',
+          DEFAULT: '#D555FF',
+          light: '#EDB5FF',
+          dark: '#8F2BC4',
+          muted: '#F5E3FF',
         },
-        // Neon yellow - CTAs
+        // CTA fills
         neon: {
-          DEFAULT: '#E6FF00',
-          light: '#F0FF66',
-          dark: '#CCE600',
-          hover: '#D4ED00',
+          DEFAULT: '#FE64DC',
+          light: '#FF8FE7',
+          dark: '#E257F6',
+          hover: '#ED5AEC',
         },
         // Text colors
         slate: {
-          warm: '#4A5568',
-          dark: '#1A202C',
-          light: '#718096',
-          muted: '#A0AEC0',
+          warm: '#63234B',
+          dark: '#330122',
+          light: '#8C5A7B',
+          muted: '#B98FAB',
         },
         // Legacy aliases for easier migration
-        'rose-dust': '#E6FF00',
-        'rose-dark': '#D4ED00',
+        'rose-dust': '#B81E9C',
+        'rose-dark': '#96157F',
         sage: {
-          DEFAULT: '#A8D5BA',
-          light: '#C5E6D2',
-          dark: '#7BC49A',
+          DEFAULT: '#8F2BC4',
+          light: '#EDB5FF',
+          dark: '#6E1C9B',
         },
         brown: {
-          warm: '#4A5568',
-          dark: '#1A202C',
-          light: '#718096',
+          warm: '#63234B',
+          dark: '#330122',
+          light: '#8C5A7B',
         },
       },
       fontFamily: {
@@ -58,6 +64,10 @@ export default {
         sans: ['"Inter"', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
+        'brand-gradient':
+          'linear-gradient(to right top, #ffddfa, #fcd3fa, #f9c8fb, #f3bffd, #edb5ff)',
+        'btn-gradient':
+          'linear-gradient(to right top, #fe64dc, #f75ee4, #ed5aec, #e257f6, #d555ff)',
         'yarn-texture': "url('/textures/yarn-bg.svg')",
       },
     },

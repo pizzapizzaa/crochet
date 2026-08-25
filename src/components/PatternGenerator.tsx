@@ -530,7 +530,7 @@ export default function PatternGenerator() {
 
           <button
             onClick={generate}
-            className="w-full bg-rose-dust hover:bg-rose-dark text-white font-semibold py-4 rounded-full transition-colors text-sm flex items-center justify-center gap-2"
+            className="w-full bg-btn-gradient text-paper hover:brightness-105 font-semibold py-4 rounded-full transition-all text-sm flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -678,7 +678,7 @@ export default function PatternGenerator() {
                         </button>
                         <button
                           onClick={downloadPattern}
-                          className="flex items-center gap-1.5 text-xs bg-rose-dust hover:bg-rose-dark text-white px-3 py-1.5 rounded-full transition-colors"
+                          className="flex items-center gap-1.5 text-xs bg-btn-gradient text-paper hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
                         >
                           Download
                         </button>
