@@ -7,11 +7,11 @@ import { mockProducts } from '../lib/mockData';
 const featuredProducts = mockProducts.filter((p) => p.is_featured).slice(0, 3);
 
 const categories = [
-  { name: 'Bags', icon: '👜', href: '/store?category=Bags' },
-  { name: 'Clothing', icon: '🧥', href: '/store?category=Clothing' },
-  { name: 'Accessories', icon: '🧣', href: '/store?category=Accessories' },
-  { name: 'Home', icon: '🏡', href: '/store?category=Home' },
-  { name: 'Toys', icon: '🧸', href: '/store?category=Toys' },
+  { name: 'Yarn Only', icon: '🧶', href: '/store?category=Yarn' },
+  { name: 'Yarn + Tools', icon: '🪝', href: '/store?category=Kits' },
+  { name: 'Tools', icon: '✂️', href: '/store?category=Tools' },
+  { name: 'Project Bundles', icon: '📦', href: '/store?category=Bundles' },
+  { name: 'Patterns', icon: '📄', href: '/store?category=Patterns' },
 ];
 ---
 
@@ -34,22 +34,22 @@ const categories = [
         <span
           class="inline-block text-rose-dust text-sm font-medium tracking-widest uppercase mb-4"
         >
-          Handmade with love
+          Your next crochet project starts here
         </span>
         <h1 class="font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold text-brown-dark leading-tight">
-          Crafted for the
-          <em class="text-rose-dust not-italic">cozy</em> life
+          Everything you need to
+          <em class="text-rose-dust not-italic">create</em>
         </h1>
         <p class="mt-6 text-brown-warm text-lg leading-relaxed max-w-md">
-          Every piece is hand-crocheted with care — from market totes and sun hats to cosy cardigans
-          and whimsical toys. Slow fashion, made to last.
+          Get project-ready yarn kits, quality tools, or shop separately — we bundle exactly what
+          you need for your next crochet masterpiece.
         </p>
         <div class="mt-10 flex flex-wrap items-center gap-4">
           <a
             href="/store"
             class="inline-flex items-center gap-2 bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors duration-200 text-sm"
           >
-            Shop the Collection
+            Browse Yarn Kits
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
@@ -84,9 +84,9 @@ const categories = [
         <div class="mt-12 flex flex-wrap gap-6">
           {
             [
-              { icon: '✦', text: '100% Handmade' },
+              { icon: '✦', text: 'Project-Ready Bundles' },
               { icon: '✦', text: 'Ships Worldwide' },
-              { icon: '✦', text: 'Custom Orders' },
+              { icon: '✦', text: 'Quality Yarn & Tools' },
             ].map((badge) => (
               <div class="flex items-center gap-2 text-sm text-brown-light">
                 <span class="text-rose-dust text-xs">{badge.icon}</span>
@@ -103,15 +103,15 @@ const categories = [
           <div class="space-y-4">
             <div class="rounded-3xl overflow-hidden aspect-[3/4] shadow-xl">
               <img
-                src="https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=600&q=80"
-                alt="Crocheted tote bag"
+                src="/assets/homepage-photos/pexels-arina-krasnikova-5709862.jpg"
+                alt="Colorful yarn collection"
                 class="w-full h-full object-cover"
               />
             </div>
             <div class="rounded-3xl overflow-hidden aspect-square shadow-lg">
               <img
-                src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
-                alt="Amigurumi bunny"
+                src="/assets/homepage-photos/pexels-kseniachernaya-5807027.jpg"
+                alt="Crochet project in progress"
                 class="w-full h-full object-cover"
               />
             </div>
@@ -119,15 +119,15 @@ const categories = [
           <div class="space-y-4 mt-8">
             <div class="rounded-3xl overflow-hidden aspect-square shadow-lg">
               <img
-                src="https://images.unsplash.com/photo-1529958030586-3aae4ca485ff?w=600&q=80"
-                alt="Sun hat"
+                src="/assets/homepage-photos/pexels-kumoknits-4601228.jpg"
+                alt="Yarn and crochet hooks"
                 class="w-full h-full object-cover"
               />
             </div>
             <div class="rounded-3xl overflow-hidden aspect-[3/4] shadow-xl">
               <img
-                src="https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=600&q=80"
-                alt="Crochet cardigan"
+                src="/assets/homepage-photos/pexels-maria-sardar-15862201-6905162.jpg"
+                alt="Finished crochet piece"
                 class="w-full h-full object-cover"
               />
             </div>
@@ -142,8 +142,8 @@ const categories = [
             🧶
           </div>
           <div>
-            <p class="text-xs text-brown-light">Latest drop</p>
-            <p class="text-sm font-semibold text-brown-dark">Granny Square Cardigan</p>
+            <p class="text-xs text-brown-light">New arrivals</p>
+            <p class="text-sm font-semibold text-brown-dark">Autumn Yarn Collection</p>
           </div>
         </div>
       </div>
@@ -154,8 +154,8 @@ const categories = [
   <section class="py-20 bg-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-12">
-        <h2 class="font-serif text-4xl font-semibold text-brown-dark">Shop by Category</h2>
-        <p class="mt-3 text-brown-warm">Find exactly what you're looking for</p>
+        <h2 class="font-serif text-4xl font-semibold text-brown-dark">Shop by Type</h2>
+        <p class="mt-3 text-brown-warm">Find the right supplies for your project</p>
       </div>
       <div class="flex flex-wrap justify-center gap-4">
         {
@@ -184,8 +184,8 @@ const categories = [
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
         <div>
-          <span class="text-rose-dust text-sm font-medium tracking-widest uppercase">New & Loved</span>
-          <h2 class="font-serif text-4xl font-semibold text-brown-dark mt-1">Featured Pieces</h2>
+          <span class="text-rose-dust text-sm font-medium tracking-widest uppercase">Popular Picks</span>
+          <h2 class="font-serif text-4xl font-semibold text-brown-dark mt-1">Featured Kits</h2>
         </div>
         <a
           href="/store"
@@ -260,16 +260,16 @@ const categories = [
         <div class="relative">
           <div class="rounded-3xl overflow-hidden aspect-square shadow-2xl">
             <img
-              src="https://images.unsplash.com/photo-1582582621959-48d27397dc69?w=800&q=80"
-              alt="Crocheting in progress"
+              src="/assets/homepage-photos/pexels-rahimegul-29889872.jpg"
+              alt="Yarn collection and crochet supplies"
               class="w-full h-full object-cover"
             />
           </div>
           <div
             class="absolute -bottom-6 -right-6 bg-cream-100 rounded-2xl shadow-xl p-5 max-w-[200px]"
           >
-            <p class="font-serif text-3xl font-bold text-rose-dust">5+</p>
-            <p class="text-sm text-brown-warm mt-1">years of crocheting</p>
+            <p class="font-serif text-3xl font-bold text-rose-dust">100+</p>
+            <p class="text-sm text-brown-warm mt-1">projects enabled</p>
           </div>
         </div>
         <div>
@@ -281,16 +281,17 @@ const categories = [
           </h2>
           <div class="space-y-4 mt-6 text-brown-warm leading-relaxed">
             <p>
-              Hi! I'm the maker behind ZippyZack.com — a one-person studio creating slow, thoughtful
-              crochet pieces from my little craft corner.
+              Hi! I'm the maker behind ZippyZack.com — a curated shop for crocheters who want
+              quality yarn and tools without the guesswork.
             </p>
             <p>
-              Every item is worked up in small batches, using natural fibres where possible. I
-              believe in making things that last, things that have a story, and things that bring a
-              bit of warmth to everyday life.
+              Every kit is carefully bundled with exactly what you need for a specific project —
+              from beginner-friendly amigurumi to advanced garments. Buy yarn only, add tools, or
+              grab a complete project bundle.
             </p>
             <p>
-              Custom orders are always welcome — reach out if you have something special in mind!
+              Can't find what you're looking for? Request a new product and I'll do my best to
+              source it for you!
             </p>
           </div>
           <div class="mt-8 flex flex-wrap gap-4">
@@ -298,13 +299,13 @@ const categories = [
               href="/store"
               class="inline-flex items-center gap-2 bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors text-sm"
             >
-              Shop the Collection
+              Browse All Products
             </a>
             <a
-              href="/contact"
+              href="/request-product"
               class="inline-flex items-center gap-2 border border-brown-light/40 hover:border-rose-dust hover:text-rose-dust text-brown-warm font-medium px-8 py-3.5 rounded-full transition-all text-sm"
             >
-              Get in Touch
+              Request a Product
             </a>
           </div>
         </div>
@@ -316,9 +317,9 @@ const categories = [
   <section class="py-16 bg-cream-200">
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <div class="text-4xl mb-4">💌</div>
-      <h2 class="font-serif text-3xl font-semibold text-brown-dark">Join the yarn-lover's list</h2>
+      <h2 class="font-serif text-3xl font-semibold text-brown-dark">Join the maker's list</h2>
       <p class="mt-3 text-brown-warm text-sm">
-        Get first access to new drops, pattern freebies, and behind-the-scenes peeks.
+        Get first access to new yarn arrivals, kit releases, and exclusive crochet tips.
       </p>
       <form class="mt-8 flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onsubmit="return false;">
         <input

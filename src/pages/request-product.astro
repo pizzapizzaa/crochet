@@ -1,0 +1,182 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Request a Product"
+  description="Can't find what you need? Request a new crochet design, yarn, tool, or other product and we'll try to source it for you."
+>
+  <!-- Header -->
+  <section class="bg-white border-b border-cream-300 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="text-xs text-brown-light mb-3 flex items-center gap-1.5">
+        <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
+        <span>/</span>
+        <span class="text-brown-warm">Request Product</span>
+      </nav>
+      <div class="text-center max-w-2xl mx-auto">
+        <span class="text-rose-dust text-sm font-medium tracking-widest uppercase">We're listening</span>
+        <h1 class="font-serif text-5xl font-semibold text-brown-dark mt-2">
+          Request a Product
+        </h1>
+        <p class="mt-4 text-brown-warm leading-relaxed">
+          Can't find the yarn, tool, or kit you're looking for? Let us know what you need and we'll do our best to source it or create it for you.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Form Section -->
+  <section class="py-16 bg-cream-100">
+    <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
+      <form id="request-form" class="bg-white rounded-3xl shadow-xl p-8 sm:p-10">
+        <!-- Request Type -->
+        <div class="mb-6">
+          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+            What would you like to request?
+          </label>
+          <select
+            name="request_type"
+            required
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100"
+          >
+            <option value="">Select a category...</option>
+            <option value="crochet_design">New crochet design / pattern</option>
+            <option value="yarn">New yarn type or color</option>
+            <option value="tool">Crochet tool or accessory</option>
+            <option value="other">Other (please describe)</option>
+          </select>
+        </div>
+
+        <!-- Name -->
+        <div class="mb-6">
+          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+            Your Name
+          </label>
+          <input
+            type="text"
+            name="name"
+            required
+            placeholder="Jane Doe"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light"
+          />
+        </div>
+
+        <!-- Email -->
+        <div class="mb-6">
+          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+            Email Address
+          </label>
+          <input
+            type="email"
+            name="email"
+            required
+            placeholder="jane@example.com"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light"
+          />
+        </div>
+
+        <!-- Product Description -->
+        <div class="mb-6">
+          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+            Describe what you're looking for
+          </label>
+          <textarea
+            name="description"
+            required
+            rows="5"
+            placeholder="Please describe the product you'd like us to add. Include details like colors, sizes, brands, or any specific requirements..."
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light resize-none"
+          ></textarea>
+        </div>
+
+        <!-- Reference Link (Optional) -->
+        <div class="mb-8">
+          <label class="text-xs font-medium text-brown-warm uppercase tracking-widest mb-2 block">
+            Reference Link <span class="text-brown-light font-normal">(optional)</span>
+          </label>
+          <input
+            type="url"
+            name="reference_url"
+            placeholder="https://example.com/product-reference"
+            class="w-full border border-cream-300 rounded-xl px-4 py-3 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/30 focus:border-rose-dust bg-cream-100 placeholder-brown-light"
+          />
+          <p class="text-xs text-brown-light mt-2">
+            Link to a similar product, Pinterest pin, or image for reference
+          </p>
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          class="w-full bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors duration-200 text-sm"
+        >
+          Submit Request
+        </button>
+
+        <!-- Success Message (hidden by default) -->
+        <div id="success-message" class="hidden mt-6 p-4 bg-sage/10 border border-sage/30 rounded-xl text-center">
+          <p class="text-sage font-medium">Thank you for your request!</p>
+          <p class="text-sm text-brown-warm mt-1">We'll review it and get back to you soon.</p>
+        </div>
+      </form>
+
+      <!-- Info Cards -->
+      <div class="grid sm:grid-cols-2 gap-4 mt-8">
+        <div class="bg-white rounded-2xl p-5 text-center shadow-sm">
+          <div class="text-2xl mb-2">📬</div>
+          <h3 class="font-serif font-semibold text-brown-dark mb-1">We review everything</h3>
+          <p class="text-xs text-brown-light">Every request is personally reviewed</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 text-center shadow-sm">
+          <div class="text-2xl mb-2">⏱️</div>
+          <h3 class="font-serif font-semibold text-brown-dark mb-1">Quick response</h3>
+          <p class="text-xs text-brown-light">We'll get back to you within 48 hours</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Back to Shop CTA -->
+  <section class="py-12 bg-cream-200">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <p class="text-brown-warm text-sm">
+        Want to browse what's already available?
+      </p>
+      <a
+        href="/store"
+        class="mt-4 inline-flex items-center gap-2 bg-rose-dust hover:bg-rose-dark text-white font-medium px-8 py-3.5 rounded-full transition-colors text-sm"
+      >
+        Visit the Shop
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M17 8l4 4m0 0l-4 4m4-4H3"
+          />
+        </svg>
+      </a>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  const form = document.getElementById('request-form') as HTMLFormElement;
+  const successMessage = document.getElementById('success-message');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // For now, just show success message (replace with actual API call later)
+    const formData = new FormData(form);
+    console.log('Form submitted:', Object.fromEntries(formData));
+
+    // Show success message
+    successMessage?.classList.remove('hidden');
+    form.reset();
+
+    // Scroll to success message
+    successMessage?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+</script>
