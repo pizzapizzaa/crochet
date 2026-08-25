@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { mockProducts } from '../lib/mockData';
 
-const categories = ['All', 'Bags', 'Clothing', 'Accessories', 'Home', 'Toys'];
+const categories = ['All', 'Yarn', 'Kits', 'Tools', 'Bundles', 'Patterns'];
 const urlCategory = Astro.url.searchParams.get('category') ?? 'All';
 const urlSort = Astro.url.searchParams.get('sort') ?? 'featured';
 const urlSearch = Astro.url.searchParams.get('q') ?? '';
@@ -32,7 +32,7 @@ else if (urlSort === 'newest')
 else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
 ---
 
-<Layout title="Shop" description="Browse handcrafted crochet bags, clothing, accessories, home decor, and toys.">
+<Layout title="Shop" description="Browse yarn, crochet hooks, project kits, bundles and patterns — everything you need to create.">
   <!-- Page Header -->
   <section class="bg-white border-b border-cream-300 py-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -148,10 +148,10 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
         <!-- Price range note -->
         <div class="bg-rose-dust/5 rounded-2xl p-5 mt-4 border border-rose-dust/10">
           <p class="text-xs text-brown-warm leading-relaxed">
-            All items are one-of-a-kind and handmade to order. Custom commissions welcome — <a
-              href="/contact"
-              class="text-rose-dust hover:underline">get in touch!</a
-            >
+            Every kit is bundled by hand with exactly what the project needs. Can't find the yarn
+              or hook you're after? <a href="/request-product" class="text-rose-dust hover:underline"
+                >Request a product</a
+              > and I'll do my best to source it.
           </p>
         </div>
       </aside>
