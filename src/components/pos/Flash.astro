@@ -1,0 +1,34 @@
+---
+/*
+ * Redirect-carried feedback. POS forms POST to an /api/pos route which
+ * redirects back with ?ok=… or ?error=…, so a refresh never re-submits.
+ */
+export interface Props {
+  ok?: string | null;
+  error?: string | null;
+}
+
+const { ok, error } = Astro.props;
+---
+
+{
+  ok && (
+    <div class="mb-5 flex items-start gap-2.5 rounded-card border border-mint-soft bg-mint-wash px-4 py-3">
+      <svg class="mt-0.5 h-4 w-4 shrink-0 text-mint-deep" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7" />
+      </svg>
+      <p class="text-sm font-semibold text-mint-deep">{ok}</p>
+    </div>
+  )
+}
+
+{
+  error && (
+    <div class="mb-5 flex items-start gap-2.5 rounded-card border border-lemon-soft bg-lemon-wash px-4 py-3">
+      <svg class="mt-0.5 h-4 w-4 shrink-0 text-lemon-deep" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />
+      </svg>
+      <p class="text-sm font-semibold text-lemon-deep">{error}</p>
+    </div>
+  )
+}

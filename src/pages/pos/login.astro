@@ -1,0 +1,91 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../layouts/PosLayout.astro';
+import { isAuthed, expectedToken, setSession } from '../../lib/auth';
+
+const token = expectedToken();
+const redirectTo = Astro.url.searchParams.get('next') ?? '/pos';
+// Only ever bounce back inside the POS — an open redirect here would be a
+// nasty thing to leave on a login screen.
+const safeNext = redirectTo.startsWith('/pos') ? redirectTo : '/pos';
+
+let error: string | null = null;
+
+if (Astro.request.method === 'POST') {
+  if (!token) {
+    error = 'ADMIN_PASSWORD is not set on the server.';
+  } else {
+    const formData = await Astro.request.formData();
+    const password = formData.get('password')?.toString() ?? '';
+
+    if (password === import.meta.env.ADMIN_PASSWORD) {
+      setSession(Astro.cookies, token);
+      return Astro.redirect(safeNext);
+    }
+    error = 'That password is not right. Try again.';
+  }
+} else if (isAuthed(Astro.cookies)) {
+  return Astro.redirect(safeNext);
+}
+---
+
+<PosLayout title="Sign in" bare>
+  <div class="flex min-h-screen items-center justify-center bg-hero-wash px-4 py-12">
+    <div class="w-full max-w-sm">
+      <div class="mb-8 text-center">
+        <img src="/assets/logos/zippyzack-mark.svg" alt="" width="48" height="48" class="mx-auto h-12 w-12" />
+        <p class="mt-4 text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+          Back office
+        </p>
+        <h1 class="mt-1 font-display text-4xl font-extrabold text-ink">ZippyZack POS</h1>
+        <p class="mt-2 text-sm text-ink-muted">Sign in with your admin password.</p>
+      </div>
+
+      <form method="POST" class="space-y-4 rounded-card border border-cream-300 bg-paper p-7 shadow">
+        <div>
+          <label
+            for="password"
+            class="mb-2 block text-micro font-bold uppercase tracking-eyebrow text-ink-muted"
+          >
+            Admin password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autofocus
+            autocomplete="current-password"
+            placeholder="••••••••••••"
+            class="w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+          />
+        </div>
+
+        {
+          error && (
+            <p class="rounded-field bg-lemon-wash px-3 py-2 text-xs font-semibold text-lemon-deep">
+              {error}
+            </p>
+          )
+        }
+
+        <button
+          type="submit"
+          class="w-full rounded-pill bg-btn-gradient py-3 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
+        >
+          Sign in →
+        </button>
+      </form>
+
+      <p class="mt-6 text-center">
+        <a
+          href="/"
+          class="text-xs font-semibold text-ink-muted transition-colors duration-fast ease-out hover:text-mint-deep"
+        >
+          ← Back to the shop
+        </a>
+      </p>
+    </div>
+  </div>
+</PosLayout>

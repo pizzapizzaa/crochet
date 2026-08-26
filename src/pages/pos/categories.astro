@@ -1,0 +1,288 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../layouts/PosLayout.astro';
+import Flash from '../../components/pos/Flash.astro';
+import { isAuthed, loginUrl } from '../../lib/auth';
+import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import type { Category, Product } from '../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const admin = getSupabaseAdmin();
+
+let categories: Category[] = [];
+let products: Pick<Product, 'id' | 'category_id' | 'is_active'>[] = [];
+let loadError: string | null = null;
+
+if (!admin) {
+  loadError =
+    'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/pos-schema.sql.';
+} else {
+  const [categoryRes, productRes] = await Promise.all([
+    admin.from('categories').select('*').order('display_order', { ascending: true }).order('name'),
+    admin.from('products').select('id, category_id, is_active'),
+  ]);
+
+  if (categoryRes.error || productRes.error) {
+    loadError = `Could not read from Supabase: ${
+      categoryRes.error?.message ?? productRes.error?.message
+    }`;
+  } else {
+    categories = categoryRes.data ?? [];
+    products = productRes.data ?? [];
+  }
+}
+
+const countFor = (categoryId: string) => products.filter((p) => p.category_id === categoryId).length;
+const liveCountFor = (categoryId: string) =>
+  products.filter((p) => p.category_id === categoryId && p.is_active).length;
+const orphaned = products.filter((p) => !p.category_id).length;
+
+const field =
+  'w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40';
+const label = 'mb-1.5 block text-micro font-bold uppercase tracking-eyebrow text-ink-muted';
+
+const ok = Astro.url.searchParams.get('ok');
+const err = Astro.url.searchParams.get('error');
+const nextOrder = categories.length
+  ? Math.max(...categories.map((c) => c.display_order)) + 1
+  : 1;
+---
+
+<PosLayout title="Categories" section="categories">
+  <header class="mb-6">
+    <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Catalogue</p>
+    <h1 class="mt-1 font-display text-3xl font-extrabold text-ink sm:text-4xl">Categories</h1>
+    <p class="mt-1.5 text-sm text-ink-muted">
+      These are the filters down the left of the <a href="/store" class="font-semibold text-mint-deep hover:underline">shop page</a>.
+      Order controls the order they appear in.
+    </p>
+  </header>
+
+  <Flash ok={ok} error={err ?? loadError} />
+
+  {
+    orphaned > 0 && (
+      <div class="mb-5 rounded-card border border-lemon-soft bg-lemon-wash px-4 py-3">
+        <p class="text-sm font-semibold text-lemon-deep">
+          {orphaned} product{orphaned === 1 ? ' is' : 's are'} not filed under any category —{' '}
+          <a href="/pos/products?category=none" class="underline">
+            fix that
+          </a>
+          .
+        </p>
+      </div>
+    )
+  }
+
+  <div class="grid gap-5 lg:grid-cols-3">
+    <!-- New category -->
+    <div class="lg:col-span-1">
+      <div class="sticky top-6 rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <h2 class="mb-4 font-display text-lg font-bold text-ink">New category</h2>
+
+        <form method="POST" action="/api/pos/category-save" class="space-y-4">
+          <input type="hidden" name="next" value="/pos/categories" />
+
+          <div>
+            <label class={label} for="new-name">Name *</label>
+            <input
+              id="new-name"
+              name="name"
+              type="text"
+              required
+              maxlength="60"
+              placeholder="Blankets"
+              class={field}
+            />
+          </div>
+
+          <div>
+            <label class={label} for="new-slug">Slug</label>
+            <input
+              id="new-slug"
+              name="slug"
+              type="text"
+              maxlength="80"
+              pattern="[a-z0-9\-]*"
+              placeholder="generated from the name"
+              class={`${field} font-mono text-xs`}
+            />
+          </div>
+
+          <div>
+            <label class={label} for="new-description">Description</label>
+            <textarea
+              id="new-description"
+              name="description"
+              rows="3"
+              placeholder="One line about what belongs in here."
+              class={field}></textarea>
+          </div>
+
+          <div>
+            <label class={label} for="new-order">Display order</label>
+            <input
+              id="new-order"
+              name="display_order"
+              type="number"
+              step="1"
+              value={nextOrder}
+              class={field}
+            />
+          </div>
+
+          <label class="flex cursor-pointer items-center gap-2.5 rounded-field bg-cream-50 p-3">
+            <input
+              type="checkbox"
+              name="is_active"
+              value="true"
+              checked
+              class="h-4 w-4 shrink-0 accent-[#00695C]"
+            />
+            <span class="text-sm font-bold text-ink">Show in the shop</span>
+          </label>
+
+          <button
+            type="submit"
+            class="w-full rounded-pill bg-btn-gradient py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
+          >
+            Add category
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Existing -->
+    <div class="space-y-4 lg:col-span-2">
+      {
+        categories.length === 0 ? (
+          <div class="rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-16 text-center">
+            <p class="text-3xl">🗂️</p>
+            <h3 class="mt-3 font-display text-lg font-bold text-ink">No categories yet</h3>
+            <p class="mt-1 text-sm text-ink-muted">
+              {loadError
+                ? 'Connect Supabase and run supabase/pos-schema.sql — it seeds five to start with.'
+                : 'Add one on the left. Products need a category before they can go live.'}
+            </p>
+          </div>
+        ) : (
+          categories.map((c) => (
+            <form
+              method="POST"
+              action="/api/pos/category-save"
+              class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm"
+            >
+              <input type="hidden" name="id" value={c.id} />
+              <input type="hidden" name="next" value="/pos/categories" />
+
+              <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-display text-lg font-bold text-ink">{c.name}</span>
+                  <span
+                    class={`rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${
+                      c.is_active ? 'bg-mint-wash text-mint-deep' : 'bg-cream-200 text-ink-muted'
+                    }`}
+                  >
+                    {c.is_active ? 'Visible' : 'Hidden'}
+                  </span>
+                </div>
+                <a
+                  href={`/pos/products?category=${c.id}`}
+                  class="text-xs font-bold text-mint-deep transition-colors duration-fast ease-out hover:text-ink"
+                >
+                  {countFor(c.id)} product{countFor(c.id) === 1 ? '' : 's'}
+                  <span class="font-normal text-ink-faint"> ({liveCountFor(c.id)} live)</span> →
+                </a>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class={label} for={`name-${c.id}`}>
+                    Name *
+                  </label>
+                  <input
+                    id={`name-${c.id}`}
+                    name="name"
+                    type="text"
+                    required
+                    maxlength="60"
+                    value={c.name}
+                    class={field}
+                  />
+                </div>
+                <div>
+                  <label class={label} for={`slug-${c.id}`}>
+                    Slug
+                  </label>
+                  <input
+                    id={`slug-${c.id}`}
+                    name="slug"
+                    type="text"
+                    maxlength="80"
+                    pattern="[a-z0-9\-]*"
+                    value={c.slug}
+                    class={`${field} font-mono text-xs`}
+                  />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class={label} for={`description-${c.id}`}>
+                    Description
+                  </label>
+                  {/* kept on one line — a textarea preserves the whitespace around its children */}
+                  <textarea id={`description-${c.id}`} name="description" rows="2" class={field}>{c.description ?? ''}</textarea>
+                </div>
+                <div>
+                  <label class={label} for={`order-${c.id}`}>
+                    Display order
+                  </label>
+                  <input
+                    id={`order-${c.id}`}
+                    name="display_order"
+                    type="number"
+                    step="1"
+                    value={c.display_order}
+                    class={field}
+                  />
+                </div>
+                <div class="flex items-end">
+                  <label class="flex w-full cursor-pointer items-center gap-2.5 rounded-field bg-cream-50 p-2.5">
+                    <input
+                      type="checkbox"
+                      name="is_active"
+                      value="true"
+                      checked={c.is_active}
+                      class="h-4 w-4 shrink-0 accent-[#00695C]"
+                    />
+                    <span class="text-sm font-bold text-ink">Show in the shop</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between gap-3 border-t border-cream-300 pt-4">
+                <button
+                  type="submit"
+                  formaction="/api/pos/category-delete"
+                  formnovalidate
+                  onclick={`return confirm('Delete “${c.name}”? Its ${countFor(c.id)} product(s) will be left uncategorised.')`}
+                  class="rounded-pill px-4 py-2 text-xs font-bold text-lemon-deep transition-colors duration-fast ease-out hover:bg-lemon-wash"
+                >
+                  Delete
+                </button>
+                <button
+                  type="submit"
+                  class="rounded-pill bg-btn-gradient px-6 py-2 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          ))
+        )
+      }
+    </div>
+  </div>
+</PosLayout>

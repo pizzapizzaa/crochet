@@ -3,12 +3,9 @@ export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
 import PatternGenerator from '../components/PatternGenerator';
+import { isAuthed } from '../lib/auth';
 
-const adminPassword = import.meta.env.ADMIN_PASSWORD;
-const authCookie = Astro.cookies.get('admin_auth')?.value;
-const expectedToken = adminPassword ? btoa(adminPassword) : null;
-
-if (!expectedToken || authCookie !== expectedToken) {
+if (!isAuthed(Astro.cookies)) {
   return Astro.redirect('/admin/login');
 }
 ---

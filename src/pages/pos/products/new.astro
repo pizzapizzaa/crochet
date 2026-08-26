@@ -1,0 +1,55 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import ProductForm from '../../../components/pos/ProductForm.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import type { Category } from '../../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const admin = getSupabaseAdmin();
+let categories: Category[] = [];
+let loadError: string | null = null;
+
+if (!admin) {
+  loadError =
+    'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/pos-schema.sql.';
+} else {
+  const { data, error } = await admin
+    .from('categories')
+    .select('*')
+    .order('display_order', { ascending: true })
+    .order('name');
+  if (error) loadError = `Could not load categories: ${error.message}`;
+  else categories = data ?? [];
+}
+
+const err = Astro.url.searchParams.get('error');
+---
+
+<PosLayout title="New product" section="products">
+  <header class="mb-6">
+    <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+      <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
+      <span>/</span>
+      <a href="/pos/products" class="transition-colors duration-fast ease-out hover:text-mint-deep">
+        Products
+      </a>
+      <span>/</span>
+      <span class="font-semibold text-ink-body">New</span>
+    </nav>
+    <h1 class="font-display text-3xl font-extrabold text-ink sm:text-4xl">New product</h1>
+    <p class="mt-1.5 text-sm text-ink-muted">
+      Publish it and it shows up in the shop immediately.
+    </p>
+  </header>
+
+  <Flash error={err ?? loadError} />
+
+  <ProductForm categories={categories} next="/pos/products" />
+</PosLayout>

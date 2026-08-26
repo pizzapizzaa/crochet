@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
+import { setSession } from '../../lib/auth';
 
 const adminPassword = import.meta.env.ADMIN_PASSWORD;
 const expectedToken = adminPassword ? btoa(adminPassword) : null;
@@ -16,13 +17,7 @@ if (Astro.request.method === 'POST') {
   }
 
   if (password === adminPassword) {
-    Astro.cookies.set('admin_auth', btoa(adminPassword), {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24, // 24 hours
-    });
+    setSession(Astro.cookies, btoa(adminPassword));
     return Astro.redirect('/pattern-generator');
   }
 

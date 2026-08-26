@@ -1,6 +1,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
+import { expectedToken, setSession } from '../../lib/auth';
 
 export const POST: APIRoute = async ({ request, redirect, cookies }) => {
   const formData = await request.formData();
@@ -15,13 +16,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies }) => {
     return redirect('/admin/login?error=1');
   }
 
-  cookies.set('admin_auth', btoa(adminPassword), {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24, // 24 hours
-  });
+  setSession(cookies, expectedToken()!);
 
   return redirect('/pattern-generator');
 };

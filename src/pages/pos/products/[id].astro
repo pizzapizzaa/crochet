@@ -1,0 +1,97 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import ProductForm from '../../../components/pos/ProductForm.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import type { Category, Product } from '../../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const { id } = Astro.params;
+const admin = getSupabaseAdmin();
+
+if (!admin) {
+  return Astro.redirect(
+    '/pos/products?error=' +
+      encodeURIComponent('Supabase is not connected — check PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'),
+  );
+}
+
+const [productRes, categoryRes] = await Promise.all([
+  admin.from('products').select('*').eq('id', id!).maybeSingle(),
+  admin.from('categories').select('*').order('display_order', { ascending: true }).order('name'),
+]);
+
+if (productRes.error || !productRes.data) {
+  return Astro.redirect('/pos/products?error=' + encodeURIComponent('That product no longer exists.'));
+}
+
+const product = productRes.data as Product;
+const categories = (categoryRes.data ?? []) as Category[];
+
+const ok = Astro.url.searchParams.get('ok');
+const err = Astro.url.searchParams.get('error');
+
+const updated = new Date(product.updated_at ?? product.created_at).toLocaleString('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+---
+
+<PosLayout title={product.name} section="products">
+  <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="min-w-0">
+      <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+        <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
+        <span>/</span>
+        <a href="/pos/products" class="transition-colors duration-fast ease-out hover:text-mint-deep">
+          Products
+        </a>
+        <span>/</span>
+        <span class="truncate font-semibold text-ink-body">{product.name}</span>
+      </nav>
+      <h1 class="truncate font-display text-3xl font-extrabold text-ink sm:text-4xl">
+        {product.name}
+      </h1>
+      <p class="mt-1.5 text-sm text-ink-muted">Last edited {updated}</p>
+    </div>
+
+    <div class="flex shrink-0 items-center gap-2">
+      {
+        product.is_active && (
+          <a
+            href={`/store/${product.slug}`}
+            target="_blank"
+            rel="noopener"
+            class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+          >
+            View in shop ↗
+          </a>
+        )
+      }
+      <form
+        method="POST"
+        action="/api/pos/product-delete"
+        onsubmit="return confirm('Delete this product for good? This cannot be undone.')"
+      >
+        <input type="hidden" name="id" value={product.id} />
+        <input type="hidden" name="next" value="/pos/products" />
+        <button
+          type="submit"
+          class="rounded-pill border border-lemon-soft bg-lemon-wash px-4 py-2 text-xs font-bold text-lemon-deep transition-colors duration-fast ease-out hover:brightness-95"
+        >
+          Delete
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <Flash ok={ok} error={err} />
+
+  <ProductForm product={product} categories={categories} next={`/pos/products/${product.id}`} />
+</PosLayout>

@@ -1,27 +1,23 @@
 ---
+// Rendered per request so a product published from /pos is live immediately,
+// with no rebuild in between.
+export const prerender = false;
+
 import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/ProductCard.astro';
-import { mockProducts } from '../../lib/mockData';
-
-export async function getStaticPaths() {
-  // In production, replace with:
-  // const { data: products } = await supabase.from('products').select('slug');
-  // return products.map((p) => ({ params: { slug: p.slug } }));
-  return mockProducts.map((p) => ({ params: { slug: p.slug } }));
-}
+import { getProductBySlug, getProducts } from '../../lib/catalog';
 
 const { slug } = Astro.params;
 
-// In production: const { data: product } = await supabase.from('products').select().eq('slug', slug).single();
-const product = mockProducts.find((p) => p.slug === slug);
+const product = await getProductBySlug(slug!);
 
 if (!product) {
   return Astro.redirect('/store');
 }
 
 // Related products (same category, exclude self)
-const related = mockProducts
-  .filter((p) => p.id !== product.id && p.category === product.category && p.is_active)
+const related = (await getProducts())
+  .filter((p) => p.id !== product.id && p.category === product.category)
   .slice(0, 3);
 
 const primaryImage = product.images?.[0] ?? '/placeholder-product.jpg';
@@ -46,7 +42,7 @@ const inStock = product.stock > 3;
       <a href="/store" class="hover:text-rose-dust transition-colors">Shop</a>
       <span>/</span>
       <a
-        href={`/store?category=${product.category}`}
+        href={`/store?category=${encodeURIComponent(product.category)}`}
         class="hover:text-rose-dust transition-colors"
       >
         {product.category}
@@ -245,7 +241,7 @@ const inStock = product.stock > 3;
               </h2>
             </div>
             <a
-              href={`/store?category=${product.category}`}
+              href={`/store?category=${encodeURIComponent(product.category)}`}
               class="text-brown-warm hover:text-rose-dust text-sm font-medium transition-colors hidden sm:block"
             >
               View all →

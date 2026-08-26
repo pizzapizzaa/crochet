@@ -1,10 +1,13 @@
 ---
+// The featured row is live data, so ticking "Featured" in the POS changes the
+// homepage without a rebuild.
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
 import ProductCard from '../components/ProductCard.astro';
-import { mockProducts } from '../lib/mockData';
+import { getProducts } from '../lib/catalog';
 
-// In production, replace with: const { data: products } = await supabase.from('products').select().eq('is_featured', true).limit(3);
-const featuredProducts = mockProducts.filter((p) => p.is_featured).slice(0, 3);
+const featuredProducts = (await getProducts()).filter((p) => p.is_featured).slice(0, 3);
 
 // Emoji carry the categorical load — 🧶 yarn, 🪝 hook, ✂️ tools, 📦 bundles, 📄 patterns.
 const categories = [

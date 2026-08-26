@@ -1,15 +1,24 @@
 ---
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
 import ProductCard from '../components/ProductCard.astro';
-import { mockProducts } from '../lib/mockData';
+import { getCategories, getProducts } from '../lib/catalog';
 
-const categories = ['All', 'Yarn', 'Kits', 'Tools', 'Bundles', 'Patterns'];
+// Both come from Supabase once supabase/pos-schema.sql has been run, and are
+// edited from /pos. Until then the mock catalogue stands in.
+const [allProducts, categoryRows] = await Promise.all([getProducts(), getCategories()]);
+
+const categories = ['All', ...categoryRows.map((c) => c.name)];
+const countByCategory = new Map<string, number>();
+for (const p of allProducts) {
+  countByCategory.set(p.category, (countByCategory.get(p.category) ?? 0) + 1);
+}
 const urlCategory = Astro.url.searchParams.get('category') ?? 'All';
 const urlSort = Astro.url.searchParams.get('sort') ?? 'featured';
 const urlSearch = Astro.url.searchParams.get('q') ?? '';
 
-// In production, replace with Supabase query filtered by category/sort/search
-let products = [...mockProducts].filter((p) => p.is_active);
+let products = [...allProducts];
 
 if (urlCategory !== 'All') {
   products = products.filter((p) => p.category === urlCategory);
@@ -97,7 +106,7 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
               categories.map((cat) => (
                 <li>
                   <a
-                    href={`/store?category=${cat}&sort=${urlSort}`}
+                    href={`/store?category=${encodeURIComponent(cat)}&sort=${urlSort}`}
                     class={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                       urlCategory === cat
                         ? 'bg-rose-dust/10 text-rose-dust font-medium'
@@ -107,7 +116,7 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
                     {cat}
                     {cat !== 'All' && (
                       <span class="text-xs text-brown-light">
-                        {mockProducts.filter((p) => p.is_active && p.category === cat).length}
+                        {countByCategory.get(cat) ?? 0}
                       </span>
                     )}
                   </a>
@@ -130,7 +139,7 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
               ].map((opt) => (
                 <li>
                   <a
-                    href={`/store?category=${urlCategory}&sort=${opt.value}`}
+                    href={`/store?category=${encodeURIComponent(urlCategory)}&sort=${opt.value}`}
                     class={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                       urlSort === opt.value
                         ? 'bg-rose-dust/10 text-rose-dust font-medium'

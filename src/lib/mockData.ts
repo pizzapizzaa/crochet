@@ -9,7 +9,11 @@ import type { Product, GalleryItem } from './database.types';
  * Every image is a local file. Photographs are Pexels (free for commercial use,
  * no attribution required); the pattern charts ship with the design system.
  */
-export const mockProducts: Product[] = [
+/*
+ * category_id and updated_at are derived below rather than repeated on every
+ * entry — these rows only stand in until Supabase is wired up.
+ */
+const mockProductSeeds: Omit<Product, 'category_id' | 'updated_at'>[] = [
   // ---------------------------------------------------------------- Yarn ---
   {
     id: '1',
@@ -380,6 +384,12 @@ export const mockProducts: Product[] = [
     care_instructions: 'Digital download — nothing ships',
   },
 ];
+
+export const mockProducts: Product[] = mockProductSeeds.map((p) => ({
+  ...p,
+  category_id: null,
+  updated_at: p.created_at,
+}));
 
 /*
  * Finished pieces made from the kits above. product_id points at the product

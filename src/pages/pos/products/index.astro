@@ -1,0 +1,334 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import type { Category, Product } from '../../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const params = Astro.url.searchParams;
+const q = params.get('q') ?? '';
+const categoryFilter = params.get('category') ?? 'all';
+const statusFilter = params.get('status') ?? 'all';
+const stockFilter = params.get('stock') ?? 'all';
+
+const admin = getSupabaseAdmin();
+
+let products: Product[] = [];
+let categories: Category[] = [];
+let loadError: string | null = null;
+
+if (!admin) {
+  loadError =
+    'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/pos-schema.sql.';
+} else {
+  const [productRes, categoryRes] = await Promise.all([
+    admin.from('products').select('*').order('created_at', { ascending: false }),
+    admin.from('categories').select('*').order('display_order', { ascending: true }).order('name'),
+  ]);
+
+  if (productRes.error || categoryRes.error) {
+    loadError = `Could not read from Supabase: ${
+      productRes.error?.message ?? categoryRes.error?.message
+    }`;
+  } else {
+    products = productRes.data ?? [];
+    categories = categoryRes.data ?? [];
+  }
+}
+
+// Filtering happens in-process: a shop this size never has enough rows to
+// justify pushing every filter combination into the query.
+let rows = products;
+
+if (q) {
+  const needle = q.toLowerCase();
+  rows = rows.filter(
+    (p) =>
+      p.name.toLowerCase().includes(needle) ||
+      p.slug.toLowerCase().includes(needle) ||
+      p.description.toLowerCase().includes(needle) ||
+      p.tags.some((t) => t.toLowerCase().includes(needle)),
+  );
+}
+if (categoryFilter !== 'all') {
+  rows =
+    categoryFilter === 'none'
+      ? rows.filter((p) => !p.category_id)
+      : rows.filter((p) => p.category_id === categoryFilter);
+}
+if (statusFilter === 'live') rows = rows.filter((p) => p.is_active);
+else if (statusFilter === 'draft') rows = rows.filter((p) => !p.is_active);
+else if (statusFilter === 'featured') rows = rows.filter((p) => p.is_featured);
+
+if (stockFilter === 'low') rows = rows.filter((p) => p.stock <= 3);
+else if (stockFilter === 'out') rows = rows.filter((p) => p.stock === 0);
+
+const qs = (over: Record<string, string>) => {
+  const next = new URLSearchParams({
+    q,
+    category: categoryFilter,
+    status: statusFilter,
+    stock: stockFilter,
+    ...over,
+  });
+  for (const [k, v] of [...next.entries()]) if (!v || v === 'all') next.delete(k);
+  const s = next.toString();
+  return s ? `/pos/products?${s}` : '/pos/products';
+};
+
+const statusTabs = [
+  { key: 'all', label: 'All', count: products.length },
+  { key: 'live', label: 'Live', count: products.filter((p) => p.is_active).length },
+  { key: 'draft', label: 'Drafts', count: products.filter((p) => !p.is_active).length },
+  { key: 'featured', label: 'Featured', count: products.filter((p) => p.is_featured).length },
+];
+
+const ok = params.get('ok');
+const err = params.get('error');
+---
+
+<PosLayout title="Products" section="products">
+  <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Catalogue</p>
+      <h1 class="mt-1 font-display text-3xl font-extrabold text-ink sm:text-4xl">Products</h1>
+      <p class="mt-1.5 text-sm text-ink-muted">
+        {rows.length} of {products.length} shown
+      </p>
+    </div>
+    <a
+      href="/pos/products/new"
+      class="inline-flex shrink-0 items-center gap-2 self-start rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
+    >
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14M5 12h14" />
+      </svg>
+      New product
+    </a>
+  </header>
+
+  <Flash ok={ok} error={err ?? loadError} />
+
+  <!-- Filters -->
+  <div class="mb-5 rounded-card border border-cream-300 bg-paper p-4 shadow-sm">
+    <form method="GET" action="/pos/products" class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="relative flex-1">
+        <svg
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="search"
+          name="q"
+          value={q}
+          placeholder="Search name, slug, tags…"
+          class="w-full rounded-field border border-cream-300 bg-cream-50 py-2.5 pl-9 pr-4 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+        />
+      </div>
+
+      <select
+        name="category"
+        class="rounded-field border border-cream-300 bg-cream-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+      >
+        <option value="all" selected={categoryFilter === 'all'}>All categories</option>
+        {
+          categories.map((c) => (
+            <option value={c.id} selected={categoryFilter === c.id}>
+              {c.name}
+            </option>
+          ))
+        }
+        <option value="none" selected={categoryFilter === 'none'}>— Uncategorised —</option>
+      </select>
+
+      <select
+        name="stock"
+        class="rounded-field border border-cream-300 bg-cream-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+      >
+        <option value="all" selected={stockFilter === 'all'}>Any stock</option>
+        <option value="low" selected={stockFilter === 'low'}>Low (≤3)</option>
+        <option value="out" selected={stockFilter === 'out'}>Sold out</option>
+      </select>
+
+      <input type="hidden" name="status" value={statusFilter} />
+
+      <button
+        type="submit"
+        class="rounded-pill border border-cream-300 bg-cream-100 px-5 py-2.5 text-sm font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+      >
+        Filter
+      </button>
+    </form>
+
+    <div class="mt-3 flex flex-wrap gap-1.5 border-t border-cream-300 pt-3">
+      {
+        statusTabs.map((t) => (
+          <a
+            href={qs({ status: t.key })}
+            class={`rounded-pill px-3 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
+              statusFilter === t.key
+                ? 'bg-forest text-paper'
+                : 'bg-cream-100 text-ink-muted hover:bg-cream-200'
+            }`}
+          >
+            {t.label} <span class="opacity-60">{t.count}</span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+
+  <!-- Table -->
+  {
+    rows.length === 0 ? (
+      <div class="rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-16 text-center">
+        <p class="text-3xl">🧶</p>
+        <h3 class="mt-3 font-display text-lg font-bold text-ink">
+          {products.length === 0 ? 'No products yet' : 'Nothing matches those filters'}
+        </h3>
+        <p class="mt-1 text-sm text-ink-muted">
+          {products.length === 0
+            ? 'Add your first product and it appears in the shop straight away.'
+            : 'Try widening the search or clearing a filter.'}
+        </p>
+        <a
+          href={products.length === 0 ? '/pos/products/new' : '/pos/products'}
+          class="mt-5 inline-block rounded-pill bg-btn-gradient px-6 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+        >
+          {products.length === 0 ? 'Add a product' : 'Clear filters'}
+        </a>
+      </div>
+    ) : (
+      <div class="overflow-x-auto rounded-card border border-cream-300 bg-paper shadow-sm">
+        <table class="w-full min-w-[820px] text-left">
+          <thead>
+            <tr class="border-b border-cream-300 bg-cream-50">
+              {['Product', 'Category', 'Price', 'Stock', 'Status', ''].map((h) => (
+                <th class="px-4 py-3 text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-cream-300">
+            {rows.map((p) => (
+              <tr class="transition-colors duration-fast ease-out hover:bg-cream-50">
+                <td class="px-4 py-3">
+                  <a href={`/pos/products/${p.id}`} class="flex items-center gap-3">
+                    <img
+                      src={p.images?.[0] ?? '/placeholder-product.jpg'}
+                      alt=""
+                      class="h-11 w-11 shrink-0 rounded-field object-cover"
+                      loading="lazy"
+                    />
+                    <span class="min-w-0">
+                      <span class="block truncate font-display text-sm font-bold text-ink">
+                        {p.name}
+                      </span>
+                      <span class="block truncate font-mono text-[11px] text-ink-faint">
+                        /{p.slug}
+                      </span>
+                    </span>
+                  </a>
+                </td>
+                <td class="px-4 py-3">
+                  {p.category_id ? (
+                    <span class="rounded-pill bg-cream-100 px-2.5 py-1 text-xs font-semibold text-ink-body">
+                      {p.category}
+                    </span>
+                  ) : (
+                    <span class="rounded-pill bg-lemon-wash px-2.5 py-1 text-xs font-semibold text-lemon-deep">
+                      Uncategorised
+                    </span>
+                  )}
+                </td>
+                <td class="px-4 py-3">
+                  <span class="font-display text-sm font-extrabold text-ink">
+                    ${Number(p.price).toFixed(2)}
+                  </span>
+                  {p.compare_at_price && (
+                    <span class="ml-1.5 text-xs text-ink-faint line-through">
+                      ${Number(p.compare_at_price).toFixed(2)}
+                    </span>
+                  )}
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class={`text-sm font-bold ${
+                      p.stock === 0 ? 'text-lemon-deep' : p.stock <= 3 ? 'text-lemon-mid' : 'text-ink-body'
+                    }`}
+                  >
+                    {p.stock}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span
+                      class={`rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${
+                        p.is_active ? 'bg-mint-wash text-mint-deep' : 'bg-cream-200 text-ink-muted'
+                      }`}
+                    >
+                      {p.is_active ? 'Live' : 'Draft'}
+                    </span>
+                    {p.is_featured && (
+                      <span class="rounded-pill bg-lemon px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-ink">
+                        ★
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <a
+                      href={`/pos/products/${p.id}`}
+                      class="rounded-field px-2.5 py-1.5 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+                    >
+                      Edit
+                    </a>
+                    <form method="POST" action="/api/pos/product-toggle" class="inline">
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="field" value="is_active" />
+                      <input type="hidden" name="value" value={p.is_active ? 'false' : 'true'} />
+                      <input type="hidden" name="next" value={Astro.url.pathname + Astro.url.search} />
+                      <button
+                        type="submit"
+                        class="rounded-field px-2.5 py-1.5 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+                      >
+                        {p.is_active ? 'Unpublish' : 'Publish'}
+                      </button>
+                    </form>
+                    <form
+                      method="POST"
+                      action="/api/pos/product-delete"
+                      class="inline"
+                      onsubmit="return confirm('Delete this product for good? This cannot be undone.')"
+                    >
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="next" value={Astro.url.pathname + Astro.url.search} />
+                      <button
+                        type="submit"
+                        class="rounded-field px-2.5 py-1.5 text-xs font-bold text-lemon-deep transition-colors duration-fast ease-out hover:bg-lemon-wash"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</PosLayout>

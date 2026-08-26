@@ -3,6 +3,12 @@
 -- Run this in your Supabase SQL editor to set up all tables
 -- =========================================================
 
+-- NOTE: this is the original launch schema.
+-- The POS admin dashboard (/pos) adds a "categories" table, "category_id" and
+-- "updated_at" on products, sync triggers, RLS policies and the product-images
+-- storage bucket. Run supabase/pos-schema.sql AFTER this file — or instead of
+-- it, since pos-schema.sql creates the products table if it is missing.
+
 -- Enable UUID extension
 create extension if not exists "pgcrypto";
 

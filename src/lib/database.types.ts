@@ -3,16 +3,43 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
+      categories: {
+        Row: {
+          id: string;
+          created_at: string;
+          updated_at: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          image_url: string | null;
+          display_order: number;
+          is_active: boolean;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+          name: string;
+          slug: string;
+          description?: string | null;
+          image_url?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+        };
+        Update: Partial<Database['public']['Tables']['categories']['Insert']>;
+      };
       products: {
         Row: {
           id: string;
           created_at: string;
+          updated_at: string;
           name: string;
           slug: string;
           description: string;
           price: number;
           compare_at_price: number | null;
           category: string;
+          category_id: string | null;
           tags: string[];
           images: string[];
           stock: number;
@@ -26,12 +53,14 @@ export interface Database {
         Insert: {
           id?: string;
           created_at?: string;
+          updated_at?: string;
           name: string;
           slug: string;
           description: string;
           price: number;
           compare_at_price?: number | null;
           category: string;
+          category_id?: string | null;
           tags?: string[];
           images?: string[];
           stock?: number;
@@ -102,6 +131,10 @@ export interface Database {
 }
 
 // Convenience types
+export type Category = Database['public']['Tables']['categories']['Row'];
 export type Product = Database['public']['Tables']['products']['Row'];
 export type GalleryItem = Database['public']['Tables']['gallery_items']['Row'];
 export type Order = Database['public']['Tables']['orders']['Row'];
+
+export type ProductInsert = Database['public']['Tables']['products']['Insert'];
+export type CategoryInsert = Database['public']['Tables']['categories']['Insert'];

@@ -1,0 +1,137 @@
+---
+/*
+ * Shell for every /pos screen. Deliberately does NOT use the public
+ * Header/Footer — the POS is a back-office tool, so it gets its own chrome:
+ * a forest sidebar against the cream ground the rest of the brand uses.
+ */
+import '../styles/design-system.css';
+
+export interface Props {
+  title: string;
+  section?: 'dashboard' | 'products' | 'categories';
+  /** Set on the login screen, which has no nav. */
+  bare?: boolean;
+}
+
+const { title, section, bare = false } = Astro.props;
+
+const navLinks = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    href: '/pos',
+    icon: 'M4 5h6v6H4V5zm10 0h6v4h-6V5zM4 15h6v4H4v-4zm10-2h6v6h-6v-6z',
+  },
+  {
+    key: 'products',
+    label: 'Products',
+    href: '/pos/products',
+    icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+  },
+  {
+    key: 'categories',
+    label: 'Categories',
+    href: '/pos/categories',
+    icon: 'M4 6h16M4 12h16M4 18h10',
+  },
+];
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito+Sans:ital,opsz,wght@0,6..12,300..900;1,6..12,300..900&display=swap"
+      rel="stylesheet"
+    />
+    <meta name="theme-color" content="#003B33" />
+    <title>{title} | ZippyZack POS</title>
+  </head>
+  <body class="min-h-screen bg-cream-100 font-sans text-ink-body antialiased">
+    {
+      bare ? (
+        <slot />
+      ) : (
+        <div class="flex min-h-screen flex-col lg:flex-row">
+          {/* Sidebar */}
+          <aside class="shrink-0 bg-dark-wash lg:w-60">
+            <div class="flex h-full flex-col p-4 lg:p-5">
+              <a href="/pos" class="mb-6 flex items-center gap-2.5">
+                <img src="/assets/logos/zippyzack-mark.svg" alt="" width="30" height="30" class="h-[30px] w-[30px]" />
+                <span class="font-display text-lg font-extrabold tracking-tight text-paper">
+                  Zippy<span class="text-mint">Zack</span>
+                  <span class="ml-1.5 rounded-pill bg-mint px-2 py-0.5 align-middle text-[10px] font-extrabold uppercase tracking-wide text-ink">
+                    POS
+                  </span>
+                </span>
+              </a>
+
+              <nav class="flex flex-row gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+                {navLinks.map((link) => (
+                  <a
+                    href={link.href}
+                    class={`flex shrink-0 items-center gap-2.5 rounded-field px-3 py-2.5 text-sm font-semibold transition-colors duration-fast ease-out ${
+                      section === link.key
+                        ? 'bg-mint text-ink'
+                        : 'text-cream-200 hover:bg-forest-deep hover:text-paper'
+                    }`}
+                  >
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d={link.icon} />
+                    </svg>
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+
+              <div class="mt-4 space-y-1 border-t border-forest-tint/40 pt-4 lg:mt-auto">
+                <a
+                  href="/store"
+                  target="_blank"
+                  rel="noopener"
+                  class="flex items-center gap-2.5 rounded-field px-3 py-2 text-xs font-semibold text-cream-200 transition-colors duration-fast ease-out hover:bg-forest-deep hover:text-paper"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  View shop
+                </a>
+                <a
+                  href="/pattern-generator"
+                  class="flex items-center gap-2.5 rounded-field px-3 py-2 text-xs font-semibold text-cream-200 transition-colors duration-fast ease-out hover:bg-forest-deep hover:text-paper"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.6L19 9.4V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Pattern generator
+                </a>
+                <a
+                  href="/api/pos/logout"
+                  class="flex items-center gap-2.5 rounded-field px-3 py-2 text-xs font-semibold text-cream-200 transition-colors duration-fast ease-out hover:bg-forest-deep hover:text-paper"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                  </svg>
+                  Sign out
+                </a>
+              </div>
+            </div>
+          </aside>
+
+          {/* Content */}
+          <main class="min-w-0 flex-1">
+            <div class="mx-auto max-w-container px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+              <slot />
+            </div>
+          </main>
+        </div>
+      )
+    }
+  </body>
+</html>
