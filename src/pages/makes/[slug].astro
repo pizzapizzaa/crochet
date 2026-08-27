@@ -30,12 +30,32 @@ const related = (await getMakes()).filter((m) => m.id !== make.id).slice(0, 3);
 const outOfStock = pricing.required.filter((i) => i.product.stock === 0);
 const bundleAvailable = pricing.required.length > 0 && outOfStock.length === 0;
 
+/*
+ * The three facts about the project, as tags rather than a run of text. Each
+ * carries a glyph so the row reads at a glance without anyone parsing the
+ * labels, and the difficulty tag takes the same fill as the badge on the photo
+ * — one colour per level, wherever the level appears.
+ */
 const facts = [
-  { label: 'Difficulty', value: make.difficulty },
-  { label: 'Time', value: make.estimated_time },
+  {
+    label: 'Difficulty',
+    value: make.difficulty,
+    // Ascending bars: the level, drawn.
+    icon: 'M4 18v-4m5 4V9m5 9V6m5 12V4',
+    tone: `border-transparent ${difficultyBadge(make.difficulty)}`,
+  },
+  {
+    label: 'Time',
+    value: make.estimated_time,
+    icon: 'M12 7.5V12l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    tone: 'border-cream-300 bg-paper text-ink-body',
+  },
   {
     label: 'Materials',
     value: `${pricing.required.length} item${pricing.required.length === 1 ? '' : 's'}`,
+    // A stack of layers — what a bundle looks like from the side.
+    icon: 'M12 3l8 4-8 4-8-4 8-4zM4 12l8 4 8-4M4 17l8 4 8-4',
+    tone: 'border-cream-300 bg-paper text-ink-body',
   },
 ].filter((f) => f.value);
 ---
@@ -130,8 +150,23 @@ const facts = [
           facts.length > 0 && (
             <div class="mt-5 flex flex-wrap gap-2">
               {facts.map((f) => (
-                <span class="rounded-pill bg-cream-100 px-3.5 py-1.5 text-xs font-semibold text-ink-body">
-                  <span class="text-ink-muted">{f.label}:</span> {f.value}
+                <span
+                  class={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs shadow-xs ${f.tone}`}
+                >
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0 opacity-70"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d={f.icon} />
+                  </svg>
+                  <span class="font-semibold opacity-70">{f.label}</span>
+                  <span class="font-bold">{f.value}</span>
                 </span>
               ))}
             </div>
