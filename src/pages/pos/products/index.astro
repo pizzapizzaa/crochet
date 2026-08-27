@@ -89,6 +89,23 @@ const statusTabs = [
   { key: 'featured', label: 'Featured', count: products.filter((p) => p.is_featured).length },
 ];
 
+/*
+ * Explicit column widths, paired with table-fixed below.
+ *
+ * Without them the browser sizes each column to its content, and because
+ * `truncate` sets white-space: nowrap, a single long product name widens the
+ * first column to the full length of the name — pushing Edit / Unpublish /
+ * Delete off the right-hand edge. Fixed widths let the name wrap instead.
+ */
+const columns = [
+  { label: 'Product', width: '' },
+  { label: 'Category', width: 'w-[124px]' },
+  { label: 'Price', width: 'w-[136px]' },
+  { label: 'Stock', width: 'w-[76px]' },
+  { label: 'Status', width: 'w-[108px]' },
+  { label: '', width: 'w-[216px]', actions: true },
+];
+
 const ok = params.get('ok');
 const err = params.get('error');
 ---
@@ -210,29 +227,33 @@ const err = params.get('error');
       </div>
     ) : (
       <div class="overflow-x-auto rounded-card border border-cream-300 bg-paper shadow-sm">
-        <table class="w-full min-w-[820px] text-left">
+        <table class="w-full min-w-[880px] table-fixed text-left">
           <thead>
             <tr class="border-b border-cream-300 bg-cream-50">
-              {['Product', 'Category', 'Price', 'Stock', 'Status', ''].map((h) => (
-                <th class="px-4 py-3 text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
-                  {h}
+              {columns.map((c) => (
+                <th
+                  class={`px-4 py-3 text-micro font-bold uppercase tracking-eyebrow text-ink-muted ${c.width} ${
+                    c.actions ? 'sticky right-0 bg-cream-50 shadow-[inset_1px_0_0_0_#EBD9A0]' : ''
+                  }`}
+                >
+                  {c.label}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody class="divide-y divide-cream-300">
             {rows.map((p) => (
-              <tr class="transition-colors duration-fast ease-out hover:bg-cream-50">
+              <tr class="group transition-colors duration-fast ease-out hover:bg-cream-50">
                 <td class="px-4 py-3">
-                  <a href={`/pos/products/${p.id}`} class="flex items-center gap-3">
+                  <a href={`/pos/products/${p.id}`} class="flex items-start gap-3">
                     <img
                       src={p.images?.[0] ?? '/placeholder-product.jpg'}
                       alt=""
                       class="h-11 w-11 shrink-0 rounded-field object-cover"
                       loading="lazy"
                     />
-                    <span class="min-w-0">
-                      <span class="block truncate font-display text-sm font-bold text-ink">
+                    <span class="min-w-0 flex-1">
+                      <span class="line-clamp-2 block font-display text-sm font-bold leading-snug text-ink">
                         {p.name}
                       </span>
                       <span class="block truncate font-mono text-[11px] text-ink-faint">
@@ -287,8 +308,8 @@ const err = params.get('error');
                     )}
                   </div>
                 </td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center justify-end gap-1.5">
+                <td class="sticky right-0 bg-paper shadow-[inset_1px_0_0_0_#EBD9A0] px-4 py-3 transition-colors duration-fast ease-out group-hover:bg-cream-50">
+                  <div class="flex flex-nowrap items-center justify-end gap-1">
                     <a
                       href={`/pos/products/${p.id}`}
                       class="rounded-field px-2.5 py-1.5 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
