@@ -10,10 +10,26 @@ import type { Product, GalleryItem } from './database.types';
  * no attribution required); the pattern charts ship with the design system.
  */
 /*
- * category_id and updated_at are derived below rather than repeated on every
- * entry — these rows only stand in until Supabase is wired up.
+ * category_id, updated_at and the cost/supplier fields are derived below
+ * rather than repeated on every entry — these rows only stand in until
+ * Supabase is wired up. Costs are deliberately blank: the offline catalogue
+ * is for laying out the shop, and inventing margins would make the materials
+ * page in the POS look like it holds real numbers when it holds none.
  */
-const mockProductSeeds: Omit<Product, 'category_id' | 'updated_at'>[] = [
+type ProductSeed = Omit<
+  Product,
+  | 'category_id'
+  | 'updated_at'
+  | 'cost_price'
+  | 'supplier_name'
+  | 'supplier_url'
+  | 'supplier_sku'
+  | 'cost_note'
+  | 'units_sold'
+  | 'cost_updated_at'
+>;
+
+const mockProductSeeds: ProductSeed[] = [
   // ---------------------------------------------------------------- Yarn ---
   {
     id: '1',
@@ -389,6 +405,13 @@ export const mockProducts: Product[] = mockProductSeeds.map((p) => ({
   ...p,
   category_id: null,
   updated_at: p.created_at,
+  cost_price: null,
+  supplier_name: null,
+  supplier_url: null,
+  supplier_sku: null,
+  cost_note: null,
+  units_sold: 0,
+  cost_updated_at: null,
 }));
 
 /*

@@ -81,3 +81,16 @@ export function withFlash(path: string, kind: 'ok' | 'error', message: string): 
 export function isUniqueViolation(error: { code?: string } | null): boolean {
   return error?.code === '23505';
 }
+
+/** Every value submitted under one name, in document order. */
+export function all(form: FormData, key: string): string[] {
+  return form.getAll(key).map((v) => v.toString().trim());
+}
+
+/**
+ * A foreign key that is still pointed at by another row. The bundle editor is
+ * the only place that creates such a reference, so the message can say so.
+ */
+export function isForeignKeyViolation(error: { code?: string } | null): boolean {
+  return error?.code === '23503';
+}

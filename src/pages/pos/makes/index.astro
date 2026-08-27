@@ -1,0 +1,271 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { money, priceBundle } from '../../../lib/makes';
+import type { MakeWithBundle } from '../../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const params = Astro.url.searchParams;
+const q = params.get('q') ?? '';
+const statusFilter = params.get('status') ?? 'all';
+
+const admin = getSupabaseAdmin();
+
+let makes: MakeWithBundle[] = [];
+let loadError: string | null = null;
+
+if (!admin) {
+  loadError =
+    'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/makes-schema.sql.';
+} else {
+  const { data, error } = await admin
+    .from('makes')
+    .select('*, items:make_items(*, product:products(*))')
+    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    loadError = `Could not read makes: ${error.message}. Have you run supabase/makes-schema.sql?`;
+  } else {
+    makes = (data ?? []) as unknown as MakeWithBundle[];
+  }
+}
+
+let rows = makes;
+if (q) {
+  const needle = q.toLowerCase();
+  rows = rows.filter(
+    (m) =>
+      m.title.toLowerCase().includes(needle) ||
+      m.author_name.toLowerCase().includes(needle) ||
+      m.tags.some((t) => t.toLowerCase().includes(needle)),
+  );
+}
+if (statusFilter === 'live') rows = rows.filter((m) => m.is_active);
+else if (statusFilter === 'draft') rows = rows.filter((m) => !m.is_active);
+else if (statusFilter === 'empty') rows = rows.filter((m) => m.items.length === 0);
+
+const statusTabs = [
+  { key: 'all', label: 'All', count: makes.length },
+  { key: 'live', label: 'Live', count: makes.filter((m) => m.is_active).length },
+  { key: 'draft', label: 'Drafts', count: makes.filter((m) => !m.is_active).length },
+  { key: 'empty', label: 'No bundle', count: makes.filter((m) => m.items.length === 0).length },
+];
+
+const back = Astro.url.pathname + Astro.url.search;
+const ok = params.get('ok');
+const err = params.get('error');
+---
+
+<PosLayout title="Makes" section="makes">
+  <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Projects</p>
+      <h1 class="mt-1 font-display text-3xl font-extrabold text-ink sm:text-4xl">Makes</h1>
+      <p class="mt-1.5 max-w-xl text-sm text-ink-muted">
+        A pin someone else made, and the bundle of yarn and tools we sell to recreate it. The
+        pattern stays on Pinterest — we link to it and credit the author.
+      </p>
+    </div>
+    <a
+      href="/pos/makes/new"
+      class="inline-flex shrink-0 items-center gap-2 self-start rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
+    >
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14M5 12h14" />
+      </svg>
+      New make
+    </a>
+  </header>
+
+  <Flash ok={ok} error={err ?? loadError} />
+
+  <div class="mb-5 rounded-card border border-cream-300 bg-paper p-4 shadow-sm">
+    <form method="GET" action="/pos/makes" class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="relative flex-1">
+        <svg
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="search"
+          name="q"
+          value={q}
+          placeholder="Search title, author, tags…"
+          class="w-full rounded-field border border-cream-300 bg-cream-50 py-2.5 pl-9 pr-4 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+        />
+      </div>
+      <input type="hidden" name="status" value={statusFilter} />
+      <button
+        type="submit"
+        class="rounded-pill border border-cream-300 bg-cream-100 px-5 py-2.5 text-sm font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+      >
+        Search
+      </button>
+    </form>
+
+    <div class="mt-3 flex flex-wrap gap-1.5 border-t border-cream-300 pt-3">
+      {
+        statusTabs.map((t) => (
+          <a
+            href={`/pos/makes?${new URLSearchParams({ ...(q ? { q } : {}), ...(t.key === 'all' ? {} : { status: t.key }) })}`}
+            class={`rounded-pill px-3 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
+              statusFilter === t.key
+                ? 'bg-forest text-paper'
+                : 'bg-cream-100 text-ink-muted hover:bg-cream-200'
+            }`}
+          >
+            {t.label} <span class="opacity-60">{t.count}</span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+
+  {
+    rows.length === 0 ? (
+      <div class="rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-16 text-center">
+        <p class="text-3xl">📌</p>
+        <h3 class="mt-3 font-display text-lg font-bold text-ink">
+          {makes.length === 0 ? 'No makes yet' : 'Nothing matches that'}
+        </h3>
+        <p class="mx-auto mt-1 max-w-md text-sm text-ink-muted">
+          {makes.length === 0
+            ? 'Copy a Pinterest link, paste it in, and build the bundle of materials that makes it.'
+            : 'Try a different search or clear the filter.'}
+        </p>
+        <a
+          href={makes.length === 0 ? '/pos/makes/new' : '/pos/makes'}
+          class="mt-5 inline-block rounded-pill bg-btn-gradient px-6 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+        >
+          {makes.length === 0 ? 'Add a make' : 'Clear filters'}
+        </a>
+      </div>
+    ) : (
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {rows.map((m) => {
+          const pricing = priceBundle(m, m.items);
+          return (
+            <article class="flex flex-col overflow-hidden rounded-card border border-cream-300 bg-paper shadow-sm transition-all duration-base ease-out hover:-translate-y-0.5 hover:shadow-lg">
+              <a href={`/pos/makes/${m.id}`} class="relative block aspect-[4/3] overflow-hidden bg-cream-200">
+                {m.image_url ? (
+                  <img src={m.image_url} alt="" class="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  <span class="flex h-full w-full items-center justify-center text-xs text-ink-faint">
+                    No image
+                  </span>
+                )}
+                <span
+                  class={`absolute left-3 top-3 rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${
+                    m.is_active ? 'bg-mint text-ink' : 'bg-forest-deep/80 text-cream'
+                  }`}
+                >
+                  {m.is_active ? 'Live' : 'Draft'}
+                </span>
+                {m.is_featured && (
+                  <span class="absolute right-3 top-3 rounded-pill bg-lemon px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-ink">
+                    ★
+                  </span>
+                )}
+              </a>
+
+              <div class="flex flex-1 flex-col gap-2 p-4">
+                <h3 class="font-display text-base font-bold leading-snug text-ink">
+                  <a href={`/pos/makes/${m.id}`} class="text-inherit no-underline hover:text-mint-deep">
+                    {m.title}
+                  </a>
+                </h3>
+                <p class="text-xs text-ink-muted">
+                  Pin by <span class="font-semibold text-ink-body">{m.author_name}</span>
+                </p>
+
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span
+                    class={`rounded-pill px-2.5 py-1 text-xs font-semibold ${
+                      m.items.length === 0
+                        ? 'bg-lemon-wash text-lemon-deep'
+                        : 'bg-cream-100 text-ink-body'
+                    }`}
+                  >
+                    {m.items.length === 0
+                      ? 'No materials yet'
+                      : `${m.items.length} material${m.items.length === 1 ? '' : 's'}`}
+                  </span>
+                  {pricing.savings > 0 && (
+                    <span class="rounded-pill bg-mint-wash px-2.5 py-1 text-xs font-semibold text-mint-deep">
+                      saves {money(pricing.savings)}
+                    </span>
+                  )}
+                </div>
+
+                <div class="mt-auto flex items-end justify-between gap-2 pt-3">
+                  <div>
+                    <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Bundle</p>
+                    <p class="font-display text-lg font-extrabold text-ink">
+                      {money(pricing.bundlePrice)}
+                    </p>
+                  </div>
+                  <a
+                    href={m.pinterest_url}
+                    target="_blank"
+                    rel="noopener nofollow"
+                    class="text-xs font-bold text-mint-deep hover:underline"
+                  >
+                    The pin ↗
+                  </a>
+                </div>
+
+                <div class="flex items-center gap-1.5 border-t border-cream-300 pt-3">
+                  <a
+                    href={`/pos/makes/${m.id}`}
+                    class="rounded-field px-2.5 py-1.5 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+                  >
+                    Edit
+                  </a>
+                  <form method="POST" action="/api/pos/make-toggle" class="inline">
+                    <input type="hidden" name="id" value={m.id} />
+                    <input type="hidden" name="field" value="is_active" />
+                    <input type="hidden" name="value" value={m.is_active ? 'false' : 'true'} />
+                    <input type="hidden" name="next" value={back} />
+                    <button
+                      type="submit"
+                      class="rounded-field px-2.5 py-1.5 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+                    >
+                      {m.is_active ? 'Unpublish' : 'Publish'}
+                    </button>
+                  </form>
+                  <form
+                    method="POST"
+                    action="/api/pos/make-delete"
+                    class="ml-auto inline"
+                    onsubmit="return confirm('Delete this make? The materials in its bundle stay in the shop.')"
+                  >
+                    <input type="hidden" name="id" value={m.id} />
+                    <input type="hidden" name="next" value={back} />
+                    <button
+                      type="submit"
+                      class="rounded-field px-2.5 py-1.5 text-xs font-bold text-lemon-deep transition-colors duration-fast ease-out hover:bg-lemon-wash"
+                    >
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )
+  }
+</PosLayout>

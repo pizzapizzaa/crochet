@@ -1,0 +1,107 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import MakeForm from '../../../components/pos/MakeForm.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import type { MakeWithBundle, Product } from '../../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const { id } = Astro.params;
+const admin = getSupabaseAdmin();
+
+if (!admin) {
+  return Astro.redirect(
+    '/pos/makes?error=' +
+      encodeURIComponent('Supabase is not connected — check PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'),
+  );
+}
+
+const [makeRes, productRes] = await Promise.all([
+  admin
+    .from('makes')
+    .select('*, items:make_items(*, product:products(*))')
+    .eq('id', id!)
+    .maybeSingle(),
+  admin.from('products').select('*').order('category', { ascending: true }).order('name'),
+]);
+
+if (makeRes.error || !makeRes.data) {
+  return Astro.redirect('/pos/makes?error=' + encodeURIComponent('That make no longer exists.'));
+}
+
+const make = makeRes.data as unknown as MakeWithBundle;
+const products = (productRes.data ?? []) as Product[];
+
+const ok = Astro.url.searchParams.get('ok');
+const err = Astro.url.searchParams.get('error');
+
+const updated = new Date(make.updated_at ?? make.created_at).toLocaleString('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+---
+
+<PosLayout title={make.title} section="makes">
+  <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="min-w-0">
+      <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+        <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
+        <span>/</span>
+        <a href="/pos/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes</a>
+        <span>/</span>
+        <span class="truncate font-semibold text-ink-body">{make.title}</span>
+      </nav>
+      <h1 class="truncate font-display text-3xl font-extrabold text-ink sm:text-4xl">{make.title}</h1>
+      <p class="mt-1.5 text-sm text-ink-muted">
+        Pin by <span class="font-semibold text-ink-body">{make.author_name}</span> · last edited {updated}
+      </p>
+    </div>
+
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
+      <a
+        href={make.pinterest_url}
+        target="_blank"
+        rel="noopener nofollow"
+        class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+      >
+        Open the pin ↗
+      </a>
+      {
+        make.is_active && (
+          <a
+            href={`/makes/${make.slug}`}
+            target="_blank"
+            rel="noopener"
+            class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+          >
+            View in shop ↗
+          </a>
+        )
+      }
+      <form
+        method="POST"
+        action="/api/pos/make-delete"
+        onsubmit="return confirm('Delete this make? The materials in its bundle stay in the shop.')"
+      >
+        <input type="hidden" name="id" value={make.id} />
+        <input type="hidden" name="next" value="/pos/makes" />
+        <button
+          type="submit"
+          class="rounded-pill border border-lemon-soft bg-lemon-wash px-4 py-2 text-xs font-bold text-lemon-deep transition-colors duration-fast ease-out hover:brightness-95"
+        >
+          Delete
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <Flash ok={ok} error={err} />
+
+  <MakeForm make={make} products={products} next={`/pos/makes/${make.id}`} />
+</PosLayout>

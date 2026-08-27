@@ -1,0 +1,53 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import MakeForm from '../../../components/pos/MakeForm.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import type { Product } from '../../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const admin = getSupabaseAdmin();
+let products: Product[] = [];
+let loadError: string | null = null;
+
+if (!admin) {
+  loadError =
+    'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/makes-schema.sql.';
+} else {
+  const { data, error } = await admin
+    .from('products')
+    .select('*')
+    .order('category', { ascending: true })
+    .order('name', { ascending: true });
+  if (error) loadError = `Could not load materials: ${error.message}`;
+  else products = data ?? [];
+}
+
+const err = Astro.url.searchParams.get('error');
+---
+
+<PosLayout title="New make" section="makes">
+  <header class="mb-6">
+    <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+      <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
+      <span>/</span>
+      <a href="/pos/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes</a>
+      <span>/</span>
+      <span class="font-semibold text-ink-body">New</span>
+    </nav>
+    <h1 class="font-display text-3xl font-extrabold text-ink sm:text-4xl">New make</h1>
+    <p class="mt-1.5 max-w-2xl text-sm text-ink-muted">
+      Paste the Pinterest link, press Fetch, then pick the yarn and tools the project needs.
+    </p>
+  </header>
+
+  <Flash error={err ?? loadError} />
+
+  <MakeForm products={products} next="/pos/makes" />
+</PosLayout>

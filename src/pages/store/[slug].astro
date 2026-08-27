@@ -6,6 +6,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import { getProductBySlug, getProducts } from '../../lib/catalog';
+import { getMakesUsingProduct } from '../../lib/makes';
 
 const { slug } = Astro.params;
 
@@ -14,6 +15,10 @@ const product = await getProductBySlug(slug!);
 if (!product) {
   return Astro.redirect('/store');
 }
+
+// Projects this material is part of — the reverse of the bundle on a make
+// page, so someone looking at a skein can see what it is for.
+const usedIn = await getMakesUsingProduct(product.id);
 
 // Related products (same category, exclude self)
 const related = (await getProducts())
@@ -163,6 +168,30 @@ const inStock = product.stock > 3;
               ))
           }
         </div>
+
+        <!-- Makes that use this -->
+        {
+          usedIn.length > 0 && (
+            <div class="mt-6 rounded-2xl border border-cream-300 bg-cream-50 p-4">
+              <p class="text-xs font-bold uppercase tracking-widest text-brown-light">
+                Used in {usedIn.length === 1 ? 'this make' : 'these makes'}
+              </p>
+              <ul class="mt-2.5 space-y-1.5">
+                {usedIn.map((m) => (
+                  <li>
+                    <a
+                      href={`/makes/${m.slug}`}
+                      class="flex items-center gap-2 text-sm font-semibold text-brown-dark transition-colors hover:text-rose-dust"
+                    >
+                      <span class="text-rose-dust">→</span>
+                      {m.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
 
         <!-- Tags -->
         {

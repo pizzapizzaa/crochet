@@ -1,0 +1,503 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../layouts/PosLayout.astro';
+import Flash from '../../components/pos/Flash.astro';
+import { isAuthed, loginUrl } from '../../lib/auth';
+import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import {
+  BAND_CLASS,
+  BAND_LABEL,
+  costing,
+  marginBand,
+  money,
+  money0,
+  pct,
+  totals,
+  type Costing,
+} from '../../lib/costing';
+import type { Category, Product } from '../../lib/database.types';
+
+/*
+ * Material source & cost.
+ *
+ * One row per thing we buy: what it cost us, who we bought it from, what we
+ * sell it for, and the margin that falls out of the two. Editing happens in
+ * place — each row is its own form posting to /api/pos/material-save, so a
+ * mistyped cost on one material can never take the rest of the page with it.
+ *
+ * "Units sold" is typed in by hand. There is no checkout yet, so the honest
+ * options were to leave realised profit out entirely or to let it be entered;
+ * entered wins, and every column derived from it is labelled as such.
+ */
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const params = Astro.url.searchParams;
+const q = params.get('q') ?? '';
+const categoryFilter = params.get('category') ?? 'all';
+const view = params.get('view') ?? 'all';
+const sort = params.get('sort') ?? 'margin-asc';
+
+const admin = getSupabaseAdmin();
+
+let products: Product[] = [];
+let categories: Category[] = [];
+let loadError: string | null = null;
+
+if (!admin) {
+  loadError =
+    'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/makes-schema.sql for the cost columns.';
+} else {
+  const [productRes, categoryRes] = await Promise.all([
+    admin.from('products').select('*').order('name', { ascending: true }),
+    admin.from('categories').select('*').order('display_order', { ascending: true }).order('name'),
+  ]);
+
+  if (productRes.error || categoryRes.error) {
+    const message = productRes.error?.message ?? categoryRes.error?.message ?? '';
+    loadError = /cost_price|units_sold|column/i.test(message)
+      ? `The cost columns are missing: ${message}. Run supabase/makes-schema.sql in the Supabase SQL editor.`
+      : `Could not read from Supabase: ${message}`;
+  } else {
+    products = productRes.data ?? [];
+    categories = categoryRes.data ?? [];
+  }
+}
+
+const allRows: Costing[] = products.map(costing);
+const summary = totals(allRows);
+
+let rows = allRows;
+
+if (q) {
+  const needle = q.toLowerCase();
+  rows = rows.filter(
+    (r) =>
+      r.product.name.toLowerCase().includes(needle) ||
+      (r.product.supplier_name ?? '').toLowerCase().includes(needle) ||
+      (r.product.supplier_sku ?? '').toLowerCase().includes(needle),
+  );
+}
+if (categoryFilter !== 'all') rows = rows.filter((r) => r.product.category_id === categoryFilter);
+if (view === 'missing') rows = rows.filter((r) => !r.hasCost);
+else if (view === 'loss') rows = rows.filter((r) => r.isLoss);
+else if (view === 'thin') rows = rows.filter((r) => marginBand(r) === 'thin' || r.isLoss);
+
+// Rows with no cost sort last on every margin sort — an unknown margin is not
+// a low margin, and floating them to the top would bury the real problems.
+const byMargin = (a: Costing, b: Costing, dir: number) => {
+  if (a.marginPct === null && b.marginPct === null) return 0;
+  if (a.marginPct === null) return 1;
+  if (b.marginPct === null) return -1;
+  return (a.marginPct - b.marginPct) * dir;
+};
+
+if (sort === 'margin-asc') rows = [...rows].sort((a, b) => byMargin(a, b, 1));
+else if (sort === 'margin-desc') rows = [...rows].sort((a, b) => byMargin(a, b, -1));
+else if (sort === 'profit-desc')
+  rows = [...rows].sort((a, b) => (b.realisedProfit ?? -1) - (a.realisedProfit ?? -1));
+else if (sort === 'cost-desc') rows = [...rows].sort((a, b) => (b.cost ?? -1) - (a.cost ?? -1));
+else rows = [...rows].sort((a, b) => a.product.name.localeCompare(b.product.name));
+
+const viewTabs = [
+  { key: 'all', label: 'Everything', count: allRows.length },
+  { key: 'missing', label: 'No cost yet', count: summary.unpriced },
+  { key: 'thin', label: 'Thin margin', count: allRows.filter((r) => marginBand(r) === 'thin' || r.isLoss).length },
+  { key: 'loss', label: 'Sold at a loss', count: allRows.filter((r) => r.isLoss).length },
+];
+
+const qs = (over: Record<string, string>) => {
+  const next = new URLSearchParams({ q, category: categoryFilter, view, sort, ...over });
+  for (const [k, v] of [...next.entries()]) if (!v || v === 'all') next.delete(k);
+  const s = next.toString();
+  return s ? `/pos/materials?${s}` : '/pos/materials';
+};
+
+const back = Astro.url.pathname + Astro.url.search;
+const ok = params.get('ok');
+const err = params.get('error');
+
+const stats = [
+  {
+    label: 'Tied up in stock',
+    value: money0(summary.stockAtCost),
+    sub: `worth ${money0(summary.stockAtRetail)} at retail`,
+  },
+  {
+    label: 'Blended margin',
+    value: pct(summary.blendedMarginPct),
+    sub: summary.unpriced ? `${summary.unpriced} item${summary.unpriced === 1 ? '' : 's'} not costed` : 'all items costed',
+  },
+  {
+    label: 'Profit on the shelf',
+    value: money0(summary.potentialProfit),
+    sub: 'if the current stock all sells',
+  },
+  {
+    label: 'Profit booked',
+    value: money0(summary.realisedProfit),
+    sub: `on ${money0(summary.revenue)} of sales entered`,
+  },
+];
+
+const cell =
+  'w-full rounded-field border border-cream-300 bg-cream-50 px-2.5 py-2 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40';
+const label = 'mb-1 block text-micro font-bold uppercase tracking-eyebrow text-ink-muted';
+const head = 'text-micro font-bold uppercase tracking-eyebrow text-ink-muted';
+const ROW_GRID =
+  'grid gap-2 lg:grid-cols-[minmax(190px,2.2fr)_92px_92px_104px_74px_74px_112px_88px] lg:items-center';
+---
+
+<PosLayout title="Material cost" section="materials">
+  <header class="mb-6">
+    <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Money</p>
+    <h1 class="mt-1 font-display text-3xl font-extrabold text-ink sm:text-4xl">Material source &amp; cost</h1>
+    <p class="mt-1.5 max-w-2xl text-sm text-ink-muted">
+      What each material costs us, where it comes from, and what we keep when it sells. Editing a
+      cost or a price here changes it everywhere — including the bundles priced off it.
+    </p>
+  </header>
+
+  <Flash ok={ok} error={err ?? loadError} />
+
+  <!-- Summary -->
+  <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    {
+      stats.map((s) => (
+        <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+          <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">{s.label}</p>
+          <p class="mt-2 font-display text-3xl font-extrabold text-ink">{s.value}</p>
+          <p class="mt-0.5 text-xs text-ink-muted">{s.sub}</p>
+        </div>
+      ))
+    }
+  </div>
+
+  {
+    summary.unpriced > 0 && (
+      <div class="mt-5 rounded-card border border-lemon-soft bg-lemon-wash px-4 py-3">
+        <p class="text-sm font-semibold text-lemon-deep">
+          {summary.unpriced} material{summary.unpriced === 1 ? ' has' : 's have'} no cost on file, so
+          they are left out of every total above —{' '}
+          <a href={qs({ view: 'missing' })} class="underline">
+            fill them in
+          </a>
+          .
+        </p>
+      </div>
+    )
+  }
+
+  <!-- Filters -->
+  <div class="mb-5 mt-5 rounded-card border border-cream-300 bg-paper p-4 shadow-sm">
+    <form method="GET" action="/pos/materials" class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="relative flex-1">
+        <svg
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="search"
+          name="q"
+          value={q}
+          placeholder="Search material, supplier, SKU…"
+          class="w-full rounded-field border border-cream-300 bg-cream-50 py-2.5 pl-9 pr-4 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+        />
+      </div>
+
+      <select
+        name="category"
+        class="rounded-field border border-cream-300 bg-cream-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+      >
+        <option value="all" selected={categoryFilter === 'all'}>All categories</option>
+        {
+          categories.map((c) => (
+            <option value={c.id} selected={categoryFilter === c.id}>
+              {c.name}
+            </option>
+          ))
+        }
+      </select>
+
+      <select
+        name="sort"
+        class="rounded-field border border-cream-300 bg-cream-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+      >
+        {
+          [
+            { value: 'margin-asc', label: 'Worst margin first' },
+            { value: 'margin-desc', label: 'Best margin first' },
+            { value: 'profit-desc', label: 'Most profit booked' },
+            { value: 'cost-desc', label: 'Most expensive' },
+            { value: 'name', label: 'By name' },
+          ].map((o) => (
+            <option value={o.value} selected={sort === o.value}>
+              {o.label}
+            </option>
+          ))
+        }
+      </select>
+
+      <input type="hidden" name="view" value={view} />
+
+      <button
+        type="submit"
+        class="rounded-pill border border-cream-300 bg-cream-100 px-5 py-2.5 text-sm font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+      >
+        Apply
+      </button>
+    </form>
+
+    <div class="mt-3 flex flex-wrap gap-1.5 border-t border-cream-300 pt-3">
+      {
+        viewTabs.map((t) => (
+          <a
+            href={qs({ view: t.key })}
+            class={`rounded-pill px-3 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
+              view === t.key ? 'bg-forest text-paper' : 'bg-cream-100 text-ink-muted hover:bg-cream-200'
+            }`}
+          >
+            {t.label} <span class="opacity-60">{t.count}</span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+
+  <!-- Rows -->
+  {
+    rows.length === 0 ? (
+      <div class="rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-16 text-center">
+        <p class="text-3xl">🧾</p>
+        <h3 class="mt-3 font-display text-lg font-bold text-ink">
+          {allRows.length === 0 ? 'No materials yet' : 'Nothing matches that'}
+        </h3>
+        <p class="mt-1 text-sm text-ink-muted">
+          {allRows.length === 0
+            ? 'Add yarn and tools as products first — they show up here to be costed.'
+            : 'Try widening the search or clearing the filter.'}
+        </p>
+        <a
+          href={allRows.length === 0 ? '/pos/products/new' : '/pos/materials'}
+          class="mt-5 inline-block rounded-pill bg-btn-gradient px-6 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+        >
+          {allRows.length === 0 ? 'Add a product' : 'Clear filters'}
+        </a>
+      </div>
+    ) : (
+      <div class="space-y-2">
+        {/* Column headings — desktop only; each row repeats its own labels on mobile. */}
+        <div class={`${ROW_GRID} hidden px-4 lg:grid`}>
+          <span class={head}>Material</span>
+          <span class={head}>Cost</span>
+          <span class={head}>Sell</span>
+          <span class={head}>Margin</span>
+          <span class={head}>Stock</span>
+          <span class={head}>Sold</span>
+          <span class={head}>Profit</span>
+          <span class={head} />
+        </div>
+
+        {rows.map((r) => {
+          const p = r.product;
+          const band = marginBand(r);
+          return (
+            <form
+              method="POST"
+              action="/api/pos/material-save"
+              class={`${ROW_GRID} rounded-card border border-cream-300 bg-paper p-4 shadow-sm`}
+            >
+              <input type="hidden" name="id" value={p.id} />
+              <input type="hidden" name="next" value={back} />
+
+              {/* Material */}
+              <div class="flex min-w-0 items-center gap-3">
+                <img
+                  src={p.images?.[0] ?? '/placeholder-product.jpg'}
+                  alt=""
+                  class="h-10 w-10 shrink-0 rounded-field object-cover"
+                  loading="lazy"
+                />
+                <div class="min-w-0">
+                  <a
+                    href={`/pos/products/${p.id}`}
+                    class="block truncate font-display text-sm font-bold text-ink hover:text-mint-deep"
+                  >
+                    {p.name}
+                  </a>
+                  <span class="block truncate text-xs text-ink-muted">
+                    {p.category}
+                    {p.supplier_name ? ` · ${p.supplier_name}` : ''}
+                    {p.is_active ? '' : ' · draft'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Cost */}
+              <div>
+                <span class={`${label} lg:hidden`}>Cost</span>
+                <input
+                  name="cost_price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={r.cost === null ? '' : r.cost.toFixed(2)}
+                  placeholder="—"
+                  aria-label={`Cost of ${p.name}`}
+                  class={cell}
+                />
+              </div>
+
+              {/* Sell */}
+              <div>
+                <span class={`${label} lg:hidden`}>Sell</span>
+                <input
+                  name="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={r.price.toFixed(2)}
+                  aria-label={`Sell price of ${p.name}`}
+                  class={cell}
+                />
+              </div>
+
+              {/* Margin */}
+              <div class="flex flex-col gap-0.5">
+                <span class={`${label} lg:hidden`}>Margin</span>
+                <span class="font-display text-sm font-extrabold text-ink">{pct(r.marginPct)}</span>
+                <span
+                  class={`w-fit rounded-pill px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${BAND_CLASS[band]}`}
+                >
+                  {BAND_LABEL[band]}
+                </span>
+              </div>
+
+              {/* Stock (read-only here — the product editor owns it) */}
+              <div>
+                <span class={`${label} lg:hidden`}>Stock</span>
+                <span class="block px-2.5 py-2 text-sm font-bold text-ink-body">{p.stock}</span>
+              </div>
+
+              {/* Units sold */}
+              <div>
+                <span class={`${label} lg:hidden`}>Sold</span>
+                <input
+                  name="units_sold"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={p.units_sold ?? 0}
+                  aria-label={`Units of ${p.name} sold`}
+                  class={cell}
+                />
+              </div>
+
+              {/* Profit */}
+              <div>
+                <span class={`${label} lg:hidden`}>Profit</span>
+                <span class="block font-display text-sm font-extrabold text-ink">
+                  {r.profitPerUnit === null ? '—' : money(r.profitPerUnit)}
+                </span>
+                <span class="block text-[11px] text-ink-muted">
+                  {r.realisedProfit === null || r.realisedProfit === 0
+                    ? 'per unit'
+                    : `${money(r.realisedProfit)} booked`}
+                </span>
+              </div>
+
+              {/* Save */}
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  type="submit"
+                  class="rounded-pill bg-btn-gradient px-4 py-2 text-xs font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97]"
+                >
+                  Save
+                </button>
+              </div>
+
+              {/* Sourcing — folded away so the money columns stay scannable. */}
+              <details class="lg:col-span-8">
+                <summary class="cursor-pointer list-none text-xs font-bold text-mint-deep hover:underline">
+                  {p.supplier_name || p.supplier_sku || p.cost_note
+                    ? `Source · ${p.supplier_name ?? 'unnamed supplier'}`
+                    : 'Add where this comes from'}
+                </summary>
+
+                <div class="mt-3 grid gap-3 border-t border-cream-300 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label class={label}>Supplier</label>
+                    <input
+                      name="supplier_name"
+                      type="text"
+                      value={p.supplier_name ?? ''}
+                      placeholder="Where you buy it"
+                      class={cell}
+                    />
+                  </div>
+                  <div>
+                    <label class={label}>Product link</label>
+                    <input
+                      name="supplier_url"
+                      type="url"
+                      value={p.supplier_url ?? ''}
+                      placeholder="https://…"
+                      class={cell}
+                    />
+                  </div>
+                  <div>
+                    <label class={label}>Their SKU</label>
+                    <input
+                      name="supplier_sku"
+                      type="text"
+                      value={p.supplier_sku ?? ''}
+                      placeholder="Catalogue code"
+                      class={cell}
+                    />
+                  </div>
+                  <div>
+                    <label class={label}>Note</label>
+                    <input
+                      name="cost_note"
+                      type="text"
+                      value={p.cost_note ?? ''}
+                      placeholder="Case of 10 · price held to March"
+                      class={cell}
+                    />
+                  </div>
+                </div>
+
+                <p class="mt-2 text-xs text-ink-faint">
+                  {p.cost_updated_at
+                    ? `Cost last changed ${new Date(p.cost_updated_at).toLocaleDateString('en-US', { dateStyle: 'medium' })}.`
+                    : 'Cost has not been set yet.'}
+                  {p.supplier_url && (
+                    <>
+                      {' '}
+                      <a
+                        href={p.supplier_url}
+                        target="_blank"
+                        rel="noopener nofollow"
+                        class="font-semibold text-mint-deep hover:underline"
+                      >
+                        Reorder ↗
+                      </a>
+                    </>
+                  )}
+                </p>
+              </details>
+            </form>
+          );
+        })}
+      </div>
+    )
+  }
+</PosLayout>

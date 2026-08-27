@@ -1,0 +1,301 @@
+---
+// Rendered per request so a make published from /pos is live immediately.
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import MakeCard from '../../components/MakeCard.astro';
+import { getMakeBySlug, getMakes, lineTotal, money, priceBundle, qty } from '../../lib/makes';
+
+const { slug } = Astro.params;
+
+const make = await getMakeBySlug(slug!);
+if (!make) {
+  return Astro.redirect('/makes');
+}
+
+const pricing = priceBundle(make, make.items);
+const image = make.image_url ?? '/placeholder-product.jpg';
+
+const related = (await getMakes()).filter((m) => m.id !== make.id).slice(0, 3);
+
+// A bundle can only be bought whole if every required material is in stock.
+const outOfStock = pricing.required.filter((i) => i.product.stock === 0);
+const bundleAvailable = pricing.required.length > 0 && outOfStock.length === 0;
+
+const facts = [
+  { label: 'Difficulty', value: make.difficulty },
+  { label: 'Time', value: make.estimated_time },
+  {
+    label: 'Materials',
+    value: `${pricing.required.length} item${pricing.required.length === 1 ? '' : 's'}`,
+  },
+].filter((f) => f.value);
+---
+
+<Layout title={make.title} description={make.summary ?? `What you need to make ${make.title}.`} image={image}>
+  <div class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
+    <nav class="mb-8 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
+      <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
+      <span>/</span>
+      <a href="/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes</a>
+      <span>/</span>
+      <span class="text-ink-body">{make.title}</span>
+    </nav>
+
+    <div class="grid gap-12 lg:grid-cols-2">
+      <!-- ── The pin ─────────────────────────────────────────────── -->
+      <div class="space-y-4">
+        <div class="relative aspect-square overflow-hidden rounded-photo bg-cream-200 shadow-xl">
+          <img src={image} alt={make.title} class="h-full w-full object-cover" />
+          {
+            make.difficulty && (
+              <span class="absolute left-5 top-5 rounded-pill bg-lemon px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-ink">
+                {make.difficulty}
+              </span>
+            )
+          }
+        </div>
+
+        <!--
+          Credit block. Sits directly under the photo rather than in the footer
+          because the photo is the thing being credited, and it is the first
+          place anyone looks to ask "whose is this?".
+        -->
+        <div class="rounded-card border border-cream-300 bg-paper p-5">
+          <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Original pin</p>
+          <p class="mt-1.5 text-sm text-ink-body">
+            This project is by{' '}
+            {
+              make.author_url ? (
+                <a
+                  href={make.author_url}
+                  target="_blank"
+                  rel="noopener nofollow"
+                  class="font-bold text-mint-deep hover:underline"
+                >
+                  {make.author_name}
+                </a>
+              ) : (
+                <span class="font-bold text-ink">{make.author_name}</span>
+              )
+            }{' '}
+            on Pinterest. We did not design it and we do not reproduce the pattern here — follow the
+            pin for that.
+          </p>
+
+          <a
+            href={make.pinterest_url}
+            target="_blank"
+            rel="noopener nofollow"
+            class="mt-4 inline-flex items-center gap-2 rounded-pill bg-forest px-5 py-2.5 text-sm font-bold text-paper transition-all duration-fast ease-out hover:-translate-y-0.5 hover:bg-forest-deep"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12c0 4.24 2.64 7.86 6.36 9.32-.09-.79-.17-2 .03-2.87.18-.78 1.17-4.97 1.17-4.97s-.3-.6-.3-1.48c0-1.39.81-2.43 1.81-2.43.85 0 1.26.64 1.26 1.41 0 .86-.55 2.14-.83 3.33-.24 1 .5 1.81 1.48 1.81 1.78 0 3.14-1.88 3.14-4.58 0-2.39-1.72-4.07-4.18-4.07-2.85 0-4.52 2.14-4.52 4.35 0 .86.33 1.78.75 2.28.08.1.09.19.07.29-.08.32-.25 1-.28 1.14-.04.19-.15.23-.34.14-1.25-.58-2.03-2.4-2.03-3.87 0-3.15 2.29-6.04 6.6-6.04 3.46 0 6.16 2.47 6.16 5.77 0 3.44-2.17 6.21-5.18 6.21-1.01 0-1.96-.53-2.29-1.15l-.62 2.38c-.23.86-.83 1.94-1.24 2.6.94.29 1.92.44 2.95.44 5.52 0 10-4.48 10-10S17.52 2 12 2z"
+              />
+            </svg>
+            Open on Pinterest
+          </a>
+
+          {
+            make.attribution_note && (
+              <p class="mt-3 text-xs text-ink-muted">{make.attribution_note}</p>
+            )
+          }
+        </div>
+      </div>
+
+      <!-- ── The bundle ──────────────────────────────────────────── -->
+      <div class="flex flex-col">
+        <span class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+          Make it yourself
+        </span>
+        <h1 class="mt-2 font-display text-4xl font-extrabold leading-tight text-ink">
+          {make.title}
+        </h1>
+
+        {make.summary && <p class="mt-4 leading-relaxed text-ink-body">{make.summary}</p>}
+
+        {
+          facts.length > 0 && (
+            <div class="mt-5 flex flex-wrap gap-2">
+              {facts.map((f) => (
+                <span class="rounded-pill bg-cream-100 px-3.5 py-1.5 text-xs font-semibold text-ink-body">
+                  <span class="text-ink-muted">{f.label}:</span> {f.value}
+                </span>
+              ))}
+            </div>
+          )
+        }
+
+        <hr class="my-6 border-cream-300" />
+
+        <h2 class="font-display text-xl font-bold text-ink">What you need</h2>
+        <p class="mt-1 text-sm text-ink-muted">
+          Everything below is in the shop. Take the bundle, or buy any line on its own.
+        </p>
+
+        {
+          pricing.required.length === 0 ? (
+            <p class="mt-4 rounded-card bg-cream-100 px-4 py-3 text-sm text-ink-muted">
+              We are still putting the materials list together for this one.
+            </p>
+          ) : (
+            <ul class="mt-4 divide-y divide-cream-300 rounded-card border border-cream-300 bg-paper">
+              {pricing.required.map((item) => (
+                <li class="flex items-center gap-3 p-3.5">
+                  <a href={`/store/${item.product.slug}`} class="shrink-0">
+                    <img
+                      src={item.product.images?.[0] ?? '/placeholder-product.jpg'}
+                      alt=""
+                      class="h-14 w-14 rounded-field object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                  <div class="min-w-0 flex-1">
+                    <a
+                      href={`/store/${item.product.slug}`}
+                      class="block font-display text-sm font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
+                    >
+                      {item.product.name}
+                    </a>
+                    <p class="text-xs text-ink-muted">
+                      {qty(item.quantity)} × {money(Number(item.product.price))}
+                      {item.note ? ` · ${item.note}` : ''}
+                    </p>
+                    {item.product.stock === 0 && (
+                      <p class="mt-0.5 text-xs font-bold text-lemon-deep">Out of stock</p>
+                    )}
+                  </div>
+                  <span class="shrink-0 font-display text-sm font-extrabold text-ink">
+                    {money(lineTotal(item))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+
+        {
+          pricing.optional.length > 0 && (
+            <>
+              <h3 class="mt-6 font-display text-base font-bold text-ink">Nice to have</h3>
+              <p class="mt-0.5 text-xs text-ink-muted">
+                Not counted in the bundle price — add them if you want them.
+              </p>
+              <ul class="mt-3 divide-y divide-cream-300 rounded-card border border-dashed border-cream-400 bg-paper/60">
+                {pricing.optional.map((item) => (
+                  <li class="flex items-center gap-3 p-3">
+                    <a href={`/store/${item.product.slug}`} class="shrink-0">
+                      <img
+                        src={item.product.images?.[0] ?? '/placeholder-product.jpg'}
+                        alt=""
+                        class="h-10 w-10 rounded-field object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                    <div class="min-w-0 flex-1">
+                      <a
+                        href={`/store/${item.product.slug}`}
+                        class="block truncate text-sm font-semibold text-ink-body hover:text-mint-deep"
+                      >
+                        {item.product.name}
+                      </a>
+                      {item.note && <p class="truncate text-xs text-ink-faint">{item.note}</p>}
+                    </div>
+                    <span class="shrink-0 text-sm font-bold text-ink-body">
+                      {money(lineTotal(item))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )
+        }
+
+        <!-- Price panel -->
+        {
+          pricing.required.length > 0 && (
+            <div class="mt-6 rounded-card border border-cream-300 bg-cream-50 p-5">
+              <div class="flex items-baseline justify-between">
+                <span class="text-sm text-ink-muted">Bought separately</span>
+                <span class="text-sm text-ink-body">{money(pricing.itemsSubtotal)}</span>
+              </div>
+              <div class="mt-2 flex items-baseline justify-between">
+                <span class="font-display text-lg font-bold text-ink">Whole bundle</span>
+                <span class="font-display text-3xl font-extrabold text-ink">
+                  {money(pricing.bundlePrice)}
+                </span>
+              </div>
+              {pricing.savings > 0 && (
+                <p class="mt-2 rounded-field bg-mint-wash px-3 py-2 text-sm font-bold text-mint-deep">
+                  Save {money(pricing.savings)} — {pricing.savingsPct.toFixed(0)}% off taking the
+                  bundle
+                </p>
+              )}
+
+              <button
+                class={`mt-4 w-full rounded-pill py-4 text-sm font-bold transition-all duration-fast ease-out ${
+                  bundleAvailable
+                    ? 'bg-btn-gradient text-ink shadow-sm hover:-translate-y-0.5 hover:brightness-105'
+                    : 'cursor-not-allowed bg-cream-200 text-ink-muted'
+                }`}
+                disabled={!bundleAvailable}
+              >
+                {bundleAvailable
+                  ? `Add the bundle — ${money(pricing.bundlePrice)}`
+                  : `${outOfStock.length} material${outOfStock.length === 1 ? '' : 's'} out of stock`}
+              </button>
+
+              <p class="mt-3 text-xs text-ink-muted">
+                You are buying the yarn and tools, not a finished piece — and not the pattern, which
+                stays with {make.author_name} on Pinterest.
+              </p>
+            </div>
+          )
+        }
+
+        {
+          make.tags.length > 0 && (
+            <div class="mt-5 flex flex-wrap gap-2">
+              {make.tags.map((tag) => (
+                <a
+                  href={`/makes?q=${encodeURIComponent(tag)}`}
+                  class="rounded-pill bg-cream-200 px-3 py-1.5 text-xs text-ink-muted transition-colors duration-fast ease-out hover:bg-mint-wash hover:text-mint-deep"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </div>
+
+    {
+      related.length > 0 && (
+        <section class="mt-24">
+          <div class="mb-10 flex items-end justify-between">
+            <div>
+              <span class="text-micro font-bold uppercase tracking-eyebrow text-mint-deep">
+                Keep going
+              </span>
+              <h2 class="mt-1 font-display text-3xl font-extrabold text-ink">More makes</h2>
+            </div>
+            <a
+              href="/makes"
+              class="hidden text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:text-mint-deep sm:block"
+            >
+              View all →
+            </a>
+          </div>
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((m) => (
+              <MakeCard make={m} />
+            ))}
+          </div>
+        </section>
+      )
+    }
+  </div>
+</Layout>

@@ -1,0 +1,168 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import MakeCard from '../../components/MakeCard.astro';
+import { getMakes } from '../../lib/makes';
+
+const allMakes = await getMakes();
+
+const urlSearch = Astro.url.searchParams.get('q') ?? '';
+const urlDifficulty = Astro.url.searchParams.get('difficulty') ?? 'All';
+
+let makes = [...allMakes];
+
+if (urlDifficulty !== 'All') {
+  makes = makes.filter((m) => m.difficulty === urlDifficulty);
+}
+
+if (urlSearch) {
+  const q = urlSearch.toLowerCase();
+  makes = makes.filter(
+    (m) =>
+      m.title.toLowerCase().includes(q) ||
+      (m.summary ?? '').toLowerCase().includes(q) ||
+      m.tags.some((t) => t.toLowerCase().includes(q)),
+  );
+}
+
+makes.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+
+const difficulties = ['All', ...new Set(allMakes.map((m) => m.difficulty).filter(Boolean))];
+---
+
+<Layout
+  title="Makes"
+  description="Projects we love from around Pinterest, and the yarn and tools you need to make each one."
+>
+  <!-- Header -->
+  <section class="border-b border-cream-300 bg-hero-wash py-12">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+        <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
+        <span>/</span>
+        <span class="text-ink-body">Makes</span>
+      </nav>
+      <h1 class="font-display text-display-2 font-extrabold text-ink">Makes</h1>
+      <p class="mt-3 max-w-2xl text-ink-body">
+        Projects we love from around Pinterest, and the exact yarn and tools you need to make each
+        one. The pattern lives with the person who wrote it — we link you straight to their pin, and
+        sell you the materials.
+      </p>
+
+      <form method="GET" action="/makes" class="mt-6 flex max-w-md gap-2">
+        <div class="relative flex-1">
+          <svg
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="search"
+            name="q"
+            value={urlSearch}
+            placeholder="Search makes…"
+            class="w-full rounded-pill border border-cream-300 bg-paper py-2.5 pl-9 pr-4 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+          />
+        </div>
+        <button
+          type="submit"
+          class="rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+        >
+          Go
+        </button>
+      </form>
+
+      {
+        difficulties.length > 1 && (
+          <div class="mt-4 flex flex-wrap gap-1.5">
+            {difficulties.map((d) => (
+              <a
+                href={`/makes?difficulty=${encodeURIComponent(d as string)}${urlSearch ? `&q=${encodeURIComponent(urlSearch)}` : ''}`}
+                class={`rounded-pill px-3.5 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
+                  urlDifficulty === d
+                    ? 'bg-forest text-paper'
+                    : 'bg-paper text-ink-body hover:bg-cream-200'
+                }`}
+              >
+                {d}
+              </a>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-container px-4 py-12 sm:px-6 lg:px-8">
+    {
+      makes.length === 0 ? (
+        <div class="py-20 text-center">
+          <div class="mb-4 text-5xl">📌</div>
+          <h2 class="font-display text-2xl font-bold text-ink">
+            {allMakes.length === 0 ? 'No makes up yet' : 'Nothing matches that'}
+          </h2>
+          <p class="mx-auto mt-2 max-w-md text-sm text-ink-muted">
+            {allMakes.length === 0
+              ? 'We are still putting these together. In the meantime the shop is full of yarn and tools.'
+              : `No makes for "${urlSearch || urlDifficulty}".`}
+          </p>
+          <a
+            href={allMakes.length === 0 ? '/store' : '/makes'}
+            class="mt-6 inline-block rounded-pill bg-btn-gradient px-6 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+          >
+            {allMakes.length === 0 ? 'Browse the shop' : 'See all makes'}
+          </a>
+        </div>
+      ) : (
+        <>
+          <p class="mb-6 text-sm text-ink-muted">
+            {makes.length} make{makes.length === 1 ? '' : 's'}
+          </p>
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {makes.map((make) => (
+              <MakeCard make={make} />
+            ))}
+          </div>
+        </>
+      )
+    }
+
+    <!-- How this works -->
+    <section class="mt-16 rounded-card border border-cream-300 bg-paper p-6 sm:p-8">
+      <h2 class="font-display text-xl font-bold text-ink">How a make works</h2>
+      <div class="mt-4 grid gap-5 sm:grid-cols-3">
+        {
+          [
+            {
+              step: '1',
+              title: 'Find one you like',
+              body: 'Every make points at the original pin. Open it to see the pattern from the person who wrote it.',
+            },
+            {
+              step: '2',
+              title: 'Buy the materials',
+              body: 'We stock the yarn and tools it takes. Take the whole bundle at a discount, or pick up only the bits you are missing.',
+            },
+            {
+              step: '3',
+              title: 'Make it',
+              body: 'We sell supplies, not finished pieces — the making is the point.',
+            },
+          ].map((s) => (
+            <div>
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-pill bg-mint font-display text-sm font-extrabold text-ink">
+                {s.step}
+              </span>
+              <h3 class="mt-3 font-display text-base font-bold text-ink">{s.title}</h3>
+              <p class="mt-1 text-sm text-ink-muted">{s.body}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+  </div>
+</Layout>
