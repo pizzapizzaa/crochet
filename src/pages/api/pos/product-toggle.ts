@@ -28,10 +28,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect(withFlash(back, 'error', 'Supabase is not connected.'));
   }
 
-  const { error } = await admin
-    .from('products')
-    .update({ [field]: value })
-    .eq('id', id);
+  // Spelled out rather than computed. A `{ [field]: value }` key is opaque to
+  // the column types, so the two columns are named and checked for real.
+  const patch = field === 'is_active' ? { is_active: value } : { is_featured: value };
+
+  const { error } = await admin.from('products').update(patch).eq('id', id);
 
   if (error) {
     return redirect(withFlash(back, 'error', `Could not update: ${error.message}`));
