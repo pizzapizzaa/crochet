@@ -7,7 +7,19 @@ const navLinks = [
   { label: 'Request Product', href: '/request-product' },
 ];
 
-const currentPath = Astro.url.pathname;
+/*
+ * Vercel serves a prerendered route with a trailing slash, so /gallery/ never
+ * equalled the '/gallery' in the list and the whole nav went dark on that page.
+ * Normalising both sides fixes it, and treating a nested route as its section
+ * keeps Shop lit on /store/<slug> and Makes lit on /makes/<slug>.
+ */
+const trim = (path: string) => (path.length > 1 ? path.replace(/\/+$/, '') : path);
+const currentPath = trim(Astro.url.pathname);
+
+const isActive = (href: string) => {
+  const target = trim(href);
+  return currentPath === target || (target !== '/' && currentPath.startsWith(target + '/'));
+};
 ---
 
 <!--
@@ -39,13 +51,49 @@ const currentPath = Astro.url.pathname;
           navLinks.map((link) => (
             <a
               href={link.href}
-              class={`text-sm font-semibold transition-colors duration-fast ease-out hover:text-mint-deep ${
-                currentPath === link.href
-                  ? 'text-mint-deep border-b-2 border-mint pb-0.5'
-                  : 'text-ink-body'
+              aria-current={isActive(link.href) ? 'page' : undefined}
+              class={`relative text-sm font-semibold transition-colors duration-fast ease-out hover:text-mint-deep ${
+                isActive(link.href) ? 'text-ink' : 'text-ink-body'
               }`}
             >
-              {link.label}
+              {/*
+                A strand of yarn looped round the label. Drawn rather than
+                bordered so it can overshoot the text on both axes and cross
+                over itself the way a real loop does. preserveAspectRatio is
+                off so it stretches to whatever the word is wide, and
+                non-scaling-stroke keeps the strand an even thickness while
+                it does — without that the long labels come out with thin
+                horizontal runs and fat turns.
+              */}
+              {isActive(link.href) && (
+                <span class="pointer-events-none absolute -inset-x-3 -inset-y-2" aria-hidden="true">
+                  <svg class="h-full w-full" viewBox="0 0 120 44" preserveAspectRatio="none" fill="none">
+                    <path
+                      d="M40 6C20 7 6 13 6 22c0 10 20 16 54 16s54-7 54-16c0-9-18-15-52-15-14 0-24 2-29 6"
+                      stroke="#A8FFDC"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      vector-effect="non-scaling-stroke"
+                    />
+                    <path
+                      d="M44 11C28 13 16 17 17 23c1 6 14 10 33 11"
+                      stroke="#21FFA8"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      opacity="0.55"
+                      vector-effect="non-scaling-stroke"
+                    />
+                    <path
+                      d="M33 12c-4 3-6 7-4 11"
+                      stroke="#A8FFDC"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      vector-effect="non-scaling-stroke"
+                    />
+                  </svg>
+                </span>
+              )}
+              <span class="relative">{link.label}</span>
             </a>
           ))
         }
@@ -99,8 +147,9 @@ const currentPath = Astro.url.pathname;
       navLinks.map((link) => (
         <a
           href={link.href}
+          aria-current={isActive(link.href) ? 'page' : undefined}
           class={`block rounded-field px-3 py-2 text-sm font-semibold transition-colors duration-fast ease-out ${
-            currentPath === link.href
+            isActive(link.href)
               ? 'bg-mint-wash text-mint-deep'
               : 'text-ink-body hover:bg-cream-200'
           }`}
