@@ -65,6 +65,15 @@ const updated = new Date(make.updated_at ?? make.created_at).toLocaleString('en-
 
     <div class="flex shrink-0 flex-wrap items-center gap-2">
       <a
+        href="/pos/makes/new"
+        class="inline-flex items-center gap-1.5 rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+      >
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14M5 12h14" />
+        </svg>
+        New make
+      </a>
+      <a
         href={make.pinterest_url}
         target="_blank"
         rel="noopener nofollow"
