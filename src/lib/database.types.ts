@@ -4,6 +4,23 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Difficulty = 'Beginner' | 'Easy' | 'Intermediate' | 'Advanced';
 export const DIFFICULTIES: Difficulty[] = ['Beginner', 'Easy', 'Intermediate', 'Advanced'];
 
+/** Kept in step with the CHECK constraint on orders.status. */
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export const ORDER_STATUSES: OrderStatus[] = [
+  'pending',
+  'processing',
+  'shipped',
+  'delivered',
+  'cancelled',
+];
+
+/**
+ * Whether the money arrived, which is a separate question from how far along
+ * the parcel is: an order can be paid and still pending, or shipped and
+ * refunded.
+ */
+export type PaymentStatus = 'unpaid' | 'paid' | 'failed' | 'refunded';
+
 export interface Database {
   public: {
     Tables: {
@@ -228,24 +245,48 @@ export interface Database {
         Row: {
           id: string;
           created_at: string;
+          updated_at: string;
+          order_number: string;
           customer_email: string;
           customer_name: string;
+          customer_note: string | null;
           items: Json;
+          subtotal: number;
+          shipping_total: number;
           total: number;
-          status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+          status: OrderStatus;
+          payment_status: PaymentStatus;
           shipping_address: Json;
-          stripe_session_id: string | null;
+          paid_at: string | null;
+          payment_provider: string;
+          provider_order_code: number | null;
+          provider_payment_id: string | null;
+          payment_reference: string | null;
+          amount_charged: number | null;
+          charged_currency: string | null;
         };
         Insert: {
           id?: string;
           created_at?: string;
+          updated_at?: string;
+          order_number: string;
           customer_email: string;
           customer_name: string;
+          customer_note?: string | null;
           items: Json;
+          subtotal?: number;
+          shipping_total?: number;
           total: number;
-          status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+          status?: OrderStatus;
+          payment_status?: PaymentStatus;
           shipping_address: Json;
-          stripe_session_id?: string | null;
+          paid_at?: string | null;
+          payment_provider?: string;
+          provider_order_code?: number | null;
+          provider_payment_id?: string | null;
+          payment_reference?: string | null;
+          amount_charged?: number | null;
+          charged_currency?: string | null;
         };
         Update: Partial<Database['public']['Tables']['orders']['Insert']>;
         Relationships: [];
@@ -272,7 +313,13 @@ export interface Database {
         ];
       };
     };
-    Functions: Record<string, never>;
+    Functions: {
+      /** Takes payment and stock together — see supabase/shop-schema.sql. */
+      commit_order: {
+        Args: { p_order_id: string; p_payment_ref: string };
+        Returns: undefined;
+      };
+    };
     Enums: Record<string, never>;
   };
 }
@@ -297,6 +344,7 @@ export interface MakeWithBundle extends Make {
   items: MakeItemWithProduct[];
 }
 
+export type OrderInsert = Database['public']['Tables']['orders']['Insert'];
 export type ProductInsert = Database['public']['Tables']['products']['Insert'];
 export type MakeInsert = Database['public']['Tables']['makes']['Insert'];
 export type MakeItemInsert = Database['public']['Tables']['make_items']['Insert'];

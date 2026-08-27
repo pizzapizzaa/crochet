@@ -101,6 +101,31 @@ const isActive = (href: string) => {
 
       <!-- Right side actions -->
       <div class="flex items-center gap-3">
+        <!--
+          The badge is hidden until the cart script finds something in it, so a
+          server-rendered page never flashes a "0" before the browser catches up.
+        -->
+        <button
+          type="button"
+          id="cart-button"
+          aria-label="Open basket"
+          class="relative rounded-field p-2 text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+        >
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z"
+            />
+          </svg>
+          <span
+            id="cart-count"
+            hidden
+            class="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-pill bg-mint px-1 text-center text-[10px] font-extrabold leading-[18px] text-ink"
+          ></span>
+        </button>
+
         <!-- Primary: light gradient fill, so the label is forest ink. -->
         <a
           href="/store"
@@ -168,10 +193,30 @@ const isActive = (href: string) => {
 </header>
 
 <script>
+  import { CART_EVENT, cartCount } from '../lib/cart';
+
   const btn = document.getElementById('mobile-menu-btn');
   const menu = document.getElementById('mobile-menu');
   btn?.addEventListener('click', () => {
     const open = menu?.classList.toggle('hidden') === false;
     btn.setAttribute('aria-expanded', String(open));
   });
+
+  const badge = document.getElementById('cart-count');
+
+  function paintBadge() {
+    if (!badge) return;
+    const count = cartCount();
+    badge.textContent = String(count);
+    badge.hidden = count === 0;
+  }
+
+  document.getElementById('cart-button')?.addEventListener('click', () => {
+    window.dispatchEvent(new Event('cart:open'));
+  });
+
+  window.addEventListener(CART_EVENT, paintBadge);
+  // Another tab may have added something since this page was rendered.
+  window.addEventListener('storage', paintBadge);
+  paintBadge();
 </script>

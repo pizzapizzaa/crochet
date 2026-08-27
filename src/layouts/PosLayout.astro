@@ -8,7 +8,7 @@ import '../styles/design-system.css';
 
 export interface Props {
   title: string;
-  section?: 'dashboard' | 'products' | 'makes' | 'materials' | 'categories';
+  section?: 'dashboard' | 'orders' | 'products' | 'makes' | 'materials' | 'categories';
   /** Set on the login screen, which has no nav. */
   bare?: boolean;
 }
@@ -21,6 +21,12 @@ const navLinks = [
     label: 'Dashboard',
     href: '/pos',
     icon: 'M4 5h6v6H4V5zm10 0h6v4h-6V5zM4 15h6v4H4v-4zm10-2h6v6h-6v-6z',
+  },
+  {
+    key: 'orders',
+    label: 'Orders',
+    href: '/pos/orders',
+    icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z',
   },
   {
     key: 'products',

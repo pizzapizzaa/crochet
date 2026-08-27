@@ -1,0 +1,373 @@
+---
+/*
+ * Checkout.
+ *
+ * Rendered per request so the "payments are off" banner reflects the server's
+ * env rather than whatever was true at build time. The page never names a
+ * price: it posts the basket to /api/shop/order-create, which prices it from
+ * the database and hands back a payOS link to send the customer to.
+ */
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import { isPayOSConfigured } from '../lib/payos';
+import { VND_PER_USD } from '../lib/orders';
+
+const vndPerUsd = new Intl.NumberFormat('en-US').format(VND_PER_USD);
+---
+
+<Layout title="Checkout" description="Finish your order.">
+  <section class="border-b border-cream-300 bg-paper py-10">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      <nav class="mb-3 flex items-center gap-1.5 text-xs text-ink-muted">
+        <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
+        <span>/</span>
+        <a href="/cart" class="transition-colors duration-fast ease-out hover:text-mint-deep">Basket</a>
+        <span>/</span>
+        <span class="font-semibold text-ink-body">Checkout</span>
+      </nav>
+      <h1 class="font-display text-4xl font-extrabold text-ink">Checkout</h1>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
+    {
+      !isPayOSConfigured && (
+        <div class="mb-6 rounded-card border border-lemon-soft bg-lemon-wash px-5 py-4">
+          <p class="font-display text-sm font-bold text-lemon-deep">Payments are not switched on</p>
+          <p class="mt-1 text-sm text-ink-body">
+            PAYOS_CLIENT_ID, PAYOS_API_KEY and PAYOS_CHECKSUM_KEY are missing from the environment,
+            so the pay button below will not work yet.
+          </p>
+        </div>
+      )
+    }
+
+    <div id="checkout-empty" class="hidden rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-20 text-center">
+      <p class="text-4xl">🧺</p>
+      <h2 class="mt-3 font-display text-xl font-bold text-ink">There is nothing to pay for</h2>
+      <a
+        href="/store"
+        class="mt-6 inline-block rounded-pill bg-btn-gradient px-7 py-3 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+      >
+        Browse the shop
+      </a>
+    </div>
+
+    <div
+      id="checkout-grid"
+      data-vnd-rate={VND_PER_USD}
+      class="hidden gap-8 lg:grid lg:grid-cols-[1fr_360px]"
+    >
+      <!-- Details -->
+      <form id="checkout-form" novalidate class="rounded-card border border-cream-300 bg-paper p-6 shadow-sm">
+        <h2 class="font-display text-lg font-bold text-ink">Where is it going?</h2>
+
+        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+          <label class="block sm:col-span-2">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Your name</span>
+            <input
+              name="name"
+              required
+              autocomplete="name"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+          </label>
+
+          <label class="block sm:col-span-2">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Email</span>
+            <input
+              name="email"
+              type="email"
+              required
+              autocomplete="email"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+            <span class="mt-1 block text-xs text-ink-muted">
+              Your order number goes here — it is how you track the order later.
+            </span>
+          </label>
+
+          <label class="block sm:col-span-2">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Address</span>
+            <input
+              name="line1"
+              required
+              autocomplete="address-line1"
+              placeholder="Street and number"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+          </label>
+
+          <label class="block sm:col-span-2">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">
+              Apartment, suite <span class="font-normal normal-case tracking-normal">(optional)</span>
+            </span>
+            <input
+              name="line2"
+              autocomplete="address-line2"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+          </label>
+
+          <label class="block">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Town or city</span>
+            <input
+              name="city"
+              required
+              autocomplete="address-level2"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+          </label>
+
+          <label class="block">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">State or region</span>
+            <input
+              name="region"
+              autocomplete="address-level1"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+          </label>
+
+          <label class="block">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Postcode</span>
+            <input
+              name="postcode"
+              required
+              autocomplete="postal-code"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+          </label>
+
+          <label class="block">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Country</span>
+            <input
+              name="country"
+              required
+              autocomplete="country-name"
+              value="United States"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+          </label>
+
+          <label class="block sm:col-span-2">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">
+              Anything I should know? <span class="font-normal normal-case tracking-normal">(optional)</span>
+            </span>
+            <textarea
+              name="note"
+              rows="3"
+              placeholder="Colour preferences, a gift note, when you need it by…"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            ></textarea>
+          </label>
+        </div>
+      </form>
+
+      <!-- Summary + pay -->
+      <aside class="mt-8 h-fit rounded-card border border-cream-300 bg-paper p-5 shadow-sm lg:mt-0">
+        <h2 class="font-display text-lg font-bold text-ink">Your order</h2>
+
+        <ul id="checkout-lines" class="mt-4 space-y-2.5 text-sm"></ul>
+
+        <dl class="mt-4 space-y-2 border-t border-cream-300 pt-4 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Subtotal</dt>
+            <dd class="font-semibold text-ink-body" data-subtotal>—</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Shipping</dt>
+            <dd class="font-semibold text-ink-body" data-shipping>—</dd>
+          </div>
+          <div class="flex justify-between border-t border-cream-300 pt-2">
+            <dt class="font-display font-bold text-ink">Total</dt>
+            <dd class="font-display text-2xl font-extrabold text-ink" data-total>—</dd>
+          </div>
+        </dl>
+
+        <div id="checkout-error" class="mt-4 hidden rounded-field border border-lemon-soft bg-lemon-wash px-4 py-3 text-sm text-ink-body"></div>
+
+        <!--
+          The amount actually taken is in dong: the catalogue is priced in USD
+          but payOS settles VND, so both are shown rather than surprising anyone
+          at the bank app.
+        -->
+        <p class="mt-4 rounded-field bg-mint-wash px-4 py-3 text-center">
+          <span class="block text-micro font-bold uppercase tracking-eyebrow text-mint-deep">
+            You will be charged
+          </span>
+          <span class="mt-0.5 block font-display text-xl font-extrabold text-ink" data-vnd>—</span>
+          <span class="mt-0.5 block text-xs text-ink-muted">at ₫{vndPerUsd} to the dollar</span>
+        </p>
+
+        <button
+          type="button"
+          id="pay-button"
+          class="mt-4 w-full rounded-pill bg-btn-gradient px-6 py-3.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Pay by bank transfer
+        </button>
+
+        <p class="mt-3 text-center text-xs text-ink-muted">
+          Scan the QR code with any Vietnamese banking app. No card needed.
+        </p>
+
+        <p id="checkout-busy" class="mt-3 hidden text-center text-sm font-semibold text-mint-deep">
+          Opening your payment — do not close this page.
+        </p>
+
+        <a
+          href="/cart"
+          class="mt-3 block py-2 text-center text-xs font-bold text-ink-muted transition-colors duration-fast ease-out hover:text-mint-deep"
+        >
+          Back to the basket
+        </a>
+      </aside>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { readCart, toRequest } from '../lib/cart';
+  import { fetchPricing, money } from '../lib/cartView';
+
+  const grid = document.getElementById('checkout-grid')!;
+  const emptyEl = document.getElementById('checkout-empty')!;
+  const linesEl = document.getElementById('checkout-lines')!;
+  const errorEl = document.getElementById('checkout-error')!;
+  const busyEl = document.getElementById('checkout-busy')!;
+  const payButton = document.getElementById('pay-button') as HTMLButtonElement | null;
+  const form = document.getElementById('checkout-form') as HTMLFormElement;
+
+  const dong = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + '₫';
+
+  function showError(message: string) {
+    errorEl.textContent = message;
+    errorEl.classList.remove('hidden');
+    errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  const clearError = () => errorEl.classList.add('hidden');
+
+  async function paintSummary() {
+    const lines = readCart();
+
+    if (lines.length === 0) {
+      grid.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+
+    grid.classList.remove('hidden');
+    grid.classList.add('grid');
+    emptyEl.classList.add('hidden');
+
+    const priced = await fetchPricing(lines);
+    if (!priced) return showError('We could not price your basket. Refresh and try again.');
+
+    linesEl.innerHTML = priced.lines
+      .map(
+        (l) => `
+        <li class="flex justify-between gap-3">
+          <span class="min-w-0 text-ink-body">
+            <span class="font-semibold">${l.qty}×</span> ${l.name}
+          </span>
+          <span class="shrink-0 font-semibold text-ink">${money(l.lineTotal)}</span>
+        </li>`,
+      )
+      .join('');
+
+    const set = (key: string, value: string) => {
+      const el = document.querySelector(`[data-${key}]`);
+      if (el) el.textContent = value;
+    };
+    set('subtotal', money(priced.subtotal));
+    set('shipping', priced.shipping === 0 ? 'Free' : money(priced.shipping));
+    set('total', money(priced.total));
+
+    // Display only. The dong figure that is actually charged is computed on the
+    // server from the same rate, so this can never become the binding number.
+    const rate = Number(grid.dataset.vndRate ?? 0);
+    set('vnd', rate ? dong(Math.round(priced.total * rate)) : '—');
+
+    if (priced.problems.length > 0) showError(priced.problems[0].message);
+  }
+
+  /** Native validity plus a scroll, since the panel can be off screen. */
+  function detailsValid(): boolean {
+    if (form.checkValidity()) return true;
+    const first = form.querySelector(':invalid') as HTMLElement | null;
+    first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    (first as HTMLInputElement)?.focus();
+    showError('Fill in your name, email and address first.');
+    return false;
+  }
+
+  function orderPayload() {
+    const data = new FormData(form);
+    const get = (key: string) => String(data.get(key) ?? '').trim();
+    return {
+      name: get('name'),
+      email: get('email'),
+      note: get('note'),
+      address: {
+        line1: get('line1'),
+        line2: get('line2'),
+        city: get('city'),
+        region: get('region'),
+        postcode: get('postcode'),
+        country: get('country'),
+      },
+      lines: toRequest(),
+    };
+  }
+
+  /*
+   * The basket is deliberately NOT cleared here. The customer is leaving for a
+   * QR screen they may well abandon, and coming back to an empty basket after
+   * changing their mind is worse than a duplicate order — which cannot happen
+   * anyway, since each attempt books its own order row.
+   *
+   * It is cleared on the receipt page instead, once the payment is confirmed.
+   */
+  payButton?.addEventListener('click', async () => {
+    clearError();
+    if (!detailsValid()) return;
+
+    payButton.disabled = true;
+    busyEl.classList.remove('hidden');
+
+    try {
+      const response = await fetch('/api/shop/order-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload()),
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        showError(body.error ?? 'We could not start that order.');
+        if (body.problems) paintSummary();
+        return;
+      }
+
+      window.location.href = body.url;
+    } catch {
+      showError('We could not reach the shop. Check your connection and try again.');
+    } finally {
+      payButton.disabled = false;
+      busyEl.classList.add('hidden');
+    }
+  });
+
+  form?.addEventListener('input', clearError);
+
+  // Someone who backed out of payOS lands here again; say so rather than
+  // leaving them wondering whether something broke.
+  if (new URLSearchParams(location.search).has('cancelled')) {
+    showError('That payment was cancelled. Your basket is still here whenever you are ready.');
+  }
+
+  paintSummary();
+</script>

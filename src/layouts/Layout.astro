@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import CartDrawer from '../components/CartDrawer.astro';
 import '../styles/design-system.css';
 
 export interface Props {
@@ -48,5 +49,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? 'https://localhos
       <slot />
     </main>
     <Footer />
+    <CartDrawer />
   </body>
 </html>

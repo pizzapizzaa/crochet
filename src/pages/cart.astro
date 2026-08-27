@@ -1,0 +1,167 @@
+---
+/*
+ * The basket at full width. Everything here is drawn in the browser — the cart
+ * lives in localStorage, so there is nothing for the server to render — but the
+ * money on it comes from /api/shop/cart-price, not from the stored snapshot.
+ */
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Your basket" description="Everything you have picked out so far.">
+  <section class="border-b border-cream-300 bg-paper py-10">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      <nav class="mb-3 flex items-center gap-1.5 text-xs text-ink-muted">
+        <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
+        <span>/</span>
+        <span class="font-semibold text-ink-body">Basket</span>
+      </nav>
+      <h1 class="font-display text-4xl font-extrabold text-ink">Your basket</h1>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
+    <div id="cart-loading" class="py-16 text-center text-sm text-ink-muted">
+      Getting your basket…
+    </div>
+
+    <div id="cart-empty" class="hidden rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-20 text-center">
+      <p class="text-4xl">🧺</p>
+      <h2 class="mt-3 font-display text-xl font-bold text-ink">Nothing in here yet</h2>
+      <p class="mt-1.5 text-sm text-ink-muted">
+        Pick out some yarn, a hook, or a whole project bundle.
+      </p>
+      <a
+        href="/store"
+        class="mt-6 inline-block rounded-pill bg-btn-gradient px-7 py-3 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+      >
+        Browse the shop
+      </a>
+    </div>
+
+    <div id="cart-full" class="hidden gap-8 lg:grid lg:grid-cols-[1fr_340px]">
+      <div>
+        <div id="cart-problems"></div>
+        <ul id="cart-lines" class="divide-y divide-cream-300 rounded-card border border-cream-300 bg-paper px-5"></ul>
+
+        <a
+          href="/store"
+          class="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-ink-body transition-colors duration-fast ease-out hover:text-mint-deep"
+        >
+          ← Keep shopping
+        </a>
+      </div>
+
+      <aside class="mt-8 h-fit rounded-card border border-cream-300 bg-paper p-5 shadow-sm lg:mt-0">
+        <h2 class="font-display text-lg font-bold text-ink">Summary</h2>
+
+        <dl class="mt-4 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Subtotal</dt>
+            <dd class="font-semibold text-ink-body" data-subtotal>—</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Shipping</dt>
+            <dd class="font-semibold text-ink-body" data-shipping>—</dd>
+          </div>
+          <div class="flex justify-between border-t border-cream-300 pt-2">
+            <dt class="font-display font-bold text-ink">Total</dt>
+            <dd class="font-display text-2xl font-extrabold text-ink" data-total>—</dd>
+          </div>
+        </dl>
+
+        <p id="cart-shipping-hint" class="mt-3 hidden rounded-field bg-mint-wash px-3 py-2 text-xs font-semibold text-mint-deep"></p>
+
+        <a
+          href="/checkout"
+          class="mt-5 block rounded-pill bg-btn-gradient px-6 py-3.5 text-center text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+        >
+          Checkout
+        </a>
+        <p class="mt-3 text-center text-xs text-ink-muted">Handmade to order · Ships in 3–5 business days</p>
+      </aside>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { CART_EVENT, readCart, removeLine, setQty, type LineKind } from '../lib/cart';
+  import { fetchPricing, lineRow, money, problemBanner } from '../lib/cartView';
+
+  const FREE_SHIPPING_OVER = 80;
+
+  const loadingEl = document.getElementById('cart-loading')!;
+  const emptyEl = document.getElementById('cart-empty')!;
+  const fullEl = document.getElementById('cart-full')!;
+  const linesEl = document.getElementById('cart-lines')!;
+  const problemsEl = document.getElementById('cart-problems')!;
+  const hintEl = document.getElementById('cart-shipping-hint')!;
+
+  async function render() {
+    const lines = readCart();
+
+    if (lines.length === 0) {
+      loadingEl.classList.add('hidden');
+      fullEl.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+
+    const priced = await fetchPricing(lines);
+
+    loadingEl.classList.add('hidden');
+    emptyEl.classList.add('hidden');
+    fullEl.classList.remove('hidden');
+    fullEl.classList.add('grid');
+
+    if (!priced) {
+      problemsEl.innerHTML = `
+        <div class="mb-4 rounded-card border border-lemon-soft bg-lemon-wash px-4 py-3 text-sm text-ink-body">
+          We could not reach the shop to price your basket. Refresh in a moment.
+        </div>`;
+      return;
+    }
+
+    linesEl.innerHTML = priced.lines.map((l) => lineRow(l, false)).join('');
+    problemsEl.innerHTML = problemBanner(priced.problems);
+
+    const set = (key: string, value: string) => {
+      const el = document.querySelector(`[data-${key}]`);
+      if (el) el.textContent = value;
+    };
+    set('subtotal', money(priced.subtotal));
+    set('shipping', priced.shipping === 0 ? 'Free' : money(priced.shipping));
+    set('total', money(priced.total));
+
+    // Worth saying out loud — it is the one nudge that changes a basket.
+    const short = FREE_SHIPPING_OVER - priced.subtotal;
+    if (priced.subtotal > 0 && short > 0) {
+      hintEl.textContent = `Add ${money(short)} more for free shipping.`;
+      hintEl.classList.remove('hidden');
+    } else {
+      hintEl.classList.add('hidden');
+    }
+  }
+
+  linesEl.addEventListener('click', (event) => {
+    const target = (event.target as HTMLElement).closest('button');
+    if (!target) return;
+
+    const row = target.closest('li');
+    const kind = row?.dataset.kind as LineKind | undefined;
+    const id = row?.dataset.id;
+    if (!kind || !id) return;
+
+    if (target.hasAttribute('data-remove')) {
+      removeLine(kind, id);
+      return;
+    }
+
+    const step = Number(target.dataset.step ?? 0);
+    if (!step) return;
+    const current = Number(row?.querySelector('[data-qty]')?.textContent ?? 1);
+    setQty(kind, id, current + step);
+  });
+
+  window.addEventListener(CART_EVENT, render);
+  render();
+</script>

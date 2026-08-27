@@ -7,6 +7,7 @@ import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import { getProductBySlug, getProducts } from '../../lib/catalog';
 import { getMakesUsingProduct } from '../../lib/makes';
+import { ON_IMG_ERROR, productImage } from '../../lib/images';
 
 const { slug } = Astro.params;
 
@@ -25,7 +26,7 @@ const related = (await getProducts())
   .filter((p) => p.id !== product.id && p.category === product.category)
   .slice(0, 3);
 
-const primaryImage = product.images?.[0] ?? '/placeholder-product.jpg';
+const primaryImage = productImage(product.images?.[0]);
 const discount = product.compare_at_price
   ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
   : null;
@@ -71,6 +72,7 @@ const inStock = product.stock > 3;
           <img
             id="product-image"
             src={primaryImage}
+            onerror={ON_IMG_ERROR}
             alt={product.name}
             class="block h-auto max-h-[70vh] w-auto max-w-full"
           />
@@ -105,7 +107,12 @@ const inStock = product.stock > 3;
                     i === 0 ? 'ring-rose-dust' : 'ring-transparent'
                   }`}
                 >
-                  <img src={img} alt="" class="h-full w-full object-cover" />
+                  <img
+                    src={img}
+                    onerror={ON_IMG_ERROR}
+                    alt=""
+                    class="h-full w-full object-cover"
+                  />
                 </button>
               ))}
             </div>
@@ -232,6 +239,12 @@ const inStock = product.stock > 3;
         <!-- CTA -->
         <div class="space-y-3">
           <button
+            id="add-to-cart"
+            data-id={product.id}
+            data-name={product.name}
+            data-price={product.price}
+            data-image={primaryImage}
+            data-href={`/store/${product.slug}`}
             class={`w-full py-4 rounded-full font-semibold text-sm transition-colors duration-200 ${
               isSoldOut
                 ? 'bg-cream-200 text-brown-light cursor-not-allowed'
@@ -306,6 +319,8 @@ const inStock = product.stock > 3;
 </Layout>
 
 <script>
+  import { addToCart } from '../../lib/cart';
+
   /*
    * Thumbnail strip. The markup shipped without this, so clicking a thumbnail
    * did nothing at all — swapping the src is the whole job.
@@ -331,4 +346,22 @@ const inStock = product.stock > 3;
   for (const thumb of thumbs) {
     thumb.addEventListener('click', () => show(thumb));
   }
+
+  // Add to cart. The price in the dataset is only the label the drawer paints
+  // before the server answers — /api/shop/cart-price re-reads the real one.
+  const addButton = document.getElementById('add-to-cart') as HTMLButtonElement | null;
+
+  addButton?.addEventListener('click', () => {
+    const { id, name, price, image, href } = addButton.dataset;
+    if (!id || !name || !href) return;
+
+    addToCart('product', id, {
+      name,
+      price: Number(price ?? 0),
+      image: image ?? null,
+      href,
+    });
+
+    window.dispatchEvent(new Event('cart:open'));
+  });
 </script>

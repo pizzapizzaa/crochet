@@ -4,6 +4,7 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import MakeCard from '../../components/MakeCard.astro';
+import { ON_IMG_ERROR, productImage } from '../../lib/images';
 import {
   difficultyBadge,
   getMakeBySlug,
@@ -22,7 +23,7 @@ if (!make) {
 }
 
 const pricing = priceBundle(make, make.items);
-const image = make.image_url ?? '/placeholder-product.jpg';
+const image = productImage(make.image_url);
 
 const related = (await getMakes()).filter((m) => m.id !== make.id).slice(0, 3);
 
@@ -74,7 +75,12 @@ const facts = [
       <!-- ── The pin ─────────────────────────────────────────────── -->
       <div class="space-y-4">
         <div class="relative flex items-center justify-center overflow-hidden rounded-photo bg-cream-200 shadow-xl">
-          <img src={image} alt={make.title} class="block h-auto max-h-[70vh] w-auto max-w-full" />
+          <img
+            src={image}
+            onerror={ON_IMG_ERROR}
+            alt={make.title}
+            class="block h-auto max-h-[70vh] w-auto max-w-full"
+          />
           {
             make.difficulty && (
               <span
@@ -191,7 +197,8 @@ const facts = [
                 <li class="flex items-center gap-3 p-3.5">
                   <a href={`/store/${item.product.slug}`} class="shrink-0">
                     <img
-                      src={item.product.images?.[0] ?? '/placeholder-product.jpg'}
+                      src={productImage(item.product.images?.[0])}
+                  onerror={ON_IMG_ERROR}
                       alt=""
                       class="h-14 w-14 rounded-field object-cover"
                       loading="lazy"
@@ -233,7 +240,8 @@ const facts = [
                   <li class="flex items-center gap-3 p-3">
                     <a href={`/store/${item.product.slug}`} class="shrink-0">
                       <img
-                        src={item.product.images?.[0] ?? '/placeholder-product.jpg'}
+                        src={productImage(item.product.images?.[0])}
+                  onerror={ON_IMG_ERROR}
                         alt=""
                         class="h-10 w-10 rounded-field object-cover"
                         loading="lazy"
@@ -280,6 +288,12 @@ const facts = [
               )}
 
               <button
+                id="add-bundle"
+                data-id={make.id}
+                data-name={`${make.title} — the whole bundle`}
+                data-price={pricing.bundlePrice}
+                data-image={make.image_url ?? ''}
+                data-href={`/makes/${make.slug}`}
                 class={`mt-4 w-full rounded-pill py-4 text-sm font-bold transition-all duration-fast ease-out ${
                   bundleAvailable
                     ? 'bg-btn-gradient text-ink shadow-sm hover:-translate-y-0.5 hover:brightness-105'
@@ -344,3 +358,29 @@ const facts = [
     }
   </div>
 </Layout>
+
+<script>
+  import { addToCart } from '../../lib/cart';
+
+  /*
+   * The bundle goes in as one line, not as its parts. Its price is the whole
+   * priced together with bundle_discount_pct applied — adding the materials
+   * individually would charge full price for every one of them and quietly
+   * drop the saving advertised right above this button.
+   */
+  const button = document.getElementById('add-bundle') as HTMLButtonElement | null;
+
+  button?.addEventListener('click', () => {
+    const { id, name, price, image, href } = button.dataset;
+    if (!id || !name || !href) return;
+
+    addToCart('bundle', id, {
+      name,
+      price: Number(price ?? 0),
+      image: image || null,
+      href,
+    });
+
+    window.dispatchEvent(new Event('cart:open'));
+  });
+</script>

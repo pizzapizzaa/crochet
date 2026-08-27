@@ -1,0 +1,233 @@
+---
+/*
+ * The receipt.
+ *
+ * Reached straight after paying with the email in the query string, or later
+ * from /orders/track. Either way the order number alone is not enough — it is
+ * printed on packing slips and forwarded in emails, so the address the order
+ * was placed under has to match before anything is shown.
+ */
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import {
+  findOrder,
+  formatAddress,
+  orderItems,
+  settleOrder,
+  shippingAddress,
+} from '../../lib/orders';
+import { readPayment } from '../../lib/payos';
+import { money } from '../../lib/makes';
+import { ORDER_STATUSES, type Order } from '../../lib/database.types';
+import { ON_IMG_ERROR, productImage } from '../../lib/images';
+
+const { number } = Astro.params;
+const email = Astro.url.searchParams.get('email') ?? '';
+
+const admin = getSupabaseAdmin();
+let order: Order | null = admin && email ? await findOrder(admin, number!, email) : null;
+
+/*
+ * The customer coming back from payOS is a hint that a transfer may have
+ * completed, never proof of it — so payOS is asked directly rather than the URL
+ * being believed. The webhook is the path that must always work; this exists so
+ * nobody stares at "awaiting payment" on something they just paid for.
+ *
+ * commit_order is idempotent, so this racing the webhook is harmless.
+ */
+if (admin && order && order.payment_status === 'unpaid' && order.provider_order_code) {
+  try {
+    const payment = await readPayment(Number(order.provider_order_code));
+    if (payment.paid) {
+      await settleOrder(admin, order.id, payment.reference);
+      order = await findOrder(admin, number!, email);
+    }
+  } catch (cause) {
+    // Never break the receipt over this — the webhook will still settle it.
+    console.error('payOS reconcile failed', order.order_number, String(cause));
+  }
+}
+
+const items = order ? orderItems(order) : { lines: [], units: [] };
+const address = order ? formatAddress(shippingAddress(order)) : [];
+
+// Cancelled orders leave the track entirely, so no step is "current".
+const timeline = ORDER_STATUSES.filter((s) => s !== 'cancelled');
+const reached = order ? timeline.indexOf(order.status) : -1;
+
+const placed = order
+  ? new Date(order.created_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })
+  : '';
+
+const STATUS_COPY: Record<string, string> = {
+  pending: 'We have your order and are getting to it.',
+  processing: 'It is being made and packed right now.',
+  shipped: 'It is on its way to you.',
+  delivered: 'Delivered — we hope you love it.',
+  cancelled: 'This order was cancelled.',
+};
+---
+
+<Layout title={order ? `Order ${order.order_number}` : 'Order not found'}>
+  <section class="mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
+    {
+      !order ? (
+        <div class="rounded-card border border-cream-300 bg-paper px-6 py-16 text-center shadow-sm">
+          <p class="text-4xl">🔍</p>
+          <h1 class="mt-3 font-display text-2xl font-extrabold text-ink">We cannot find that order</h1>
+          <p class="mx-auto mt-2 max-w-md text-sm text-ink-muted">
+            An order number only opens with the email address it was placed under. Check both, or
+            look it up again below.
+          </p>
+          <a
+            href="/orders/track"
+            class="mt-6 inline-block rounded-pill bg-btn-gradient px-7 py-3 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+          >
+            Track an order
+          </a>
+        </div>
+      ) : (
+        <>
+          <div class="rounded-card border border-cream-300 bg-paper p-6 shadow-sm sm:p-8">
+            <p
+              class={`text-micro font-bold uppercase tracking-eyebrow ${
+                order.payment_status === 'paid' ? 'text-mint-deep' : 'text-lemon-deep'
+              }`}
+            >
+              {order.payment_status === 'paid' ? 'Paid · thank you' : 'Awaiting payment'}
+            </p>
+            <h1 class="mt-1.5 font-display text-3xl font-extrabold text-ink sm:text-4xl">
+              Order {order.order_number}
+            </h1>
+            <p class="mt-1.5 text-sm text-ink-muted">Placed {placed}</p>
+
+            {order.payment_status === 'paid' ? (
+              <p class="mt-4 rounded-field bg-mint-wash px-4 py-3 text-sm font-semibold text-mint-deep">
+                {STATUS_COPY[order.status]}
+              </p>
+            ) : (
+              <p class="mt-4 rounded-field bg-lemon-wash px-4 py-3 text-sm text-ink-body">
+                <span class="font-bold text-lemon-deep">We have not seen the transfer yet.</span> If
+                you have just paid, give it a minute and refresh — bank transfers take a moment to
+                land. Nothing is reserved until it does.
+              </p>
+            )}
+
+            {order.status !== 'cancelled' && (
+              <ol class="mt-6 flex gap-1.5">
+                {timeline.map((step, i) => (
+                  <li class="flex-1">
+                    <div
+                      class={`h-1.5 rounded-pill ${i <= reached ? 'bg-mint' : 'bg-cream-300'}`}
+                    />
+                    <p
+                      class={`mt-1.5 text-[11px] font-bold capitalize ${
+                        i <= reached ? 'text-ink-body' : 'text-ink-faint'
+                      }`}
+                    >
+                      {step}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+
+          <div class="mt-6 rounded-card border border-cream-300 bg-paper p-6 shadow-sm sm:p-8">
+            <h2 class="font-display text-lg font-bold text-ink">What you ordered</h2>
+
+            <ul class="mt-4 divide-y divide-cream-300">
+              {items.lines.map((line) => (
+                <li class="flex items-center gap-3 py-3">
+                  <img
+                    src={productImage(line.image)}
+                    onerror={ON_IMG_ERROR}
+                    alt=""
+                    class="h-14 w-14 shrink-0 rounded-field object-cover"
+                    loading="lazy"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <a
+                      href={line.href}
+                      class="block font-display text-sm font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
+                    >
+                      {line.name}
+                    </a>
+                    <p class="text-xs text-ink-muted">
+                      {line.qty} × {money(line.unitPrice)}
+                    </p>
+                  </div>
+                  <span class="shrink-0 font-display text-sm font-extrabold text-ink">
+                    {money(line.lineTotal)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <dl class="mt-4 space-y-1.5 border-t border-cream-300 pt-4 text-sm">
+              <div class="flex justify-between">
+                <dt class="text-ink-muted">Subtotal</dt>
+                <dd class="font-semibold text-ink-body">{money(Number(order.subtotal))}</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-ink-muted">Shipping</dt>
+                <dd class="font-semibold text-ink-body">
+                  {Number(order.shipping_total) === 0 ? 'Free' : money(Number(order.shipping_total))}
+                </dd>
+              </div>
+              {order.amount_charged && order.charged_currency === 'VND' && (
+                <div class="flex justify-between">
+                  <dt class="text-ink-muted">Charged</dt>
+                  <dd class="font-semibold text-ink-body">
+                    {new Intl.NumberFormat('vi-VN').format(Number(order.amount_charged))}₫
+                  </dd>
+                </div>
+              )}
+              <div class="flex justify-between border-t border-cream-300 pt-1.5">
+                <dt class="font-display font-bold text-ink">Total</dt>
+                <dd class="font-display text-lg font-extrabold text-ink">
+                  {money(Number(order.total))}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="mt-6 rounded-card border border-cream-300 bg-paper p-6 shadow-sm sm:p-8">
+            <h2 class="font-display text-lg font-bold text-ink">Going to</h2>
+            <p class="mt-2 text-sm font-semibold text-ink-body">{order.customer_name}</p>
+            <address class="mt-1 text-sm not-italic leading-relaxed text-ink-muted">
+              {address.map((row) => (
+                <span class="block">{row}</span>
+              ))}
+            </address>
+            <p class="mt-3 text-xs text-ink-muted">{order.customer_email}</p>
+          </div>
+
+          <p class="mt-6 text-center text-sm text-ink-muted">
+            Keep this number safe — you can come back to it any time at{' '}
+            <a href="/orders/track" class="font-bold text-mint-deep hover:underline">
+              order tracking
+            </a>
+            .
+          </p>
+        </>
+      )
+    }
+  </section>
+</Layout>
+
+<script is:inline define:vars={{ settled: order?.payment_status === 'paid' }}>
+  /*
+   * The basket is emptied here rather than when the customer left for payOS.
+   * Someone who changed their mind at the QR screen comes back to their basket
+   * intact; only a confirmed payment clears it.
+   */
+  if (settled) {
+    try {
+      localStorage.removeItem('zz_cart_v1');
+    } catch {}
+    window.dispatchEvent(new CustomEvent('cart:changed', { detail: [] }));
+  }
+</script>

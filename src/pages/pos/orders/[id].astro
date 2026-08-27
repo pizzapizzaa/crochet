@@ -1,0 +1,267 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { formatAddress, orderItems, shippingAddress } from '../../../lib/orders';
+import { money } from '../../../lib/makes';
+import { transferNote } from '../../../lib/payos';
+import { ORDER_STATUSES, type Order } from '../../../lib/database.types';
+import { ON_IMG_ERROR, productImage } from '../../../lib/images';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const { id } = Astro.params;
+const admin = getSupabaseAdmin();
+
+if (!admin) {
+  return Astro.redirect(
+    '/pos/orders?error=' + encodeURIComponent('Supabase is not connected.'),
+  );
+}
+
+const { data, error } = await admin.from('orders').select('*').eq('id', id!).maybeSingle();
+
+if (error || !data) {
+  return Astro.redirect('/pos/orders?error=' + encodeURIComponent('That order no longer exists.'));
+}
+
+const order = data as Order;
+const items = orderItems(order);
+const address = formatAddress(shippingAddress(order));
+
+const ok = Astro.url.searchParams.get('ok');
+const err = Astro.url.searchParams.get('error');
+
+const when = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+const next = `/pos/orders/${order.id}`;
+---
+
+<PosLayout title={`Order ${order.order_number}`} section="orders">
+  <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="min-w-0">
+      <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+        <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
+        <span>/</span>
+        <a href="/pos/orders" class="transition-colors duration-fast ease-out hover:text-mint-deep">
+          Orders
+        </a>
+        <span>/</span>
+        <span class="font-semibold text-ink-body">{order.order_number}</span>
+      </nav>
+      <h1 class="font-mono text-3xl font-extrabold text-ink sm:text-4xl">{order.order_number}</h1>
+      <p class="mt-1.5 text-sm text-ink-muted">
+        Placed {when(order.created_at)}
+        {order.paid_at && ` · paid ${when(order.paid_at)}`}
+      </p>
+    </div>
+
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
+      <span
+        class={`rounded-pill px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
+          order.payment_status === 'paid'
+            ? 'bg-mint-wash text-mint-deep'
+            : 'bg-lemon-wash text-lemon-deep'
+        }`}
+      >
+        {order.payment_status}
+      </span>
+      <a
+        href={`mailto:${order.customer_email}?subject=${encodeURIComponent(`Your ZippyZack order ${order.order_number}`)}`}
+        class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+      >
+        Email the customer
+      </a>
+    </div>
+  </header>
+
+  <Flash ok={ok} error={err} />
+
+  {
+    order.customer_note?.includes('⚠ Stock not adjusted') && (
+      <div class="mb-5 rounded-card border border-lemon-soft bg-lemon-wash px-5 py-4">
+        <p class="font-display text-sm font-bold text-lemon-deep">This one needs a human</p>
+        <p class="mt-1 text-sm text-ink-body">
+          The payment landed but stock could not be drawn down — something sold out while the
+          customer was paying. Check the note below, then either restock or refund.
+        </p>
+      </div>
+    )
+  }
+
+  <div class="grid gap-5 lg:grid-cols-[1fr_320px]">
+    <!-- Items -->
+    <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+      <h2 class="font-display text-lg font-bold text-ink">Items</h2>
+
+      <ul class="mt-4 divide-y divide-cream-300">
+        {
+          items.lines.map((line) => (
+            <li class="flex items-center gap-3 py-3">
+              <img
+                src={productImage(line.image)}
+                onerror={ON_IMG_ERROR}
+                alt=""
+                class="h-12 w-12 shrink-0 rounded-field object-cover"
+                loading="lazy"
+              />
+              <div class="min-w-0 flex-1">
+                <a
+                  href={line.href}
+                  target="_blank"
+                  rel="noopener"
+                  class="block font-display text-sm font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
+                >
+                  {line.name}
+                </a>
+                <p class="text-xs text-ink-muted">
+                  {line.qty} × {money(line.unitPrice)}
+                  {line.kind === 'bundle' && ' · bundle'}
+                </p>
+              </div>
+              <span class="shrink-0 font-display text-sm font-extrabold text-ink">
+                {money(line.lineTotal)}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+
+      <dl class="mt-4 space-y-1.5 border-t border-cream-300 pt-4 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-ink-muted">Subtotal</dt>
+          <dd class="font-semibold text-ink-body">{money(Number(order.subtotal))}</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-ink-muted">Shipping</dt>
+          <dd class="font-semibold text-ink-body">
+            {Number(order.shipping_total) === 0 ? 'Free' : money(Number(order.shipping_total))}
+          </dd>
+        </div>
+        <div class="flex justify-between border-t border-cream-300 pt-1.5">
+          <dt class="font-display font-bold text-ink">Total</dt>
+          <dd class="font-display text-lg font-extrabold text-ink">{money(Number(order.total))}</dd>
+        </div>
+      </dl>
+
+      {
+        /*
+         * What actually came off the shelf. A bundle line hides its components,
+         * so without this the picking list would be guesswork.
+         */
+        items.units.length > 0 && (
+          <details class="mt-4 border-t border-cream-300 pt-4">
+            <summary class="cursor-pointer text-xs font-bold uppercase tracking-eyebrow text-ink-muted">
+              Stock drawn ({items.units.length} product{items.units.length === 1 ? '' : 's'})
+            </summary>
+            <ul class="mt-2 space-y-1">
+              {items.units.map((unit) => (
+                <li class="font-mono text-[11px] text-ink-faint">
+                  {unit.quantity} × {unit.product_id}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )
+      }
+    </div>
+
+    <!-- Customer + status -->
+    <div class="space-y-5">
+      <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <h2 class="font-display text-base font-bold text-ink">Ship to</h2>
+        <p class="mt-2 text-sm font-semibold text-ink-body">{order.customer_name}</p>
+        <address class="mt-1 text-sm not-italic leading-relaxed text-ink-muted">
+          {address.map((row) => <span class="block">{row}</span>)}
+        </address>
+        <a
+          href={`mailto:${order.customer_email}`}
+          class="mt-3 block break-all text-xs font-semibold text-mint-deep hover:underline"
+        >
+          {order.customer_email}
+        </a>
+
+        {
+          order.customer_note && (
+            <div class="mt-4 rounded-field bg-cream-100 px-3 py-2.5">
+              <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Note</p>
+              <p class="mt-1 whitespace-pre-wrap text-sm text-ink-body">{order.customer_note}</p>
+            </div>
+          )
+        }
+      </div>
+
+      <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <h2 class="font-display text-base font-bold text-ink">Status</h2>
+        <p class="mt-1 text-xs text-ink-muted">The customer sees this on their tracking page.</p>
+
+        <form method="POST" action="/api/pos/order-status" class="mt-3 space-y-2">
+          <input type="hidden" name="id" value={order.id} />
+          <input type="hidden" name="next" value={next} />
+          <select
+            name="status"
+            class="w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+          >
+            {
+              ORDER_STATUSES.map((s) => (
+                <option value={s} selected={order.status === s}>
+                  {s[0].toUpperCase() + s.slice(1)}
+                </option>
+              ))
+            }
+          </select>
+          <button
+            type="submit"
+            class="w-full rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+          >
+            Save status
+          </button>
+        </form>
+      </div>
+
+      <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <h2 class="font-display text-base font-bold text-ink">Payment</h2>
+        <dl class="mt-2 space-y-1.5 text-xs">
+          <div>
+            <dt class="text-ink-muted">Provider</dt>
+            <dd class="font-semibold uppercase text-ink-body">{order.payment_provider}</dd>
+          </div>
+          {
+            order.amount_charged && (
+              <div>
+                <dt class="text-ink-muted">Amount taken</dt>
+                <dd class="font-semibold text-ink-body">
+                  {order.charged_currency === 'VND'
+                    ? `${new Intl.NumberFormat('vi-VN').format(Number(order.amount_charged))}₫`
+                    : `${order.amount_charged} ${order.charged_currency ?? ''}`}
+                </dd>
+              </div>
+            )
+          }
+          <div>
+            <dt class="text-ink-muted">Bank reference</dt>
+            <dd class="break-all font-mono text-ink-body">{order.payment_reference ?? '—'}</dd>
+          </div>
+          <div>
+            <dt class="text-ink-muted">Transfer note</dt>
+            <dd class="break-all font-mono text-ink-body">{transferNote(order.order_number)}</dd>
+          </div>
+          <div>
+            <dt class="text-ink-muted">Payment link</dt>
+            <dd class="break-all font-mono text-ink-body">{order.provider_payment_id ?? '—'}</dd>
+          </div>
+        </dl>
+        <p class="mt-3 text-xs text-ink-muted">
+          Refunds are sent back by bank transfer — payOS does not reverse a VietQR payment for you.
+          The bank reference is what to quote.
+        </p>
+      </div>
+    </div>
+  </div>
+</PosLayout>
