@@ -1,6 +1,6 @@
 ---
 import type { MakeWithBundle } from '../lib/database.types';
-import { money, priceBundle } from '../lib/makes';
+import { difficultyBadge, money, priceBundle } from '../lib/makes';
 
 export interface Props {
   make: MakeWithBundle;
@@ -34,7 +34,9 @@ const image = make.image_url ?? '/placeholder-product.jpg';
     </div>
     {
       make.difficulty && (
-        <span class="absolute left-3 top-3 rounded-pill bg-lemon px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-ink">
+        <span
+          class={`absolute left-3 top-3 rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide shadow-sm ${difficultyBadge(make.difficulty)}`}
+        >
           {make.difficulty}
         </span>
       )

@@ -4,7 +4,15 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import MakeCard from '../../components/MakeCard.astro';
-import { getMakeBySlug, getMakes, lineTotal, money, priceBundle, qty } from '../../lib/makes';
+import {
+  difficultyBadge,
+  getMakeBySlug,
+  getMakes,
+  lineTotal,
+  money,
+  priceBundle,
+  qty,
+} from '../../lib/makes';
 
 const { slug } = Astro.params;
 
@@ -49,7 +57,9 @@ const facts = [
           <img src={image} alt={make.title} class="block h-auto max-h-[70vh] w-auto max-w-full" />
           {
             make.difficulty && (
-              <span class="absolute left-5 top-5 rounded-pill bg-lemon px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-ink">
+              <span
+                class={`absolute left-5 top-5 rounded-pill px-3 py-1.5 text-xs font-bold uppercase tracking-wide shadow-sm ${difficultyBadge(make.difficulty)}`}
+              >
                 {make.difficulty}
               </span>
             )

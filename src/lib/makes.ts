@@ -1,5 +1,11 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Make, MakeItemWithProduct, MakeWithBundle, Product } from './database.types';
+import type {
+  Difficulty,
+  Make,
+  MakeItemWithProduct,
+  MakeWithBundle,
+  Product,
+} from './database.types';
 
 /*
  * Makes: a project someone else published on Pinterest, plus the bundle of
@@ -145,3 +151,21 @@ export const qty = (n: number) => {
   const value = Number(n);
   return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
 };
+
+/*
+ * Difficulty badge colours. A ramp, not four arbitrary hues: the fill warms and
+ * darkens as the project gets harder, so the four tags read as a scale at a
+ * glance rather than as decoration. Fills only from the brand palette, and the
+ * label follows the fill rule — bright fill takes forest ink, the dark forest
+ * fill takes cream.
+ */
+const DIFFICULTY_BADGE: Record<Difficulty, string> = {
+  Beginner: 'bg-mint-soft text-ink',
+  Easy: 'bg-mint text-ink',
+  Intermediate: 'bg-lemon text-ink',
+  Advanced: 'bg-forest text-paper',
+};
+
+/** Fill + label classes for a difficulty tag. Unknown values fall back to lemon. */
+export const difficultyBadge = (difficulty: string | null | undefined) =>
+  DIFFICULTY_BADGE[difficulty as Difficulty] ?? 'bg-lemon text-ink';
