@@ -18,6 +18,13 @@ const urlCategory = Astro.url.searchParams.get('category') ?? 'All';
 const urlSort = Astro.url.searchParams.get('sort') ?? 'featured';
 const urlSearch = Astro.url.searchParams.get('q') ?? '';
 
+const sortOptions = [
+  { value: 'featured', label: 'Featured' },
+  { value: 'newest', label: 'Newest First' },
+  { value: 'price-asc', label: 'Price: Low → High' },
+  { value: 'price-desc', label: 'Price: High → Low' },
+];
+
 let products = [...allProducts];
 
 if (urlCategory !== 'All') {
@@ -97,11 +104,30 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <div class="flex flex-col lg:flex-row gap-10">
       <!-- Sidebar Filters -->
-      <aside class="w-full lg:w-56 shrink-0">
-        <!-- Category filter -->
-        <div class="bg-white rounded-2xl p-5 shadow-sm">
-          <h3 class="font-display font-semibold text-brown-dark mb-4">Category</h3>
-          <ul class="space-y-1">
+      <aside class="w-full shrink-0 space-y-4 lg:w-56">
+        {/*
+          Collapsed on a phone, where the two panels otherwise filled the
+          whole first screen and pushed every product below the fold. Open
+          and un-collapsible from lg up, which is why the summary loses its
+          chevron and its pointer affordance there rather than being hidden
+          outright — a details with no summary at all is a footgun if the
+          open attribute ever comes off.
+        */}
+        <details open data-collapsible class="group overflow-hidden rounded-2xl bg-white shadow-sm">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 lg:cursor-default lg:pb-0 [&::-webkit-details-marker]:hidden">
+            <h3 class="font-display font-semibold text-brown-dark">Category</h3>
+            <span class="ml-auto text-xs text-brown-light lg:hidden">{urlCategory}</span>
+            <svg
+              class="h-4 w-4 shrink-0 text-brown-light transition-transform duration-200 group-open:rotate-180 lg:hidden"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <ul class="space-y-1 px-5 pb-5 pt-4">
             {
               categories.map((cat) => (
                 <li>
@@ -124,19 +150,26 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
               ))
             }
           </ul>
-        </div>
+        </details>
 
         <!-- Sort -->
-        <div class="bg-white rounded-2xl p-5 shadow-sm mt-4">
-          <h3 class="font-display font-semibold text-brown-dark mb-4">Sort By</h3>
-          <ul class="space-y-1">
+        <details open data-collapsible class="group overflow-hidden rounded-2xl bg-white shadow-sm">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 lg:cursor-default lg:pb-0 [&::-webkit-details-marker]:hidden">
+            <h3 class="font-display font-semibold text-brown-dark">Sort By</h3>
+            <span class="ml-auto text-xs text-brown-light lg:hidden">{sortOptions.find((o) => o.value === urlSort)?.label ?? 'Featured'}</span>
+            <svg
+              class="h-4 w-4 shrink-0 text-brown-light transition-transform duration-200 group-open:rotate-180 lg:hidden"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <ul class="space-y-1 px-5 pb-5 pt-4">
             {
-              [
-                { value: 'featured', label: 'Featured' },
-                { value: 'newest', label: 'Newest First' },
-                { value: 'price-asc', label: 'Price: Low → High' },
-                { value: 'price-desc', label: 'Price: High → Low' },
-              ].map((opt) => (
+              sortOptions.map((opt) => (
                 <li>
                   <a
                     href={`/store?category=${encodeURIComponent(urlCategory)}&sort=${opt.value}`}
@@ -152,8 +185,26 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
               ))
             }
           </ul>
-        </div>
+        </details>
       </aside>
+
+      {/*
+        Inline and un-bundled on purpose: it runs while the parser is still
+        here, so the panels are already shut before the first paint. A
+        deferred module would let a phone flash the full-height open state
+        first, which is the thing being fixed.
+      */}
+      <script is:inline>
+        (function () {
+          var wide = window.matchMedia('(min-width: 1024px)');
+          var panels = document.querySelectorAll('[data-collapsible]');
+          function sync(mq) {
+            for (var i = 0; i < panels.length; i++) panels[i].open = mq.matches;
+          }
+          sync(wide);
+          wide.addEventListener('change', sync);
+        })();
+      </script>
 
       <!-- Product Grid -->
       <div class="flex-1">
