@@ -141,8 +141,9 @@ const btnGhost =
           </div>
         </div>
 
-        <div
-          class="absolute -bottom-5 left-4 flex items-center gap-3 rounded-card bg-paper px-5 py-3.5 shadow-xl"
+        <a
+          href="/store?sort=newest"
+          class="group absolute -bottom-5 left-4 flex items-center gap-3 rounded-card bg-paper px-5 py-3.5 shadow-xl transition-all duration-fast ease-out hover:-translate-y-0.5 hover:shadow-2xl"
         >
           <div
             class="flex h-10 w-10 items-center justify-center rounded-pill bg-lemon-wash text-xl"
@@ -152,8 +153,20 @@ const btnGhost =
           <div>
             <p class="text-micro text-ink-muted">New arrivals</p>
             <p class="text-[13.5px] font-bold text-ink">Autumn Yarn Collection</p>
+            <span class="mt-1 flex items-center gap-1 text-micro font-bold text-mint-deep">
+              Shop new arrivals
+              <svg
+                class="h-3 w-3 transition-transform duration-fast ease-out group-hover:translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </span>
           </div>
-        </div>
+        </a>
       </div>
     </div>
   </section>
