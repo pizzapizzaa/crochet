@@ -245,6 +245,16 @@ const err = params.get('error');
                       {m.is_active ? 'Unpublish' : 'Publish'}
                     </button>
                   </form>
+                  <form method="POST" action="/api/pos/make-duplicate" class="inline">
+                    <input type="hidden" name="id" value={m.id} />
+                    <input type="hidden" name="next" value={back} />
+                    <button
+                      type="submit"
+                      class="rounded-field px-2.5 py-1.5 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+                    >
+                      Duplicate
+                    </button>
+                  </form>
                   <form
                     method="POST"
                     action="/api/pos/make-delete"

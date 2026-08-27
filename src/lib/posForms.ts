@@ -59,6 +59,23 @@ export function lines(form: FormData, key: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * A free slug in the "beanie-copy", "beanie-copy-2", … series. Both slug
+ * columns are unique, so a duplicate cannot reuse the slug it came from.
+ * `taken` is every slug already in use that starts with the stem.
+ */
+export function copySlug(stem: string, taken: Iterable<string>): string {
+  const used = new Set(taken);
+  if (!used.has(stem)) return stem;
+
+  // Every n gives a distinct candidate and `used` is finite, so this ends.
+  for (let n = 2; ; n += 1) {
+    const suffix = `-${n}`;
+    const candidate = stem.slice(0, 80 - suffix.length) + suffix;
+    if (!used.has(candidate)) return candidate;
+  }
+}
+
 /** Only ever redirect back inside the POS. */
 export function safeNext(form: FormData, fallback: string): string {
   const next = str(form, 'next');

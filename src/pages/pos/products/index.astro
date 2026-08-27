@@ -103,7 +103,7 @@ const columns = [
   { label: 'Price', width: 'w-[136px]' },
   { label: 'Stock', width: 'w-[76px]' },
   { label: 'Status', width: 'w-[108px]' },
-  { label: '', width: 'w-[216px]', actions: true },
+  { label: '', width: 'w-[292px]', actions: true },
 ];
 
 const ok = params.get('ok');
@@ -227,7 +227,7 @@ const err = params.get('error');
       </div>
     ) : (
       <div class="overflow-x-auto rounded-card border border-cream-300 bg-paper shadow-sm">
-        <table class="w-full min-w-[880px] table-fixed text-left">
+        <table class="w-full min-w-[956px] table-fixed text-left">
           <thead>
             <tr class="border-b border-cream-300 bg-cream-50">
               {columns.map((c) => (
@@ -316,6 +316,16 @@ const err = params.get('error');
                     >
                       Edit
                     </a>
+                    <form method="POST" action="/api/pos/product-duplicate" class="inline">
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="next" value={Astro.url.pathname + Astro.url.search} />
+                      <button
+                        type="submit"
+                        class="rounded-field px-2.5 py-1.5 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+                      >
+                        Duplicate
+                      </button>
+                    </form>
                     <form method="POST" action="/api/pos/product-toggle" class="inline">
                       <input type="hidden" name="id" value={p.id} />
                       <input type="hidden" name="field" value="is_active" />
