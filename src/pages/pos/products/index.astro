@@ -6,6 +6,7 @@ import Flash from '../../../components/pos/Flash.astro';
 import { isAuthed, loginUrl } from '../../../lib/auth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
 import type { Category, Product } from '../../../lib/database.types';
+import { ON_IMG_ERROR, productImage } from '../../../lib/images';
 
 if (!isAuthed(Astro.cookies)) {
   return Astro.redirect(loginUrl(Astro.url));
@@ -247,7 +248,8 @@ const err = params.get('error');
                 <td class="px-4 py-3">
                   <a href={`/pos/products/${p.id}`} class="flex items-start gap-3">
                     <img
-                      src={p.images?.[0] ?? '/placeholder-product.jpg'}
+                      src={productImage(p.images?.[0])}
+                      onerror={ON_IMG_ERROR}
                       alt=""
                       class="h-11 w-11 shrink-0 rounded-field object-cover"
                       loading="lazy"

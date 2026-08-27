@@ -1,5 +1,6 @@
 ---
 import type { Product } from '../lib/database.types';
+import { ON_IMG_ERROR, productImage } from '../lib/images';
 
 export interface Props {
   product: Product;
@@ -7,7 +8,7 @@ export interface Props {
 }
 
 const { product, class: className = '' } = Astro.props;
-const primaryImage = product.images?.[0] ?? '/placeholder-product.jpg';
+const primaryImage = productImage(product.images?.[0]);
 const discount = product.compare_at_price
   ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
   : null;
@@ -33,6 +34,7 @@ const spec = product.yarn_weight
   >
     <img
       src={primaryImage}
+      onerror={ON_IMG_ERROR}
       alt={product.name}
       class="h-full w-full object-cover transition-transform duration-lazy ease-out group-hover:scale-[1.04]"
       loading="lazy"

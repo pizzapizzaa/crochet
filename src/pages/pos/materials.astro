@@ -17,6 +17,7 @@ import {
   type Costing,
 } from '../../lib/costing';
 import type { Category, Product } from '../../lib/database.types';
+import { ON_IMG_ERROR, productImage } from '../../lib/images';
 
 /*
  * Material source & cost.
@@ -320,7 +321,8 @@ const ROW_GRID =
               {/* Material */}
               <div class="flex min-w-0 items-center gap-3">
                 <img
-                  src={p.images?.[0] ?? '/placeholder-product.jpg'}
+                  src={productImage(p.images?.[0])}
+                  onerror={ON_IMG_ERROR}
                   alt=""
                   class="h-10 w-10 shrink-0 rounded-field object-cover"
                   loading="lazy"

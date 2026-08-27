@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="No photo yet">
+  <!--
+    Stand-in for a product with no photo of its own.
+
+    Drawn on a filled square rather than as a bare glyph: these tiles sit in
+    grids beside real photographs, and a transparent icon would read as a
+    missing image rather than a deliberate placeholder. Sized in a 120 box so it
+    stays crisp from the 44px POS row to the 600px product page.
+  -->
+  <rect width="120" height="120" fill="#F5E7B8" />
+
+  <g transform="translate(60 60)">
+    <!-- The ball -->
+    <circle r="34" fill="#FFEB6C" />
+
+    <!--
+      Wound strands. Clipped to the ball so each arc ends flush at the edge the
+      way wrapped yarn does, instead of poking out past the silhouette.
+    -->
+    <clipPath id="ball">
+      <circle r="34" />
+    </clipPath>
+    <g clip-path="url(#ball)" fill="none" stroke="#C9A400" stroke-width="3" stroke-linecap="round" opacity="0.55">
+      <path d="M-40 -14C-18 -30 14 -32 40 -18" />
+      <path d="M-40 2C-16 -14 16 -16 40 -2" />
+      <path d="M-40 18C-16 2 16 0 40 14" />
+      <path d="M-26 -34C-36 -12 -34 12 -20 34" />
+      <path d="M-6 -36C-16 -12 -14 12 0 36" />
+      <path d="M14 -34C4 -12 6 12 20 32" />
+    </g>
+
+    <circle r="34" fill="none" stroke="#7A5E00" stroke-width="3" opacity="0.35" />
+
+    <!-- The loose end, trailing off to one side. -->
+    <path
+      d="M30 18C42 26 46 36 38 42C31 47 22 43 24 36"
+      fill="none"
+      stroke="#7A5E00"
+      stroke-width="3"
+      stroke-linecap="round"
+      opacity="0.5"
+    />
+  </g>
+</svg>
