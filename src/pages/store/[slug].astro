@@ -60,11 +60,19 @@ const inStock = product.stock > 3;
     <div class="grid lg:grid-cols-2 gap-14">
       <!-- Images -->
       <div class="space-y-4">
-        <div class="rounded-3xl overflow-hidden aspect-square shadow-xl relative bg-cream-200">
+        <!--
+          No fixed ratio here: a product photo is evidence, and cropping it to
+          a square hides whatever sat at the top and bottom of the frame. It is
+          capped at 70vh so a tall portrait shot cannot push the price and the
+          buy button below the fold. The thumbnails below stay square — a tidy
+          strip is worth a crop, the photo being examined is not.
+        -->
+        <div class="relative flex items-center justify-center overflow-hidden rounded-3xl bg-cream-200 shadow-xl">
           <img
+            id="product-image"
             src={primaryImage}
             alt={product.name}
-            class="w-full h-full object-cover"
+            class="block h-auto max-h-[70vh] w-auto max-w-full"
           />
           {
             discount && (
@@ -86,9 +94,19 @@ const inStock = product.stock > 3;
           product.images.length > 1 && (
             <div class="grid grid-cols-4 gap-3">
               {product.images.map((img, i) => (
-                <div class="rounded-xl overflow-hidden aspect-square cursor-pointer ring-2 ring-transparent hover:ring-rose-dust transition-all">
-                  <img src={img} alt={`${product.name} view ${i + 1}`} class="w-full h-full object-cover" />
-                </div>
+                <button
+                  type="button"
+                  data-thumb
+                  data-image={img}
+                  data-alt={`${product.name} view ${i + 1}`}
+                  aria-label={`Show image ${i + 1} of ${product.images.length}`}
+                  aria-current={i === 0 ? 'true' : 'false'}
+                  class={`block aspect-square w-full overflow-hidden rounded-xl ring-2 transition-all hover:ring-rose-dust/60 ${
+                    i === 0 ? 'ring-rose-dust' : 'ring-transparent'
+                  }`}
+                >
+                  <img src={img} alt="" class="h-full w-full object-cover" />
+                </button>
               ))}
             </div>
           )
@@ -286,3 +304,31 @@ const inStock = product.stock > 3;
     }
   </div>
 </Layout>
+
+<script>
+  /*
+   * Thumbnail strip. The markup shipped without this, so clicking a thumbnail
+   * did nothing at all — swapping the src is the whole job.
+   */
+  const main = document.getElementById('product-image') as HTMLImageElement | null;
+  const thumbs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-thumb]'));
+
+  function show(button: HTMLButtonElement) {
+    const src = button.dataset.image;
+    if (!main || !src) return;
+
+    main.src = src;
+    main.alt = button.dataset.alt ?? '';
+
+    for (const thumb of thumbs) {
+      const active = thumb === button;
+      thumb.classList.toggle('ring-rose-dust', active);
+      thumb.classList.toggle('ring-transparent', !active);
+      thumb.setAttribute('aria-current', active ? 'true' : 'false');
+    }
+  }
+
+  for (const thumb of thumbs) {
+    thumb.addEventListener('click', () => show(thumb));
+  }
+</script>

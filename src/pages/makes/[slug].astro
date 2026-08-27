@@ -45,8 +45,8 @@ const facts = [
     <div class="grid gap-12 lg:grid-cols-2">
       <!-- ── The pin ─────────────────────────────────────────────── -->
       <div class="space-y-4">
-        <div class="relative aspect-square overflow-hidden rounded-photo bg-cream-200 shadow-xl">
-          <img src={image} alt={make.title} class="h-full w-full object-cover" />
+        <div class="relative flex items-center justify-center overflow-hidden rounded-photo bg-cream-200 shadow-xl">
+          <img src={image} alt={make.title} class="block h-auto max-h-[70vh] w-auto max-w-full" />
           {
             make.difficulty && (
               <span class="absolute left-5 top-5 rounded-pill bg-lemon px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-ink">
