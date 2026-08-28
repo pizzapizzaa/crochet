@@ -46,6 +46,17 @@ export default {
           300: '#EBD9A0', // hairline borders
           400: '#DCC784',
         },
+        // The one hot accent, reserved for "featured". Not a fifth brand
+        // colour — it exists so ONE thing on a page can outrank lemon and
+        // mint. Same rule as the other bright fills: flame is a FILL and
+        // takes an ink label (4.8:1); flame-deep is the readable text shade.
+        flame: {
+          DEFAULT: '#FF7A2E', // fill only
+          deep: '#8A3400', // the readable one
+          mid: '#D75A00',
+          soft: '#FFC6A1',
+          wash: '#FFF1E6',
+        },
         forest: {
           DEFAULT: '#005247',
           deep: '#003B33',

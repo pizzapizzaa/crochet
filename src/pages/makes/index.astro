@@ -4,6 +4,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import MakeCard from '../../components/MakeCard.astro';
 import { getMakes } from '../../lib/makes';
+import { DIFFICULTIES } from '../../lib/database.types';
 
 const allMakes = await getMakes();
 
@@ -26,9 +27,20 @@ if (urlSearch) {
   );
 }
 
-makes.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+/*
+ * Two bands. Featured makes get lifted out entirely and shown first on the hot
+ * flame row; everything else follows in the same Beginner → Advanced ramp the
+ * difficulty tags read as. Makes with no difficulty set sit at the end.
+ */
+const rank = (difficulty: string | null | undefined) => {
+  const i = DIFFICULTIES.indexOf(difficulty as (typeof DIFFICULTIES)[number]);
+  return i === -1 ? DIFFICULTIES.length : i;
+};
 
-const difficulties = ['All', ...new Set(allMakes.map((m) => m.difficulty).filter(Boolean))];
+const featured = makes.filter((m) => m.is_featured).sort((a, b) => rank(a.difficulty) - rank(b.difficulty));
+const rest = makes.filter((m) => !m.is_featured).sort((a, b) => rank(a.difficulty) - rank(b.difficulty));
+
+const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => m.difficulty === d))];
 ---
 
 <Layout
@@ -95,6 +107,36 @@ const difficulties = ['All', ...new Set(allMakes.map((m) => m.difficulty).filter
     </div>
   </section>
 
+  <!--
+    Featured row. Full-bleed flame so it reads as a band across the page rather
+    than as another card, and the paper cards sit on it at full contrast. Flame
+    is a fill: every label on it is ink.
+  -->
+  {
+    featured.length > 0 && (
+      <section class="border-b border-flame-mid/40 bg-flame">
+        <div class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
+          <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 class="flex items-center gap-2 font-display text-2xl font-extrabold text-ink">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-pill bg-ink text-sm text-flame">
+                ★
+              </span>
+              Featured makes
+            </h2>
+            <p class="text-sm font-semibold text-ink/80">
+              {featured.length} hand-picked to start with
+            </p>
+          </div>
+          <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {featured.map((make) => (
+              <MakeCard make={make} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   <div class="mx-auto max-w-container px-4 py-12 sm:px-6 lg:px-8">
     {
       makes.length === 0 ? (
@@ -116,16 +158,20 @@ const difficulties = ['All', ...new Set(allMakes.map((m) => m.difficulty).filter
           </a>
         </div>
       ) : (
-        <>
-          <p class="mb-6 text-sm text-ink-muted">
-            {makes.length} make{makes.length === 1 ? '' : 's'}
-          </p>
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {makes.map((make) => (
-              <MakeCard make={make} />
-            ))}
-          </div>
-        </>
+        rest.length > 0 && (
+          <>
+            <p class="mb-6 text-sm text-ink-muted">
+              {featured.length > 0
+                ? `${rest.length} more make${rest.length === 1 ? '' : 's'}, easiest first`
+                : `${rest.length} make${rest.length === 1 ? '' : 's'}, easiest first`}
+            </p>
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {rest.map((make) => (
+                <MakeCard make={make} />
+              ))}
+            </div>
+          </>
+        )
       )
     }
 
