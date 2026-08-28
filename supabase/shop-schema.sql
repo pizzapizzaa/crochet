@@ -5,6 +5,13 @@
 -- It is idempotent: safe on a fresh project, safe on top of schema.sql and
 -- pos-schema.sql, and safe to run more than once.
 --
+-- ⚠ RUN fulfilment-schema.sql AFTER THIS ONE, ALWAYS.
+-- The commit_order below is the earlier version: it knows nothing about
+-- stock_committed and does its stock loop inline. fulfilment-schema.sql
+-- replaces it with one that records whether stock was really drawn, which the
+-- restock and refund tooling depends on. Re-running this file on its own would
+-- quietly put the old version back.
+--
 -- What it does:
 --   1. Creates `orders` if it is missing, then adds the checkout columns
 --   2. Adds a human order number and the ids a payment is traced by

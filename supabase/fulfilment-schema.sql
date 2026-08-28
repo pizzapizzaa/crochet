@@ -17,6 +17,8 @@
 --   4. Tracks whether stock was really drawn, which is the fact a restock or a
 --      refund has to turn on
 --   5. Gives an abandoned checkout an expiry, so unpaid rows stop piling up
+--   6. Repairs commit_order, whose deployed parameter names did not match the
+--      ones the app calls it with — see section 7
 -- =========================================================
 
 create extension if not exists "pgcrypto";
@@ -136,7 +138,37 @@ alter table public.order_events enable row level security;
 -- No policies, deliberately: like orders, this is server-only. Every read and
 -- write goes through a route holding the service-role key.
 
--- ── 7. DRAW AN ORDER'S STOCK ─────────────────────────────────────────
+-- ── 7. CLEAR THE OLD FUNCTIONS OUT ───────────────────────────────────
+-- `create or replace function` cannot rename an input parameter. It fails with
+-- 42P13 and tells you to drop first, which is what this does.
+--
+-- It matters here because the deployed commit_order took (p_capture_id,
+-- p_order_id) while lib/orders.ts has always called it as (p_order_id,
+-- p_payment_ref). PostgREST resolves an RPC by parameter *name*, so that call
+-- could never match: every settlement would have failed with PGRST202 and
+-- dropped into the needs-a-human path — order marked paid, stock never drawn.
+-- Recreating the function below with the names the code actually sends is what
+-- fixes it.
+--
+-- Dropping every overload by signature rather than naming one: an older
+-- deployment may carry a version with a different arity, and leaving that
+-- behind would make the call ambiguous instead of fixing it.
+do $$
+declare
+  fn record;
+begin
+  for fn in
+    select p.oid::regprocedure as signature
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname in ('commit_order', 'draw_order_stock', 'restock_order')
+  loop
+    execute format('drop function if exists %s', fn.signature);
+  end loop;
+end $$;
+
+-- ── 8. DRAW AN ORDER'S STOCK ─────────────────────────────────────────
 -- Lifted out of commit_order so it has a second caller.
 --
 -- When commit_order raises, its whole transaction rolls back: the payment is
@@ -188,7 +220,7 @@ begin
   update public.orders set stock_committed = true where id = p_order_id;
 end $$;
 
--- ── 8. COMMIT AN ORDER (revised) ─────────────────────────────────────
+-- ── 9. COMMIT AN ORDER (revised) ─────────────────────────────────────
 -- Unchanged in what it promises — payment and stock still move together or not
 -- at all, and a retried webhook still cannot draw stock twice. The loop simply
 -- moved into draw_order_stock, and stock_committed is now recorded.
@@ -212,7 +244,7 @@ begin
    where id = p_order_id;
 end $$;
 
--- ── 9. PUT THE STOCK BACK ────────────────────────────────────────────
+-- ── 10. PUT THE STOCK BACK ───────────────────────────────────────────
 -- The other half of draw_order_stock, for a cancellation or a refund. Same
 -- reason it is a function rather than a loop in an API route: one transaction,
 -- so a half-restocked order cannot exist.
