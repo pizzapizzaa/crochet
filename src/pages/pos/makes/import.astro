@@ -1,0 +1,708 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { isImportTokenConfigured } from '../../../lib/apiAuth';
+
+/*
+ * Bulk pin import.
+ *
+ * Pasting one link at a time into the make editor is fine for one make and
+ * miserable for twenty. This screen takes the whole paste — a list, a wall of
+ * chat text, a board link — reads every pin it can find, and shows them as a
+ * sheet of rows you approve before anything is written.
+ *
+ * The review step is not ceremony. Pinterest's metadata is often thin and
+ * sometimes wrong, and a make cannot be saved without a credited author, so
+ * the rows that came back short are exactly the ones that need a human before
+ * they turn into rows in the database.
+ */
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const admin = getSupabaseAdmin();
+const loadError = admin
+  ? null
+  : 'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/makes-schema.sql.';
+
+const hasExtensionToken = isImportTokenConfigured();
+
+const card = 'rounded-card border border-cream-300 bg-paper p-5 shadow-sm';
+const label = 'mb-1.5 block text-micro font-bold uppercase tracking-eyebrow text-ink-muted';
+const field =
+  'w-full rounded-field border border-cream-300 bg-cream-50 px-3.5 py-2.5 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40';
+---
+
+<PosLayout title="Import pins" section="makes">
+  <header class="mb-6">
+    <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+      <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
+      <span>/</span>
+      <a href="/pos/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes</a>
+      <span>/</span>
+      <span class="font-semibold text-ink-body">Import</span>
+    </nav>
+    <h1 class="font-display text-3xl font-extrabold text-ink sm:text-4xl">Import pins in bulk</h1>
+    <p class="mt-1.5 max-w-2xl text-sm text-ink-muted">
+      Paste as many Pinterest links as you like — a list, a board, or a lump of text with links in
+      it. Every pin is read, shown for approval, then saved as a draft make you can build a bundle
+      for.
+    </p>
+  </header>
+
+  <Flash error={loadError} />
+
+  <!-- ── Paste ──────────────────────────────────────────────────────── -->
+  <div class={`${card} mb-5`}>
+    <h2 class="font-display text-lg font-bold text-ink">Pin links</h2>
+    <p class="mb-4 mt-0.5 text-xs text-ink-muted">
+      One per line is tidiest, but anything works — links are picked out of whatever is pasted, and
+      duplicates collapse. Bare pin ids count too.
+    </p>
+
+    <textarea
+      id="paste"
+      rows="6"
+      placeholder={`https://www.pinterest.com/pin/1234567890/\nhttps://pin.it/abcdefg\n1234567890`}
+      class={`${field} font-mono text-xs`}></textarea>
+
+    <div class="mt-3 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        id="read"
+        class="rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
+      >
+        Read these pins
+      </button>
+      <button
+        type="button"
+        id="clear"
+        class="rounded-pill border border-cream-300 bg-cream-100 px-4 py-2.5 text-sm font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+      >
+        Start over
+      </button>
+      <span id="read-status" class="text-xs font-semibold text-ink-muted"></span>
+    </div>
+
+    <!-- Board helper -->
+    <div class="mt-5 border-t border-cream-300 pt-4">
+      <label class={label} for="board-url">…or pull the pins off a board</label>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <input
+          id="board-url"
+          type="url"
+          placeholder="https://www.pinterest.com/yourname/crochet-ideas/"
+          class={`${field} flex-1`}
+        />
+        <button
+          type="button"
+          id="board-read"
+          class="shrink-0 rounded-pill border border-cream-300 bg-cream-100 px-5 py-2.5 text-sm font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+        >
+          Fetch board
+        </button>
+      </div>
+      <p id="board-status" class="mt-1.5 text-xs font-semibold text-ink-muted"></p>
+      <p class="mt-1.5 text-xs text-ink-faint">
+        Pinterest builds boards in the browser, so a board fetched from here gives up its first
+        screenful and no more.
+        {
+          hasExtensionToken
+            ? ' For a whole board, open it in Chrome and use the ZippyZack extension — it collects every pin you have scrolled past.'
+            : ' The ZippyZack Chrome extension collects a whole board once POS_IMPORT_TOKEN is set.'
+        }
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Review ─────────────────────────────────────────────────────── -->
+  <div id="review" class="hidden">
+    <div
+      class="sticky top-0 z-10 mb-4 flex flex-col gap-3 rounded-card border border-cream-300 bg-paper/95 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span id="counts" class="font-semibold text-ink-body"></span>
+        <button
+          type="button"
+          id="select-all"
+          class="rounded-pill bg-cream-100 px-3 py-1.5 font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+        >
+          Select all
+        </button>
+        <button
+          type="button"
+          id="select-none"
+          class="rounded-pill bg-cream-100 px-3 py-1.5 font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+        >
+          Select none
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink-body">
+          <input type="checkbox" id="publish" class="h-4 w-4 accent-[#00695C]" />
+          Publish straight away
+        </label>
+        <button
+          type="button"
+          id="import"
+          class="rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Import selected
+        </button>
+      </div>
+    </div>
+
+    <p class="mb-4 text-xs text-ink-muted">
+      Imported makes have no materials yet. Open each one afterwards to bundle the yarn and hooks it
+      needs — until then they are drafts, which is why publishing straight away is off by default.
+    </p>
+
+    <div id="rows" class="grid gap-3"></div>
+  </div>
+
+  <!-- ── Results ────────────────────────────────────────────────────── -->
+  <div id="results" class="hidden mt-6"></div>
+</PosLayout>
+
+<script>
+  import { extractPinterestUrls, MAX_BULK_URLS } from '../../../lib/pinterest';
+  import { DIFFICULTIES } from '../../../lib/database.types';
+
+  /*
+   * Three phases, one page: collect links, review what came back, write the
+   * ones that were ticked. State lives in `rows` and the DOM is rebuilt from
+   * it, so there is only ever one version of the truth.
+   */
+
+  interface Row {
+    url: string;
+    pinId: string | null;
+    title: string;
+    summary: string;
+    authorName: string;
+    authorUrl: string;
+    imageUrl: string | null;
+    difficulty: string;
+    via: string;
+    existing: { id: string; title: string } | null;
+    problem: string | null;
+    selected: boolean;
+    /** Set once the row has been written, so a second Import cannot duplicate it. */
+    imported: { id: string; slug: string } | null;
+  }
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+  const paste = $<HTMLTextAreaElement>('paste');
+  const readBtn = $<HTMLButtonElement>('read');
+  const clearBtn = $<HTMLButtonElement>('clear');
+  const readStatus = $<HTMLElement>('read-status');
+  const boardInput = $<HTMLInputElement>('board-url');
+  const boardBtn = $<HTMLButtonElement>('board-read');
+  const boardStatus = $<HTMLElement>('board-status');
+  const review = $<HTMLElement>('review');
+  const rowsEl = $<HTMLElement>('rows');
+  const countsEl = $<HTMLElement>('counts');
+  const importBtn = $<HTMLButtonElement>('import');
+  const publishBox = $<HTMLInputElement>('publish');
+  const resultsEl = $<HTMLElement>('results');
+
+  let rows: Row[] = [];
+
+  /*
+   * Every link that has already been read, in both the form it was pasted in
+   * and the canonical form the server resolved it to. A pin.it link becomes a
+   * /pin/<id>/ URL on the way through, so matching only on the row's URL would
+   * let the same short link be pasted twice and imported twice.
+   */
+  const alreadyRead = new Set<string>();
+
+  /** How many go to the server in one request. Matches the endpoint's own cap. */
+  const LOOKUP_CHUNK = 8;
+  const IMPORT_CHUNK = 10;
+
+  const say = (el: HTMLElement | null, message: string, tone: 'ok' | 'warn' | 'muted' = 'muted') => {
+    if (!el) return;
+    el.textContent = message;
+    el.className =
+      'mt-1.5 text-xs font-semibold ' +
+      (tone === 'ok' ? 'text-mint-deep' : tone === 'warn' ? 'text-lemon-deep' : 'text-ink-muted');
+  };
+
+  const chunk = <T,>(list: T[], size: number): T[][] => {
+    const out: T[][] = [];
+    for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+    return out;
+  };
+
+  /** A row is only importable once it has a title and a credited author. */
+  const ready = (row: Row) => Boolean(row.title.trim() && row.authorName.trim());
+
+  function refreshCounts() {
+    if (!countsEl || !importBtn) return;
+    const selected = rows.filter((r) => r.selected && !r.imported);
+    const blocked = selected.filter((r) => !ready(r)).length;
+
+    countsEl.textContent =
+      `${rows.length} pin${rows.length === 1 ? '' : 's'} read · ` +
+      `${selected.length} selected` +
+      (blocked ? ` · ${blocked} still need a title or author` : '');
+
+    importBtn.disabled = selected.length === 0 || blocked > 0;
+    importBtn.textContent =
+      selected.length === 0 ? 'Import selected' : `Import ${selected.length}`;
+  }
+
+  function rowCard(row: Row, index: number): HTMLElement {
+    const el = document.createElement('article');
+    el.className =
+      'grid gap-4 rounded-card border bg-paper p-4 shadow-sm sm:grid-cols-[120px_1fr] ' +
+      (row.imported
+        ? 'border-mint-soft opacity-70'
+        : row.existing
+          ? 'border-lemon-soft'
+          : 'border-cream-300');
+
+    const thumb = document.createElement('div');
+    thumb.className =
+      'flex aspect-square items-center justify-center overflow-hidden rounded-field border border-cream-300 bg-cream-100 text-center text-[11px] text-ink-faint';
+    if (row.imageUrl) {
+      const img = document.createElement('img');
+      img.src = row.imageUrl;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.className = 'h-full w-full object-cover';
+      img.onerror = () => {
+        thumb.textContent = 'Image will not load';
+      };
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = 'No image';
+    }
+    el.appendChild(thumb);
+
+    const body = document.createElement('div');
+    body.className = 'min-w-0 space-y-3';
+
+    // Top line: the tick, the pin link, and whatever is notable about the row.
+    const top = document.createElement('div');
+    top.className = 'flex flex-wrap items-center gap-2';
+
+    if (!row.imported) {
+      const tick = document.createElement('label');
+      tick.className = 'flex cursor-pointer items-center gap-2 text-xs font-bold text-ink-body';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = row.selected;
+      box.className = 'h-4 w-4 accent-[#00695C]';
+      box.addEventListener('change', () => {
+        rows[index].selected = box.checked;
+        refreshCounts();
+      });
+      tick.appendChild(box);
+      tick.appendChild(document.createTextNode('Import this one'));
+      top.appendChild(tick);
+    }
+
+    const link = document.createElement('a');
+    link.href = row.url;
+    link.target = '_blank';
+    link.rel = 'noopener nofollow';
+    link.className = 'text-xs font-bold text-mint-deep hover:underline';
+    link.textContent = 'The pin ↗';
+    top.appendChild(link);
+
+    const badge = (text: string, classes: string) => {
+      const span = document.createElement('span');
+      span.className = `rounded-pill px-2.5 py-1 text-[11px] font-bold ${classes}`;
+      span.textContent = text;
+      return span;
+    };
+
+    if (row.imported) {
+      const done = document.createElement('a');
+      done.href = `/pos/makes/${row.imported.id}`;
+      done.className =
+        'rounded-pill bg-mint px-2.5 py-1 text-[11px] font-bold text-ink hover:brightness-105';
+      done.textContent = 'Imported — open it';
+      top.appendChild(done);
+    } else if (row.existing) {
+      const dupe = document.createElement('a');
+      dupe.href = `/pos/makes/${row.existing.id}`;
+      dupe.className =
+        'rounded-pill bg-lemon-wash px-2.5 py-1 text-[11px] font-bold text-lemon-deep hover:underline';
+      dupe.textContent = 'Already a make — open it';
+      top.appendChild(dupe);
+    }
+
+    if (row.via === 'none') top.appendChild(badge('Pinterest gave nothing back', 'bg-lemon-wash text-lemon-deep'));
+    if (row.problem) top.appendChild(badge(row.problem, 'bg-lemon-wash text-lemon-deep'));
+
+    body.appendChild(top);
+
+    const fieldClass =
+      'w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40';
+
+    const textField = (
+      value: string,
+      placeholder: string,
+      onInput: (v: string) => void,
+      required = false,
+    ) => {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = value;
+      input.placeholder = placeholder;
+      input.disabled = Boolean(row.imported);
+      input.className =
+        fieldClass + (required && !value.trim() ? ' border-lemon-deep bg-lemon-wash' : '');
+      input.addEventListener('input', () => {
+        onInput(input.value);
+        if (required) {
+          input.className =
+            fieldClass + (input.value.trim() ? '' : ' border-lemon-deep bg-lemon-wash');
+        }
+        refreshCounts();
+      });
+      return input;
+    };
+
+    body.appendChild(
+      textField(row.title, 'Title — what to call this make', (v) => (rows[index].title = v), true),
+    );
+
+    const pair = document.createElement('div');
+    pair.className = 'grid gap-3 sm:grid-cols-2';
+    pair.appendChild(
+      textField(
+        row.authorName,
+        'Pin author — required, this is the credit',
+        (v) => (rows[index].authorName = v),
+        true,
+      ),
+    );
+
+    const difficulty = document.createElement('select');
+    difficulty.className = fieldClass;
+    difficulty.disabled = Boolean(row.imported);
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'Difficulty not set';
+    difficulty.appendChild(none);
+    for (const d of DIFFICULTIES) {
+      const option = document.createElement('option');
+      option.value = d;
+      option.textContent = d;
+      option.selected = row.difficulty === d;
+      difficulty.appendChild(option);
+    }
+    difficulty.addEventListener('change', () => (rows[index].difficulty = difficulty.value));
+    pair.appendChild(difficulty);
+    body.appendChild(pair);
+
+    if (row.summary) {
+      const summary = document.createElement('p');
+      summary.className = 'line-clamp-2 text-xs text-ink-muted';
+      summary.textContent = row.summary;
+      body.appendChild(summary);
+    }
+
+    el.appendChild(body);
+    return el;
+  }
+
+  function render() {
+    if (!rowsEl || !review) return;
+    rowsEl.innerHTML = '';
+    rows.forEach((row, i) => rowsEl.appendChild(rowCard(row, i)));
+    review.classList.toggle('hidden', rows.length === 0);
+    refreshCounts();
+  }
+
+  /** Look the pasted links up, a chunk at a time, drawing as they land. */
+  async function readPins(urls: string[]) {
+    if (!readBtn) return;
+    const fresh = urls.filter((u) => !alreadyRead.has(u) && !rows.some((r) => r.url === u));
+    if (fresh.length === 0) {
+      say(readStatus, 'Those pins are already in the list below.', 'warn');
+      return;
+    }
+    fresh.forEach((u) => alreadyRead.add(u));
+
+    readBtn.disabled = true;
+    readBtn.classList.add('opacity-60');
+
+    let done = 0;
+    try {
+      for (const batch of chunk(fresh, LOOKUP_CHUNK)) {
+        say(readStatus, `Reading ${done + 1}–${done + batch.length} of ${fresh.length}…`);
+
+        const res = await fetch('/api/pos/pinterest-bulk-lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urls: batch }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? 'Lookup failed.');
+
+        for (const r of json.rows ?? []) {
+          // The resolved URL counts as read too, so the short link and the
+          // canonical one both match next time.
+          alreadyRead.add(r.url);
+          rows.push({
+            url: r.url,
+            pinId: r.pinId,
+            title: (r.title ?? '').trim(),
+            summary: (r.description ?? '').trim(),
+            authorName: (r.authorName ?? '').trim(),
+            authorUrl: r.authorUrl ?? '',
+            imageUrl: r.imageUrl,
+            difficulty: '',
+            via: r.via,
+            existing: r.existing,
+            problem: r.problem,
+            // A pin we already hold starts unticked — importing it again is
+            // almost never what was meant.
+            selected: !r.existing,
+            imported: null,
+          });
+        }
+
+        done += batch.length;
+        render();
+      }
+
+      const dupes = rows.filter((r) => r.existing).length;
+      const thin = rows.filter((r) => !ready(r)).length;
+      say(
+        readStatus,
+        `Read ${rows.length} pin${rows.length === 1 ? '' : 's'}.` +
+          (dupes ? ` ${dupes} already imported and left unticked.` : '') +
+          (thin ? ` ${thin} need a title or author typed in.` : ''),
+        thin ? 'warn' : 'ok',
+      );
+    } catch (error) {
+      say(readStatus, error instanceof Error ? error.message : 'Could not read those pins.', 'warn');
+    } finally {
+      readBtn.disabled = false;
+      readBtn.classList.remove('opacity-60');
+    }
+  }
+
+  readBtn?.addEventListener('click', () => {
+    const urls = extractPinterestUrls(paste?.value ?? '');
+    if (urls.length === 0) {
+      say(readStatus, 'No Pinterest links in there. Paste pin URLs, one per line.', 'warn');
+      return;
+    }
+    const capped = urls.length === MAX_BULK_URLS ? ` (capped at ${MAX_BULK_URLS})` : '';
+    say(readStatus, `Found ${urls.length} link${urls.length === 1 ? '' : 's'}${capped}…`);
+    readPins(urls);
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    rows = [];
+    alreadyRead.clear();
+    if (paste) paste.value = '';
+    if (resultsEl) {
+      resultsEl.innerHTML = '';
+      resultsEl.classList.add('hidden');
+    }
+    say(readStatus, '');
+    render();
+  });
+
+  boardBtn?.addEventListener('click', async () => {
+    const url = boardInput?.value.trim();
+    if (!url) {
+      say(boardStatus, 'Paste a board link first.', 'warn');
+      return;
+    }
+    boardBtn.disabled = true;
+    say(boardStatus, 'Looking at that board…');
+    try {
+      const res = await fetch('/api/pos/pinterest-board', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Could not read that board.');
+
+      const found: string[] = json.pinUrls ?? [];
+      if (found.length && paste) {
+        // Into the paste box rather than straight into the list, so what gets
+        // read is still something you can see and edit.
+        paste.value = [paste.value.trim(), found.join('\n')].filter(Boolean).join('\n');
+      }
+      say(
+        boardStatus,
+        json.note ?? `Added ${found.length} pin${found.length === 1 ? '' : 's'} to the box above.`,
+        found.length ? 'ok' : 'warn',
+      );
+    } catch (error) {
+      say(boardStatus, error instanceof Error ? error.message : 'Could not read that board.', 'warn');
+    } finally {
+      boardBtn.disabled = false;
+    }
+  });
+
+  $<HTMLButtonElement>('select-all')?.addEventListener('click', () => {
+    rows.forEach((r) => {
+      if (!r.imported) r.selected = true;
+    });
+    render();
+  });
+
+  $<HTMLButtonElement>('select-none')?.addEventListener('click', () => {
+    rows.forEach((r) => (r.selected = false));
+    render();
+  });
+
+  importBtn?.addEventListener('click', async () => {
+    const queue = rows.map((row, i) => ({ row, i })).filter(({ row }) => row.selected && !row.imported);
+    if (queue.length === 0) return;
+
+    importBtn.disabled = true;
+    const created: { title: string; id: string; slug: string }[] = [];
+    const failed: { title: string; error: string }[] = [];
+
+    if (resultsEl) {
+      resultsEl.classList.remove('hidden');
+      resultsEl.innerHTML =
+        '<p class="rounded-card border border-cream-300 bg-paper px-4 py-3 text-sm font-semibold text-ink-muted">Importing…</p>';
+    }
+
+    for (const batch of chunk(queue, IMPORT_CHUNK)) {
+      try {
+        const res = await fetch('/api/pos/pinterest-bulk-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            publish: publishBox?.checked ?? false,
+            items: batch.map(({ row }) => ({
+              url: row.url,
+              title: row.title,
+              summary: row.summary,
+              authorName: row.authorName,
+              authorUrl: row.authorUrl,
+              imageUrl: row.imageUrl,
+              difficulty: row.difficulty,
+            })),
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? 'Import failed.');
+
+        (json.results ?? []).forEach((result: any, n: number) => {
+          const target = batch[n];
+          if (!target) return;
+          if (result.ok) {
+            rows[target.i].imported = { id: result.id, slug: result.slug };
+            rows[target.i].selected = false;
+            created.push({ title: result.title, id: result.id, slug: result.slug });
+          } else {
+            failed.push({ title: result.title, error: result.error ?? 'Unknown error.' });
+          }
+        });
+      } catch (error) {
+        for (const { row } of batch) {
+          failed.push({
+            title: row.title,
+            error: error instanceof Error ? error.message : 'Import failed.',
+          });
+        }
+      }
+      render();
+    }
+
+    renderResults(created, failed);
+    refreshCounts();
+  });
+
+  /**
+   * The outcome of a batch, built as nodes rather than as a string of HTML.
+   * Titles here came off Pinterest, so they are somebody else's text and have
+   * no business being parsed as markup.
+   */
+  function renderResults(
+    created: { title: string; id: string; slug: string }[],
+    failed: { title: string; error: string }[],
+  ) {
+    if (!resultsEl) return;
+    resultsEl.innerHTML = '';
+
+    const panel = (classes: string, heading: string, sub: string | null) => {
+      const box = document.createElement('div');
+      box.className = `mb-3 rounded-card border px-4 py-3 ${classes}`;
+      const title = document.createElement('p');
+      title.className = 'text-sm font-bold';
+      title.textContent = heading;
+      box.appendChild(title);
+      if (sub) {
+        const note = document.createElement('p');
+        note.className = 'mt-1 text-xs';
+        note.textContent = sub;
+        box.appendChild(note);
+      }
+      const list = document.createElement('ul');
+      list.className = 'mt-2 space-y-1';
+      box.appendChild(list);
+      resultsEl.appendChild(box);
+      return list;
+    };
+
+    if (created.length) {
+      const list = panel(
+        'border-mint-soft bg-mint-wash text-mint-deep',
+        `Imported ${created.length} make${created.length === 1 ? '' : 's'} as ${
+          publishBox?.checked ? 'live' : 'draft'
+        }${created.length === 1 ? '' : 's'}.`,
+        'Each one still needs its bundle of materials.',
+      );
+      for (const item of created) {
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = `/pos/makes/${item.id}`;
+        link.className = 'text-xs font-bold underline';
+        link.textContent = item.title;
+        li.appendChild(link);
+        list.appendChild(li);
+      }
+    }
+
+    if (failed.length) {
+      const list = panel(
+        'border-lemon-soft bg-lemon-wash text-lemon-deep',
+        `${failed.length} did not import.`,
+        null,
+      );
+      for (const item of failed) {
+        const li = document.createElement('li');
+        li.className = 'text-xs';
+        const name = document.createElement('strong');
+        name.textContent = item.title;
+        li.appendChild(name);
+        li.appendChild(document.createTextNode(` — ${item.error}`));
+        list.appendChild(li);
+      }
+    }
+  }
+
+  /*
+   * A link from the extension arrives as ?pins=<comma separated>, so the
+   * browser can hand a scrolled board straight to this screen.
+   */
+  const handed = new URLSearchParams(location.search).get('pins');
+  if (handed && paste) {
+    paste.value = handed.split(',').map((s) => s.trim()).filter(Boolean).join('\n');
+    readBtn?.click();
+  }
+</script>

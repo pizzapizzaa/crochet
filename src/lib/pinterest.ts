@@ -250,3 +250,123 @@ export async function lookupPin(rawUrl: string): Promise<PinLookup> {
   if (merged.imageUrl) merged.imageUrl = upgradePinImage(merged.imageUrl);
   return merged;
 }
+
+/* ── Bulk ────────────────────────────────────────────────────────────
+ *
+ * Everything below serves /pos/makes/import, where the shop owner pastes a
+ * whole afternoon of pinning at once rather than one link at a time.
+ */
+
+/** Cap on how many pins one paste can carry, so a stray paste cannot melt the box. */
+export const MAX_BULK_URLS = 100;
+
+/**
+ * Pull Pinterest links out of whatever got pasted. People paste a tidy list,
+ * a wall of text from a chat, or a copied board with the links buried in it,
+ * so this reads URLs out of prose rather than insisting on one per line.
+ *
+ * Bare pin ids are accepted too — "1234567890" on its own line is a pin.
+ * Duplicates collapse, and order is kept so the preview matches the paste.
+ */
+export function extractPinterestUrls(text: string): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+
+  const push = (candidate: string) => {
+    // Trailing punctuation is a paste artefact, not part of the link.
+    const cleaned = candidate.replace(/[)\]},.;'"]+$/, '');
+    const withScheme = /^https?:\/\//i.test(cleaned) ? cleaned : 'https://' + cleaned;
+    if (!isPinterestUrl(withScheme)) return;
+    const canonical = canonicalPinUrl(withScheme);
+    if (seen.has(canonical)) return;
+    seen.add(canonical);
+    found.push(canonical);
+  };
+
+  for (const match of text.matchAll(/(?:https?:\/\/)?[\w.-]*\bpin(?:terest)?[\w.-]*\.[a-z.]{2,12}\/\S*/gi)) {
+    push(match[0]);
+  }
+
+  // A column of bare ids, which is what copying from a spreadsheet gives you.
+  for (const line of text.split(/\r?\n/)) {
+    const bare = line.trim();
+    if (/^\d{6,25}$/.test(bare)) push(`https://www.pinterest.com/pin/${bare}/`);
+  }
+
+  return found.slice(0, MAX_BULK_URLS);
+}
+
+/** A /pin/<id>/ link, as opposed to a board, a profile or a search. */
+export function isPinUrl(raw: string): boolean {
+  return isPinterestUrl(raw) && pinIdFrom(raw) !== null;
+}
+
+/**
+ * Every pin id mentioned in a page of Pinterest HTML, in first-seen order.
+ * Board pages ship a chunk of embedded JSON that names the pins above the
+ * fold, which is what this reads.
+ */
+export function pinIdsFromHtml(html: string): string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const patterns = [/\/pin\/(\d{6,25})\//g, /"(?:id|pin_id)"\s*:\s*"(\d{12,25})"/g];
+
+  for (const re of patterns) {
+    for (const match of html.matchAll(re)) {
+      const id = match[1];
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+export interface BoardScan {
+  /** Canonical pin URLs found on the board page. */
+  pinUrls: string[];
+  /** Why the list is short or empty, when it is. */
+  note: string | null;
+}
+
+/**
+ * Best-effort read of a board or profile page.
+ *
+ * Pinterest renders boards in the browser, so the HTML a server gets holds
+ * only the pins that made it into the page's bootstrap JSON — usually the
+ * first screenful, sometimes none at all. That is a real ceiling, not a bug to
+ * work around, so the result says so and the POS points at the browser
+ * extension, which reads the board the visitor can actually see.
+ */
+export async function scanBoard(rawUrl: string): Promise<BoardScan> {
+  const url = await resolveShortLink(rawUrl.trim());
+
+  if (isPinUrl(url)) {
+    return { pinUrls: [canonicalPinUrl(url)], note: null };
+  }
+
+  try {
+    const res = await fetchWithTimeout(url, {
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+      redirect: 'follow',
+    });
+    if (!res.ok) {
+      return { pinUrls: [], note: `Pinterest answered ${res.status} for that board.` };
+    }
+
+    const ids = pinIdsFromHtml(await res.text()).slice(0, MAX_BULK_URLS);
+    if (ids.length === 0) {
+      return {
+        pinUrls: [],
+        note: 'No pins were in the board HTML — Pinterest builds boards in the browser. Open the board, scroll, and use the extension to collect the pins, or paste the pin links yourself.',
+      };
+    }
+
+    return {
+      pinUrls: ids.map((id) => `https://www.pinterest.com/pin/${id}/`),
+      note: `Found ${ids.length} pin${ids.length === 1 ? '' : 's'} in the board's first screenful. Scroll the board in the extension to collect the rest.`,
+    };
+  } catch {
+    return { pinUrls: [], note: 'Could not reach that board.' };
+  }
+}

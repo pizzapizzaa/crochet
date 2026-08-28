@@ -3,7 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { guardApi } from '../../../lib/auth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
-import { slugify } from '../../../lib/posForms';
+import { mirrorImage } from '../../../lib/mirror';
 import { isPinterestUrl, lookupPin, upgradePinImage } from '../../../lib/pinterest';
 
 /*
@@ -15,66 +15,11 @@ import { isPinterestUrl, lookupPin, upgradePinImage } from '../../../lib/pintere
  * Answers in JSON: the POS calls it with fetch() and fills the form in place.
  */
 
-const BUCKET = 'product-images';
-const MAX_BYTES = 8 * 1024 * 1024;
-
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
-
-const EXT_BY_TYPE: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/avif': 'avif',
-  'image/gif': 'gif',
-};
-
-/**
- * Pull the pin image down and put it in our bucket. Returns null on any
- * failure — the caller keeps the remote URL, which is degraded but not broken.
- */
-async function mirrorImage(
-  admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
-  imageUrl: string,
-  nameHint: string,
-): Promise<string | null> {
-  const candidates = [imageUrl];
-  const original = upgradePinImage(imageUrl);
-  // Try the full-resolution path first, then whatever we were handed.
-  if (original !== imageUrl) candidates.unshift(original);
-
-  for (const candidate of candidates) {
-    try {
-      const res = await fetch(candidate, {
-        headers: { Referer: 'https://www.pinterest.com/' },
-      });
-      if (!res.ok) continue;
-
-      const type = (res.headers.get('content-type') ?? '').split(';')[0].trim();
-      const ext = EXT_BY_TYPE[type];
-      if (!ext) continue;
-
-      const bytes = new Uint8Array(await res.arrayBuffer());
-      if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) continue;
-
-      const base = slugify(nameHint) || 'pin';
-      const path = `makes/${base}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-
-      const { error } = await admin.storage
-        .from(BUCKET)
-        .upload(path, bytes, { contentType: type, upsert: false });
-      if (error) continue;
-
-      return admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return null;
-}
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   if (guardApi(cookies)) return json({ error: 'Not signed in.' }, 401);
@@ -100,7 +45,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const admin = getSupabaseAdmin();
   let mirroredUrl: string | null = null;
   if (admin && pin.imageUrl) {
-    mirroredUrl = await mirrorImage(admin, pin.imageUrl, pin.title ?? pin.pinId ?? 'pin');
+    // Full-resolution path first, the preview Pinterest advertised second.
+    mirroredUrl = await mirrorImage(admin, [upgradePinImage(pin.imageUrl), pin.imageUrl], {
+      folder: 'makes',
+      nameHint: pin.title ?? pin.pinId ?? 'pin',
+      referer: 'https://www.pinterest.com/',
+    });
   }
 
   const found = Boolean(pin.imageUrl || pin.authorName || pin.title);

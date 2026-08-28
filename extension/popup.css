@@ -1,0 +1,210 @@
+/*
+ * The POS palette, at popup size. Same colours as the shop's back office so
+ * the two do not feel like different tools.
+ */
+:root {
+  --forest: #003b33;
+  --forest-mid: #00695c;
+  --mint: #21ffa8;
+  --mint-soft: #a8ffdc;
+  --mint-wash: #e4fff3;
+  --cream: #fbf1ca;
+  --cream-50: #fffdf2;
+  --cream-300: #ebd9a0;
+  --paper: #fffbea;
+  --lemon-wash: #fffbe4;
+  --lemon-soft: #fff4a6;
+  --lemon-deep: #7a5e00;
+  --ink-muted: #2e6a60;
+  --ink-faint: #7fb3aa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  margin: 0;
+  padding: 14px;
+  background: var(--cream);
+  color: var(--forest);
+  font: 13px/1.45 "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sub {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--cream-300);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.preview {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.thumb {
+  width: 66px;
+  height: 66px;
+  flex: 0 0 66px;
+  border-radius: 10px;
+  border: 1px solid var(--cream-300);
+  background: var(--cream-50) center/cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--ink-faint);
+  text-align: center;
+  overflow: hidden;
+}
+
+.grow {
+  min-width: 0;
+  flex: 1;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="password"],
+select {
+  width: 100%;
+  margin-top: 3px;
+  padding: 7px 9px;
+  border: 1px solid var(--cream-300);
+  border-radius: 8px;
+  background: var(--cream-50);
+  color: var(--forest);
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--forest-mid);
+  box-shadow: 0 0 0 3px rgba(33, 255, 168, 0.35);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--forest);
+}
+
+.check input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--forest-mid);
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--mint), var(--mint-soft));
+  color: var(--forest);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: var(--cream);
+  border: 1px solid var(--cream-300);
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.warn {
+  background: var(--lemon-wash);
+  border-color: var(--lemon-soft);
+  color: var(--lemon-deep);
+}
+
+.ok {
+  background: var(--mint-wash);
+  border-color: var(--mint-soft);
+  color: var(--forest-mid);
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--cream);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--ink-muted);
+}
+
+a {
+  color: var(--forest-mid);
+  font-weight: 700;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.name {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}

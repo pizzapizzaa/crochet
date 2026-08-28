@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>ZippyZack importer — settings</title>
+    <style>
+      body {
+        width: auto;
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 28px 20px;
+      }
+      h1 {
+        font-size: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ZippyZack importer</h1>
+    <p class="sub">
+      Where your shop lives, and the secret that lets this extension write to it.
+    </p>
+
+    <div class="card">
+      <label>
+        Shop address
+        <input id="shopUrl" type="url" placeholder="https://zippyzack.com" />
+      </label>
+      <p class="note" style="margin-top: -4px">
+        The site your POS runs on. Just the address — no /pos on the end.
+      </p>
+
+      <label style="margin-top: 12px">
+        Import token
+        <input id="token" type="password" placeholder="the value of POS_IMPORT_TOKEN" />
+      </label>
+      <p class="note" style="margin-top: -4px">
+        Set <code>POS_IMPORT_TOKEN</code> in your shop's environment to a long random string, and
+        paste the same value here. It is what tells your shop this extension is yours; anyone who
+        has it can write products into your catalogue.
+      </p>
+
+      <button id="test" class="secondary" style="margin-top: 12px">Test the connection</button>
+      <p class="note" id="test-note"></p>
+    </div>
+
+    <div class="card">
+      <p style="margin: 0 0 10px; font-weight: 800">What an import should default to</p>
+
+      <label>
+        File under
+        <select id="categoryId"><option value="">Imported (hidden holding pen)</option></select>
+      </label>
+
+      <div class="row">
+        <label>
+          Markup on the source price (%)
+          <input id="markup" type="number" min="0" max="900" step="1" />
+        </label>
+        <label>
+          Stock on hand
+          <input id="stock" type="number" min="0" step="1" />
+        </label>
+      </div>
+      <p class="note" style="margin-top: -4px">
+        A markup sets what you sell for and keeps the shop's own price as your cost. Leave it at 0
+        to import the price as-is.
+      </p>
+
+      <label class="check" style="margin-top: 10px">
+        <input id="publish" type="checkbox" />
+        Publish imports straight away
+      </label>
+      <p class="note" style="margin-top: 2px">
+        Off by default: an import arrives with somebody else's description and wants rewriting
+        before customers see it.
+      </p>
+    </div>
+
+    <button id="save">Save settings</button>
+    <p class="note" id="save-note"></p>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

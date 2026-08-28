@@ -1,0 +1,757 @@
+---
+export const prerender = false;
+
+import PosLayout from '../../../layouts/PosLayout.astro';
+import Flash from '../../../components/pos/Flash.astro';
+import { isAuthed, loginUrl } from '../../../lib/auth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { isImportTokenConfigured } from '../../../lib/apiAuth';
+import type { Category } from '../../../lib/database.types';
+
+/*
+ * Import a product from another shop's URL.
+ *
+ * Paste a link — or several — and each one is read for the structured data
+ * its page already publishes, then shown as a row to price, file and approve.
+ * The source URL is kept on every product it creates, so where a thing came
+ * from is never a thing anybody has to remember.
+ *
+ * Some shops refuse a request that did not come from a browser. That is not
+ * something to work around from a server, so this screen says so and points
+ * at the Chrome extension, which reads the page the shop already rendered for
+ * you.
+ */
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const admin = getSupabaseAdmin();
+let categories: Category[] = [];
+let loadError: string | null = null;
+
+if (!admin) {
+  loadError =
+    'Supabase is not connected. Add PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env, then run supabase/pos-schema.sql.';
+} else {
+  const { data, error } = await admin
+    .from('categories')
+    .select('*')
+    .order('display_order', { ascending: true })
+    .order('name');
+  if (error) loadError = `Could not load categories: ${error.message}`;
+  else categories = data ?? [];
+}
+
+const hasExtensionToken = isImportTokenConfigured();
+
+const card = 'rounded-card border border-cream-300 bg-paper p-5 shadow-sm';
+const label = 'mb-1.5 block text-micro font-bold uppercase tracking-eyebrow text-ink-muted';
+const field =
+  'w-full rounded-field border border-cream-300 bg-cream-50 px-3.5 py-2.5 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40';
+---
+
+<PosLayout title="Import products" section="products">
+  <header class="mb-6">
+    <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+      <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
+      <span>/</span>
+      <a href="/pos/products" class="transition-colors duration-fast ease-out hover:text-mint-deep">
+        Products
+      </a>
+      <span>/</span>
+      <span class="font-semibold text-ink-body">Import</span>
+    </nav>
+    <h1 class="font-display text-3xl font-extrabold text-ink sm:text-4xl">Import from a shop link</h1>
+    <p class="mt-1.5 max-w-2xl text-sm text-ink-muted">
+      Paste a supplier's product URL and the name, price, photographs and SKU come across. Check the
+      numbers, pick a category, and it lands in your catalogue as a draft with the source link kept
+      on the row.
+    </p>
+  </header>
+
+  <Flash error={loadError} />
+
+  {
+    categories.length === 0 && !loadError && (
+      <div class="mb-5 rounded-card border border-lemon-soft bg-lemon-wash px-4 py-3">
+        <p class="text-sm font-semibold text-lemon-deep">
+          There are no categories yet. Imports will be filed under a hidden “Imported” category
+          until you <a href="/pos/categories" class="underline">create some</a>.
+        </p>
+      </div>
+    )
+  }
+
+  <!-- ── Links ──────────────────────────────────────────────────────── -->
+  <div class={`${card} mb-5`}>
+    <h2 class="font-display text-lg font-bold text-ink">Product links</h2>
+    <p class="mb-4 mt-0.5 text-xs text-ink-muted">
+      One per line. Yarn shops on Shopify come across almost complete; anything publishing standard
+      product data comes across mostly complete.
+    </p>
+
+    <textarea
+      id="paste"
+      rows="4"
+      placeholder="https://someyarnshop.com/products/merino-aran-oatmeal"
+      class={`${field} font-mono text-xs`}></textarea>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+      <div>
+        <label class={label} for="default-category">File under</label>
+        <select id="default-category" class={field}>
+          <option value="">Imported (hidden holding pen)</option>
+          {
+            categories.map((c) => (
+              <option value={c.id}>
+                {c.name}
+                {c.is_active ? '' : ' (hidden)'}
+              </option>
+            ))
+          }
+        </select>
+      </div>
+      <div>
+        <label class={label} for="markup">Markup on the source price</label>
+        <div class="relative">
+          <input
+            id="markup"
+            type="number"
+            min="0"
+            max="900"
+            step="1"
+            value="0"
+            class={`${field} pr-7`}
+          />
+          <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-faint">%</span>
+        </div>
+        <p class="mt-1.5 text-xs text-ink-faint">
+          Sets your price; the source price is kept as the cost.
+        </p>
+      </div>
+      <div>
+        <label class={label} for="default-stock">Stock on hand</label>
+        <input id="default-stock" type="number" min="0" step="1" value="0" class={field} />
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        id="read"
+        class="rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
+      >
+        Read these pages
+      </button>
+      <button
+        type="button"
+        id="clear"
+        class="rounded-pill border border-cream-300 bg-cream-100 px-4 py-2.5 text-sm font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+      >
+        Start over
+      </button>
+      <span id="read-status" class="text-xs font-semibold text-ink-muted"></span>
+    </div>
+
+    <p class="mt-4 border-t border-cream-300 pt-4 text-xs text-ink-faint">
+      Shops that block anything but a browser — the big marketplaces, mostly — will come back empty
+      from here.
+      {
+        hasExtensionToken
+          ? ' Open the page in Chrome and use the ZippyZack extension, which reads what the shop rendered for you.'
+          : ' The ZippyZack Chrome extension reads those from your own browser; it needs POS_IMPORT_TOKEN set to talk to this shop.'
+      }
+    </p>
+  </div>
+
+  <!-- ── Review ─────────────────────────────────────────────────────── -->
+  <div id="review" class="hidden">
+    <div
+      class="sticky top-0 z-10 mb-4 flex flex-col gap-3 rounded-card border border-cream-300 bg-paper/95 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+    >
+      <span id="counts" class="text-xs font-semibold text-ink-body"></span>
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink-body">
+          <input type="checkbox" id="publish" class="h-4 w-4 accent-[#00695C]" />
+          Publish straight away
+        </label>
+        <button
+          type="button"
+          id="import"
+          class="rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Import selected
+        </button>
+      </div>
+    </div>
+
+    <div id="rows" class="grid gap-3"></div>
+  </div>
+
+  <div id="results" class="mt-6 hidden"></div>
+
+  <!-- Category options, handed to the client script as data. -->
+  <script
+    type="application/json"
+    id="category-data"
+    set:html={JSON.stringify(categories.map((c) => ({ id: c.id, name: c.name, active: c.is_active })))}
+  />
+</PosLayout>
+
+<script>
+  /*
+   * Same three-phase shape as the pin importer: collect links, review what
+   * came back, write the ones that were ticked. Reading is one request per
+   * page — a scrape is slow and a row that lands on its own is a row you can
+   * start correcting while the rest are still arriving.
+   */
+
+  interface Row {
+    url: string;
+    siteName: string;
+    name: string;
+    description: string;
+    price: number | null;
+    costPrice: number | null;
+    compareAtPrice: number | null;
+    currency: string | null;
+    sku: string | null;
+    images: string[];
+    tags: string[];
+    categoryId: string;
+    stock: number;
+    via: string[];
+    note: string | null;
+    selected: boolean;
+    imported: { id: string; name: string } | null;
+    error: string | null;
+  }
+
+  interface CategoryOption {
+    id: string;
+    name: string;
+    active: boolean;
+  }
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+  const paste = $<HTMLTextAreaElement>('paste');
+  const readBtn = $<HTMLButtonElement>('read');
+  const clearBtn = $<HTMLButtonElement>('clear');
+  const readStatus = $<HTMLElement>('read-status');
+  const review = $<HTMLElement>('review');
+  const rowsEl = $<HTMLElement>('rows');
+  const countsEl = $<HTMLElement>('counts');
+  const importBtn = $<HTMLButtonElement>('import');
+  const publishBox = $<HTMLInputElement>('publish');
+  const resultsEl = $<HTMLElement>('results');
+  const defaultCategory = $<HTMLSelectElement>('default-category');
+  const markupInput = $<HTMLInputElement>('markup');
+  const defaultStock = $<HTMLInputElement>('default-stock');
+
+  const categories: CategoryOption[] = JSON.parse(
+    $<HTMLScriptElement>('category-data')?.textContent || '[]',
+  );
+
+  let rows: Row[] = [];
+
+  const money = (n: number | null) =>
+    n === null ? '—' : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const say = (message: string, tone: 'ok' | 'warn' | 'muted' = 'muted') => {
+    if (!readStatus) return;
+    readStatus.textContent = message;
+    readStatus.className =
+      'text-xs font-semibold ' +
+      (tone === 'ok' ? 'text-mint-deep' : tone === 'warn' ? 'text-lemon-deep' : 'text-ink-muted');
+  };
+
+  /** Links out of the paste box, deduplicated, http(s) only. */
+  function linksFrom(text: string): string[] {
+    const out: string[] = [];
+    for (const piece of text.split(/[\s,]+/)) {
+      const candidate = piece.trim().replace(/[)\]},.;'"]+$/, '');
+      if (!candidate) continue;
+      const withScheme = /^https?:\/\//i.test(candidate) ? candidate : 'https://' + candidate;
+      try {
+        const url = new URL(withScheme);
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
+        if (!url.hostname.includes('.')) continue;
+        if (!out.includes(url.toString())) out.push(url.toString());
+      } catch {
+        // Not a link; the paste box tolerates prose around them.
+      }
+    }
+    return out.slice(0, 40);
+  }
+
+  const ready = (row: Row) => Boolean(row.name.trim()) && row.price !== null && row.price >= 0;
+
+  function refreshCounts() {
+    if (!countsEl || !importBtn) return;
+    const selected = rows.filter((r) => r.selected && !r.imported);
+    const blocked = selected.filter((r) => !ready(r)).length;
+
+    countsEl.textContent =
+      `${rows.length} page${rows.length === 1 ? '' : 's'} read · ${selected.length} selected` +
+      (blocked ? ` · ${blocked} still need a name or price` : '');
+
+    importBtn.disabled = selected.length === 0 || blocked > 0;
+    importBtn.textContent = selected.length === 0 ? 'Import selected' : `Import ${selected.length}`;
+  }
+
+  const fieldClass =
+    'w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40';
+
+  function labelled(text: string, control: HTMLElement): HTMLElement {
+    const wrap = document.createElement('label');
+    wrap.className = 'block';
+    const span = document.createElement('span');
+    span.className = 'mb-1 block text-micro font-bold uppercase tracking-eyebrow text-ink-muted';
+    span.textContent = text;
+    wrap.appendChild(span);
+    wrap.appendChild(control);
+    return wrap;
+  }
+
+  function rowCard(row: Row, index: number): HTMLElement {
+    const el = document.createElement('article');
+    el.className =
+      'grid gap-4 rounded-card border bg-paper p-4 shadow-sm sm:grid-cols-[120px_1fr] ' +
+      (row.imported ? 'border-mint-soft opacity-70' : row.error ? 'border-lemon-soft' : 'border-cream-300');
+
+    // Thumbnail
+    const thumb = document.createElement('div');
+    thumb.className =
+      'flex aspect-square items-center justify-center overflow-hidden rounded-field border border-cream-300 bg-cream-100 text-center text-[11px] text-ink-faint';
+    if (row.images[0]) {
+      const img = document.createElement('img');
+      img.src = row.images[0];
+      img.alt = '';
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.className = 'h-full w-full object-cover';
+      img.onerror = () => {
+        thumb.textContent = 'Image will not load';
+      };
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = 'No photo found';
+    }
+    el.appendChild(thumb);
+
+    const body = document.createElement('div');
+    body.className = 'min-w-0 space-y-3';
+
+    // Header line
+    const top = document.createElement('div');
+    top.className = 'flex flex-wrap items-center gap-2';
+
+    if (!row.imported) {
+      const tick = document.createElement('label');
+      tick.className = 'flex cursor-pointer items-center gap-2 text-xs font-bold text-ink-body';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = row.selected;
+      box.className = 'h-4 w-4 accent-[#00695C]';
+      box.addEventListener('change', () => {
+        rows[index].selected = box.checked;
+        refreshCounts();
+      });
+      tick.appendChild(box);
+      tick.appendChild(document.createTextNode('Import this one'));
+      top.appendChild(tick);
+    }
+
+    const source = document.createElement('a');
+    source.href = row.url;
+    source.target = '_blank';
+    source.rel = 'noopener nofollow';
+    source.className = 'text-xs font-bold text-mint-deep hover:underline';
+    source.textContent = `${row.siteName} ↗`;
+    top.appendChild(source);
+
+    const badge = (text: string, classes: string) => {
+      const span = document.createElement('span');
+      span.className = `rounded-pill px-2.5 py-1 text-[11px] font-bold ${classes}`;
+      span.textContent = text;
+      return span;
+    };
+
+    if (row.imported) {
+      const done = document.createElement('a');
+      done.href = `/pos/products/${row.imported.id}`;
+      done.className =
+        'rounded-pill bg-mint px-2.5 py-1 text-[11px] font-bold text-ink hover:brightness-105';
+      done.textContent = 'Imported — open it';
+      top.appendChild(done);
+    }
+    if (row.via.length) top.appendChild(badge(`read via ${row.via.join(' + ')}`, 'bg-cream-100 text-ink-muted'));
+    if (row.currency && row.currency !== 'USD') {
+      top.appendChild(badge(`priced in ${row.currency}`, 'bg-lemon-wash text-lemon-deep'));
+    }
+    if (row.error) top.appendChild(badge(row.error, 'bg-lemon-wash text-lemon-deep'));
+    if (row.images.length > 1) {
+      top.appendChild(badge(`${row.images.length} photos`, 'bg-cream-100 text-ink-muted'));
+    }
+    body.appendChild(top);
+
+    if (row.note) {
+      const note = document.createElement('p');
+      note.className = 'text-xs font-semibold text-lemon-deep';
+      note.textContent = row.note;
+      body.appendChild(note);
+    }
+
+    // Name
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = row.name;
+    nameInput.placeholder = 'Product name';
+    nameInput.disabled = Boolean(row.imported);
+    nameInput.className = fieldClass + (row.name.trim() ? '' : ' border-lemon-deep bg-lemon-wash');
+    nameInput.addEventListener('input', () => {
+      rows[index].name = nameInput.value;
+      nameInput.className =
+        fieldClass + (nameInput.value.trim() ? '' : ' border-lemon-deep bg-lemon-wash');
+      refreshCounts();
+    });
+    body.appendChild(nameInput);
+
+    // Money and filing
+    const grid = document.createElement('div');
+    grid.className = 'grid gap-3 sm:grid-cols-4';
+
+    const numberInput = (
+      value: number | null,
+      onInput: (v: number | null) => void,
+      required = false,
+    ) => {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.step = '0.01';
+      input.value = value === null ? '' : String(value);
+      input.disabled = Boolean(row.imported);
+      input.className = fieldClass + (required && value === null ? ' border-lemon-deep bg-lemon-wash' : '');
+      input.addEventListener('input', () => {
+        const parsed = input.value === '' ? null : Number(input.value);
+        onInput(Number.isFinite(parsed as number) ? (parsed as number) : null);
+        if (required) {
+          input.className =
+            fieldClass + (input.value === '' ? ' border-lemon-deep bg-lemon-wash' : '');
+        }
+        refreshCounts();
+      });
+      return input;
+    };
+
+    grid.appendChild(
+      labelled('Sell for', numberInput(row.price, (v) => (rows[index].price = v), true)),
+    );
+    grid.appendChild(labelled('Costs us', numberInput(row.costPrice, (v) => (rows[index].costPrice = v))));
+
+    const stock = document.createElement('input');
+    stock.type = 'number';
+    stock.min = '0';
+    stock.step = '1';
+    stock.value = String(row.stock);
+    stock.disabled = Boolean(row.imported);
+    stock.className = fieldClass;
+    stock.addEventListener('input', () => {
+      rows[index].stock = Math.max(0, Math.round(Number(stock.value) || 0));
+    });
+    grid.appendChild(labelled('Stock', stock));
+
+    const category = document.createElement('select');
+    category.className = fieldClass;
+    category.disabled = Boolean(row.imported);
+    const holding = document.createElement('option');
+    holding.value = '';
+    holding.textContent = 'Imported (hidden)';
+    category.appendChild(holding);
+    for (const c of categories) {
+      const option = document.createElement('option');
+      option.value = c.id;
+      option.textContent = c.name + (c.active ? '' : ' (hidden)');
+      option.selected = row.categoryId === c.id;
+      category.appendChild(option);
+    }
+    category.addEventListener('change', () => (rows[index].categoryId = category.value));
+    grid.appendChild(labelled('Category', category));
+
+    body.appendChild(grid);
+
+    if (row.description) {
+      const description = document.createElement('p');
+      description.className = 'line-clamp-2 text-xs text-ink-muted';
+      description.textContent = row.description;
+      body.appendChild(description);
+    }
+
+    const footnote = document.createElement('p');
+    footnote.className = 'text-xs text-ink-faint';
+    footnote.textContent =
+      [row.sku ? `SKU ${row.sku}` : null, row.compareAtPrice ? `listed at ${money(row.compareAtPrice)}` : null]
+        .filter(Boolean)
+        .join(' · ') || 'The description comes across as a starting point — rewrite it in your own words.';
+    body.appendChild(footnote);
+
+    el.appendChild(body);
+    return el;
+  }
+
+  function render() {
+    if (!rowsEl || !review) return;
+    rowsEl.innerHTML = '';
+    rows.forEach((row, i) => rowsEl.appendChild(rowCard(row, i)));
+    review.classList.toggle('hidden', rows.length === 0);
+    refreshCounts();
+  }
+
+  async function readPages(urls: string[]) {
+    if (!readBtn) return;
+    const fresh = urls.filter((u) => !rows.some((r) => r.url === u));
+    if (fresh.length === 0) {
+      say('Those links are already in the list below.', 'warn');
+      return;
+    }
+
+    readBtn.disabled = true;
+    readBtn.classList.add('opacity-60');
+
+    const markup = Math.max(0, Number(markupInput?.value ?? 0) || 0);
+    const stock = Math.max(0, Math.round(Number(defaultStock?.value ?? 0) || 0));
+    const categoryId = defaultCategory?.value ?? '';
+
+    let done = 0;
+    for (const url of fresh) {
+      say(`Reading ${done + 1} of ${fresh.length}…`);
+      try {
+        const res = await fetch('/api/pos/product-scrape', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? 'Could not read that page.');
+
+        const draft = json.draft;
+        const sourcePrice: number | null = draft.price;
+        rows.push({
+          url: draft.sourceUrl || url,
+          siteName: draft.siteName ?? new URL(url).hostname,
+          name: (draft.name ?? '').trim(),
+          description: (draft.description ?? '').trim(),
+          // Markup turns the supplier's price into ours and keeps theirs as
+          // the cost; with no markup the source price is simply the price.
+          price:
+            sourcePrice === null
+              ? null
+              : Math.round(sourcePrice * (1 + markup / 100) * 100) / 100,
+          costPrice: markup > 0 ? sourcePrice : null,
+          compareAtPrice: draft.compareAtPrice,
+          currency: draft.currency,
+          sku: draft.sku,
+          images: draft.images ?? [],
+          tags: draft.tags ?? [],
+          categoryId,
+          stock,
+          via: draft.via ?? [],
+          note: json.note,
+          selected: json.found === true,
+          imported: null,
+          error: null,
+        });
+      } catch (error) {
+        rows.push({
+          url,
+          siteName: (() => {
+            try {
+              return new URL(url).hostname.replace(/^www\./, '');
+            } catch {
+              return url;
+            }
+          })(),
+          name: '',
+          description: '',
+          price: null,
+          costPrice: null,
+          compareAtPrice: null,
+          currency: null,
+          sku: null,
+          images: [],
+          tags: [],
+          categoryId,
+          stock,
+          via: [],
+          note: null,
+          selected: false,
+          imported: null,
+          error: error instanceof Error ? error.message : 'Could not read that page.',
+        });
+      }
+      done += 1;
+      render();
+    }
+
+    const usable = rows.filter((r) => ready(r)).length;
+    say(
+      `Read ${rows.length} page${rows.length === 1 ? '' : 's'}. ${usable} ready to import.`,
+      usable === rows.length ? 'ok' : 'warn',
+    );
+    readBtn.disabled = false;
+    readBtn.classList.remove('opacity-60');
+  }
+
+  readBtn?.addEventListener('click', () => {
+    const urls = linksFrom(paste?.value ?? '');
+    if (urls.length === 0) {
+      say('No links in there — paste a product URL.', 'warn');
+      return;
+    }
+    readPages(urls);
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    rows = [];
+    if (paste) paste.value = '';
+    if (resultsEl) {
+      resultsEl.innerHTML = '';
+      resultsEl.classList.add('hidden');
+    }
+    say('');
+    render();
+  });
+
+  importBtn?.addEventListener('click', async () => {
+    const queue = rows.map((row, i) => ({ row, i })).filter(({ row }) => row.selected && !row.imported);
+    if (queue.length === 0) return;
+
+    importBtn.disabled = true;
+    const created: { name: string; id: string; warnings: string[] }[] = [];
+    const failed: { name: string; error: string }[] = [];
+
+    if (resultsEl) {
+      resultsEl.classList.remove('hidden');
+      resultsEl.innerHTML =
+        '<p class="rounded-card border border-cream-300 bg-paper px-4 py-3 text-sm font-semibold text-ink-muted">Importing…</p>';
+    }
+
+    // One at a time: each import mirrors up to six photographs, and a serial
+    // queue keeps that off the shop's Supabase connection all at once.
+    for (const { row, i } of queue) {
+      try {
+        const res = await fetch('/api/pos/product-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: row.url,
+            siteName: row.siteName,
+            name: row.name,
+            description: row.description,
+            price: row.price,
+            costPrice: row.costPrice,
+            compareAtPrice: row.compareAtPrice,
+            currency: row.currency,
+            sku: row.sku,
+            images: row.images,
+            tags: row.tags,
+            categoryId: row.categoryId || undefined,
+            stock: row.stock,
+            publish: publishBox?.checked ?? false,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? 'Import failed.');
+
+        if (json.duplicate) {
+          rows[i].imported = { id: json.id, name: json.name };
+          rows[i].selected = false;
+          created.push({ name: json.name, id: json.id, warnings: ['Already imported from that link.'] });
+        } else {
+          rows[i].imported = { id: json.id, name: json.name };
+          rows[i].selected = false;
+          created.push({ name: json.name, id: json.id, warnings: json.warnings ?? [] });
+        }
+      } catch (error) {
+        failed.push({
+          name: row.name || row.url,
+          error: error instanceof Error ? error.message : 'Import failed.',
+        });
+      }
+      render();
+    }
+
+    renderResults(created, failed);
+    refreshCounts();
+  });
+
+  /**
+   * The outcome of a run, built as nodes rather than as a string of HTML.
+   * Product names and warnings came off another shop's page, so they are
+   * somebody else's text and have no business being parsed as markup.
+   */
+  function renderResults(
+    created: { name: string; id: string; warnings: string[] }[],
+    failed: { name: string; error: string }[],
+  ) {
+    if (!resultsEl) return;
+    resultsEl.innerHTML = '';
+
+    const panel = (classes: string, heading: string) => {
+      const box = document.createElement('div');
+      box.className = `mb-3 rounded-card border px-4 py-3 ${classes}`;
+      const title = document.createElement('p');
+      title.className = 'text-sm font-bold';
+      title.textContent = heading;
+      box.appendChild(title);
+      const list = document.createElement('ul');
+      list.className = 'mt-2 space-y-1';
+      box.appendChild(list);
+      resultsEl.appendChild(box);
+      return list;
+    };
+
+    if (created.length) {
+      const list = panel(
+        'border-mint-soft bg-mint-wash text-mint-deep',
+        `Imported ${created.length} product${created.length === 1 ? '' : 's'}.`,
+      );
+      for (const item of created) {
+        const li = document.createElement('li');
+        li.className = 'text-xs';
+        const link = document.createElement('a');
+        link.href = `/pos/products/${item.id}`;
+        link.className = 'font-bold underline';
+        link.textContent = item.name;
+        li.appendChild(link);
+        if (item.warnings.length) {
+          li.appendChild(document.createTextNode(' — ' + item.warnings.join(' ')));
+        }
+        list.appendChild(li);
+      }
+    }
+
+    if (failed.length) {
+      const list = panel('border-lemon-soft bg-lemon-wash text-lemon-deep', `${failed.length} did not import.`);
+      for (const item of failed) {
+        const li = document.createElement('li');
+        li.className = 'text-xs';
+        const name = document.createElement('strong');
+        name.textContent = item.name;
+        li.appendChild(name);
+        li.appendChild(document.createTextNode(` — ${item.error}`));
+        list.appendChild(li);
+      }
+    }
+  }
+
+  /* A link handed over from the extension arrives as ?url=… */
+  const handed = new URLSearchParams(location.search).get('url');
+  if (handed && paste) {
+    paste.value = handed;
+    readBtn?.click();
+  }
+</script>

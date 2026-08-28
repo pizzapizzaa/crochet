@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Import into ZippyZack</title>
+  </head>
+  <body>
+    <h1>ZippyZack importer</h1>
+    <p class="sub" id="subtitle">Reading this page…</p>
+
+    <!-- Nothing configured yet -->
+    <section id="setup" class="card warn hidden">
+      <p style="margin: 0 0 10px; font-weight: 700">
+        Point the extension at your shop first: its web address, and the import token from your
+        environment.
+      </p>
+      <button id="open-options">Open settings</button>
+    </section>
+
+    <!-- A shop page -->
+    <section id="product" class="hidden">
+      <div class="card">
+        <div class="preview">
+          <div class="thumb" id="thumb">No photo</div>
+          <div class="grow">
+            <p class="name" id="product-name">—</p>
+            <p class="sub" id="product-meta" style="margin: 0"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <label>
+            Sell for
+            <input id="price" type="number" min="0" step="0.01" />
+          </label>
+          <label>
+            Costs us
+            <input id="cost" type="number" min="0" step="0.01" />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Stock
+            <input id="stock" type="number" min="0" step="1" />
+          </label>
+          <label>
+            Category
+            <select id="category"><option value="">Imported (hidden)</option></select>
+          </label>
+        </div>
+        <label class="check">
+          <input id="publish" type="checkbox" />
+          Publish it straight away
+        </label>
+      </div>
+
+      <button id="import">Import to my shop</button>
+      <p class="note" id="product-note"></p>
+    </section>
+
+    <!-- Pinterest -->
+    <section id="pinterest" class="hidden">
+      <div class="card">
+        <p style="margin: 0 0 6px; font-weight: 800" id="pin-count">No pins here yet</p>
+        <p class="sub" style="margin: 0">
+          Pinterest loads a board as you scroll, so this collects the pins you have scrolled past.
+          Scroll further and press again for more.
+        </p>
+      </div>
+      <button id="send-pins">Send pins to ZippyZack</button>
+      <button id="recount" class="secondary" style="margin-top: 8px">Count again</button>
+      <p class="note" id="pin-note"></p>
+    </section>
+
+    <!-- Anything else -->
+    <section id="idle" class="card hidden">
+      <p style="margin: 0">
+        Open a product page on a shop, or a Pinterest board, and press the ZippyZack button again.
+      </p>
+    </section>
+
+    <p class="note">
+      <a href="#" id="settings-link">Settings</a>
+      · <a href="#" id="shop-link">Open the POS</a>
+    </p>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
