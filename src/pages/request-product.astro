@@ -164,19 +164,39 @@ import Layout from '../layouts/Layout.astro';
 <script>
   const form = document.getElementById('request-form') as HTMLFormElement;
   const successMessage = document.getElementById('success-message');
+  const submitBtn = form?.querySelector('button[type="submit"]') as HTMLButtonElement | null;
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // For now, just show success message (replace with actual API call later)
-    const formData = new FormData(form);
-    console.log('Form submitted:', Object.fromEntries(formData));
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+    }
 
-    // Show success message
-    successMessage?.classList.remove('hidden');
-    form.reset();
+    try {
+      const res = await fetch('/api/request-product', {
+        method: 'POST',
+        body: new FormData(form),
+      });
 
-    // Scroll to success message
-    successMessage?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error ?? 'Something went wrong. Please try again.');
+        return;
+      }
+
+      successMessage?.classList.remove('hidden');
+      form.reset();
+      successMessage?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch {
+      alert('Could not send your request. Please check your connection and try again.');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Request';
+      }
+    }
   });
 </script>
