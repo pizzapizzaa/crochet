@@ -65,6 +65,10 @@ In your Supabase dashboard, open the **SQL Editor** and run each file in
 Step 5 is required for the orders screens to work — without it the POS cannot
 read `needs_attention`, `tracking_number` or the order history.
 
+If your database predates the payOS switch it may still carry `paypal_order_id`,
+`paypal_capture_id` and `stripe_session_id`, and be missing the columns checkout
+writes. Step 5 detects that and adds them, so running it is enough either way.
+
 ### 4. Create a Storage bucket
 
 In Supabase Dashboard → **Storage** → New Bucket → name it `product-images` → set to **Public**.

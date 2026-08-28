@@ -1,7 +1,8 @@
 -- =========================================================
 -- ZippyZack.com — Fulfilment schema
 --
--- Run this in the Supabase SQL editor AFTER shop-schema.sql.
+-- Run this in the Supabase SQL editor AFTER shop-schema.sql — or on its own,
+-- since section 0 adds the checkout columns it depends on if they are missing.
 -- It is idempotent: safe on a fresh project and safe to run more than once.
 --
 -- shop-schema.sql got money in. This one is about everything that happens
@@ -18,10 +19,48 @@
 --      refund has to turn on
 --   5. Gives an abandoned checkout an expiry, so unpaid rows stop piling up
 --   6. Repairs commit_order, whose deployed parameter names did not match the
---      ones the app calls it with — see section 7
+--      ones the app calls it with — see section 8
+--   7. Backfills the payOS checkout columns if an older PayPal-era schema is
+--      what is actually deployed — see section 0
 -- =========================================================
 
 create extension if not exists "pgcrypto";
+
+-- ── 0. THE PAYOS COLUMNS THIS FILE STANDS ON ─────────────────────────
+-- These belong to shop-schema.sql and are repeated here because a database
+-- can easily be missing them.
+--
+-- The one this was written against had been built from an earlier, PayPal-era
+-- shop schema: it carried paypal_order_id, paypal_capture_id and
+-- stripe_session_id, and a commit_order taking (p_order_id, p_capture_id).
+-- The provider-neutral payOS columns had never been added, so /checkout could
+-- not have inserted an order at all — payment_provider, provider_order_code,
+-- amount_charged and charged_currency simply did not exist.
+--
+-- Every statement is `if not exists`, so on a database where shop-schema.sql
+-- has already run this section does nothing. Repeating them costs a few lines
+-- and means this file can be run on its own and leave a working shop, which is
+-- worth more than the tidiness of stating each column exactly once.
+alter table public.orders add column if not exists payment_provider    text not null default 'payos';
+alter table public.orders add column if not exists provider_order_code bigint;
+alter table public.orders add column if not exists provider_payment_id text;
+alter table public.orders add column if not exists payment_reference   text;
+alter table public.orders add column if not exists amount_charged      numeric(14, 2);
+alter table public.orders add column if not exists charged_currency    text;
+
+do $$
+begin
+  -- payOS will not reuse an orderCode, and neither should we.
+  if not exists (select 1 from pg_constraint where conname = 'orders_provider_order_code_key') then
+    alter table public.orders add constraint orders_provider_order_code_key unique (provider_order_code);
+  end if;
+end $$;
+
+create index if not exists orders_provider_code_idx on public.orders (provider_order_code);
+
+-- The older columns are left where they are. They are empty, nothing reads
+-- them, and dropping columns is not something a migration should do quietly —
+-- see the note at the end of this file if you want them gone.
 
 -- ── 1. WHERE THE PARCEL IS ───────────────────────────────────────────
 -- A status word alone cannot answer "you said it shipped — when?", and
@@ -281,3 +320,18 @@ begin
 
   update public.orders set stock_committed = false where id = p_order_id;
 end $$;
+
+-- ── 11. THE COLUMNS NOBODY USES ANY MORE ─────────────────────────────
+-- A database built from the older PayPal-era schema still carries
+-- paypal_order_id, paypal_capture_id and stripe_session_id. Nothing in the
+-- codebase reads or writes them: payments go through payOS and are recorded in
+-- payment_provider / provider_order_code / payment_reference.
+--
+-- They are left in place on purpose. Dropping a column is irreversible, and a
+-- migration that quietly deletes data is a migration nobody can run with
+-- confidence. If you have checked they are empty and you want them gone, run
+-- these three lines by hand:
+--
+--   alter table public.orders drop column if exists paypal_order_id;
+--   alter table public.orders drop column if exists paypal_capture_id;
+--   alter table public.orders drop column if exists stripe_session_id;
