@@ -1,0 +1,139 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+/*
+ * Contact. Three facts and nothing else: where the parcels come from, the
+ * number, the address. No form — /request-product already owns that job, and a
+ * second one here would only split where things land.
+ */
+const address = ['96/114 Dang Thuy Tram', 'Binh Loi Trung', 'Vietnam'];
+
+/* What actually happens at that address, in the order it happens. */
+const workshopSteps = ['Designing', 'Sourcing', 'Bundling', 'Packing'];
+
+const phone = '+84 902 672 192';
+const email = 'zippyzack@proton.me';
+---
+
+<Layout
+  title="Contact"
+  description="Where to find ZippyZack — the workshop address in Binh Loi Trung, plus our phone number and email."
+>
+  <!-- Header -->
+  <section class="border-b border-cream-300 bg-hero-wash py-12">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
+        <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
+        <span>/</span>
+        <span class="text-ink-body">Contact</span>
+      </nav>
+      <h1 class="font-display text-display-2 font-extrabold text-ink">Contact</h1>
+      <p class="mt-3 max-w-2xl text-ink-body">
+        One workshop, one number, one inbox. Whichever you use, it reaches the same person.
+      </p>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-container px-4 py-14 sm:px-6 lg:px-8">
+    <!--
+      Address. The illustration leads on wide screens and sits above the text on
+      narrow ones, so the page opens with the drawing either way. Swap the file
+      at /assets/illustrations/crocheted-house.svg to change it — the tile
+      around it stays put.
+    -->
+    <section class="grid items-center gap-10 md:grid-cols-2 md:gap-14">
+      <div class="mx-auto w-full max-w-xs md:mx-0">
+        <div class="rounded-photo border border-cream-300 bg-cream-200 p-6">
+          <img
+            src="/assets/illustrations/crocheted-house.svg"
+            alt="A little house crocheted out of yarn"
+            width="320"
+            height="320"
+            class="h-auto w-full"
+          />
+        </div>
+      </div>
+
+      <div>
+        <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+          Where your parcel comes from
+        </p>
+        <h2 class="mt-2 font-display text-3xl font-extrabold text-ink">The workshop</h2>
+        <address class="mt-4 text-lg not-italic leading-relaxed text-ink-body">
+          {address.map((line) => <span class="block">{line}</span>)}
+        </address>
+
+        <p class="mt-8 text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+          What happens here
+        </p>
+        <ul class="mt-3 flex flex-wrap gap-1.5">
+          {
+            workshopSteps.map((step) => (
+              <li class="rounded-pill bg-mint-wash px-3.5 py-1.5 text-xs font-bold text-ink-body">
+                {step}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    <!--
+      Phone and email. Both are live links rather than copy-and-paste text: on a
+      phone the number dials, everywhere else the address opens a compose window.
+    -->
+    <section class="mt-14 grid gap-5 sm:grid-cols-2">
+      <div class="rounded-card border border-cream-300 bg-paper p-6 shadow-sm">
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-pill bg-mint">
+          <svg class="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 5a2 2 0 012-2h2.2a1 1 0 01.98.8l.9 4.4a1 1 0 01-.55 1.1L7 10.3a12.5 12.5 0 006.7 6.7l1-1.53a1 1 0 011.1-.55l4.4.9a1 1 0 01.8.98V19a2 2 0 01-2 2h-1C9.6 21 3 14.4 3 6z"
+            />
+          </svg>
+        </span>
+        <p class="mt-4 text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Call or text</p>
+        <a
+          href={`tel:${phone.replace(/\s/g, '')}`}
+          class="mt-1 inline-block font-display text-xl font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
+        >
+          {phone}
+        </a>
+      </div>
+
+      <div class="rounded-card border border-cream-300 bg-paper p-6 shadow-sm">
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-pill bg-lemon">
+          <svg class="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+            />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m3.5 7.5 8.5 6 8.5-6" />
+          </svg>
+        </span>
+        <p class="mt-4 text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Email</p>
+        <a
+          href={`mailto:${email}`}
+          class="mt-1 inline-block break-all font-display text-xl font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
+        >
+          {email}
+        </a>
+      </div>
+    </section>
+
+    <p class="mt-10 text-sm text-ink-muted">
+      Chasing a yarn or a tool we do not stock yet?
+      <a
+        href="/request-product"
+        class="font-bold text-mint-deep transition-colors duration-fast ease-out hover:text-ink"
+      >
+        Request it here
+      </a>
+      — it lands in the same inbox, with the details already filled in.
+    </p>
+  </div>
+</Layout>

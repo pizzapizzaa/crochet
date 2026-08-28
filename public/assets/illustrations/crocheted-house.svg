@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="A little house crocheted out of yarn">
+  <!--
+    PLACEHOLDER — swap this file, keep the path.
+
+    The workshop, drawn as a house someone crocheted: granny-square windows, a
+    whipstitched roof, and a strand of yarn running out of the chimney instead
+    of smoke. Stands in until the finished illustration lands. Anything dropped
+    at this path inherits the tile on /contact, so replacing it is one file and
+    no code.
+
+    Palette is the brand's four and nothing else — lemon and mint as fills,
+    forest as the drawn line. Transparent ground: the page supplies the cream
+    tile behind it.
+  -->
+  <g fill="none" stroke="#003B33" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!--
+      Chimney. Drawn first and run well past the roofline so the roof paints
+      over its base — at the right-hand edge the roof surface does not start
+      until y≈77, and a shorter stack would hang in the air there.
+    -->
+    <path d="M136 40h18v44h-18z" fill="#FFEB6C" />
+
+    <!-- A curl of yarn coming out of the chimney rather than smoke -->
+    <path
+      d="M145 38c0-8 9-7 9-14s-10-6-10-13"
+      stroke="#00A883"
+      stroke-width="2.5"
+      stroke-linecap="round"
+    />
+
+    <!-- Walls -->
+    <path d="M42 88h116v72a4 4 0 0 1-4 4H46a4 4 0 0 1-4-4z" fill="#FFF4A6" />
+
+    <!-- Roof, with the eaves overshooting the walls the way a stitched edge does -->
+    <path d="M30 90 100 32l70 58z" fill="#21FFA8" />
+
+    <!-- Rows of stitches worked across the roof -->
+    <g stroke="#00695C" stroke-width="2.5" opacity="0.5">
+      <path d="M58 70h84M46 80h108" />
+    </g>
+
+    <!-- Whipstitch along the eave -->
+    <path d="M30 90h140" stroke-width="3" stroke-dasharray="1 9" />
+
+    <!-- Granny-square windows -->
+    <g>
+      <path d="M56 104h30v30H56z" fill="#FFFBEA" />
+      <path d="M56 119h30M71 104v30" stroke-width="2.5" />
+      <path d="M114 104h30v30h-30z" fill="#FFFBEA" />
+      <path d="M114 119h30M129 104v30" stroke-width="2.5" />
+    </g>
+
+    <!-- Door -->
+    <path d="M88 128h24v36H88z" fill="#005247" />
+    <circle cx="106" cy="147" r="2.5" fill="#FFEB6C" stroke="none" />
+
+    <!--
+      The ball it was all worked from, sat clear of the wall so the two
+      silhouettes stay separate, with the strand still running back to the door.
+    -->
+    <circle cx="174" cy="152" r="12" fill="#FFEB6C" />
+    <path d="M165 146c6 4 11 9 14 15M169 143c6 3 12 8 15 14" stroke="#C9A400" stroke-width="2.5" />
+    <path d="M163 159c-11 5-24 7-39 7" stroke="#C9A400" stroke-width="2.5" />
+
+    <!-- Ground: a running stitch, not a ruled line -->
+    <path d="M18 168h168" stroke-dasharray="9 8" opacity="0.45" />
+  </g>
+</svg>
