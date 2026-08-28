@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import SectionWave from '../components/SectionWave.astro';
 import { SHOP_ADDRESS, SHOP_EMAIL, SHOP_PHONE } from '../lib/shop';
 
 /*
@@ -25,7 +26,7 @@ const email = SHOP_EMAIL;
   description="Where to find ZippyZack — the workshop address in Binh Loi Trung, plus our phone number and email."
 >
   <!-- Header -->
-  <section class="border-b border-cream-300 bg-hero-wash py-12">
+  <section class="relative bg-hero-wash py-12">
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
         <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
@@ -39,7 +40,9 @@ const email = SHOP_EMAIL;
     </div>
   </section>
 
-  <div class="mx-auto max-w-container px-4 py-14 sm:px-6 lg:px-8">
+  <div class="relative bg-cream-100">
+    <SectionWave fill="var(--cream-100)" variant={1} />
+    <div class="mx-auto max-w-container px-4 py-14 sm:px-6 lg:px-8">
     <!--
       Address. The illustration leads on wide screens and sits above the text on
       narrow ones, so the page opens with the drawing either way. Swap the file
@@ -131,14 +134,17 @@ const email = SHOP_EMAIL;
     </section>
 
     <p class="mt-10 text-sm text-ink-muted">
-      Chasing a yarn or a tool we do not stock yet?
+      {/* The compiler eats the newline either side of the link, so the spaces
+          have to be asked for or the sentence runs together. */}
+      Chasing a yarn or a tool we do not stock yet?{' '}
       <a
         href="/request-product"
         class="font-bold text-mint-deep transition-colors duration-fast ease-out hover:text-ink"
       >
         Request it here
-      </a>
+      </a>{' '}
       — it lands in the same inbox, with the details already filled in.
     </p>
+    </div>
   </div>
 </Layout>

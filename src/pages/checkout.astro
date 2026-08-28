@@ -10,6 +10,7 @@
 export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
+import SectionWave from '../components/SectionWave.astro';
 import { isPayOSConfigured } from '../lib/payos';
 import { VND_PER_USD } from '../lib/orders';
 
@@ -17,7 +18,7 @@ const vndPerUsd = new Intl.NumberFormat('en-US').format(VND_PER_USD);
 ---
 
 <Layout title="Checkout" description="Finish your order.">
-  <section class="border-b border-cream-300 bg-paper py-10">
+  <section class="relative bg-paper py-10">
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <nav class="mb-3 flex items-center gap-1.5 text-xs text-ink-muted">
         <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
@@ -30,7 +31,9 @@ const vndPerUsd = new Intl.NumberFormat('en-US').format(VND_PER_USD);
     </div>
   </section>
 
-  <section class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
+  <section class="relative bg-cream-100">
+    <SectionWave fill="var(--cream-100)" variant={1} />
+    <div class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
     {
       !isPayOSConfigured && (
         <div class="mb-6 rounded-card border border-lemon-soft bg-lemon-wash px-5 py-4">
@@ -238,6 +241,7 @@ const vndPerUsd = new Intl.NumberFormat('en-US').format(VND_PER_USD);
           Back to the basket
         </a>
       </aside>
+    </div>
     </div>
   </section>
 </Layout>

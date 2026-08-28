@@ -5,10 +5,11 @@
  * money on it comes from /api/shop/cart-price, not from the stored snapshot.
  */
 import Layout from '../layouts/Layout.astro';
+import SectionWave from '../components/SectionWave.astro';
 ---
 
 <Layout title="Your basket" description="Everything you have picked out so far.">
-  <section class="border-b border-cream-300 bg-paper py-10">
+  <section class="relative bg-paper py-10">
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <nav class="mb-3 flex items-center gap-1.5 text-xs text-ink-muted">
         <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
@@ -19,7 +20,9 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
+  <section class="relative bg-cream-100">
+    <SectionWave fill="var(--cream-100)" variant={1} />
+    <div class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
     <div id="cart-loading" class="py-16 text-center text-sm text-ink-muted">
       Getting your basket…
     </div>
@@ -79,6 +82,7 @@ import Layout from '../layouts/Layout.astro';
         </a>
         <p class="mt-3 text-center text-xs text-ink-muted">Handmade to order · Ships in 3–5 business days</p>
       </aside>
+    </div>
     </div>
   </section>
 </Layout>

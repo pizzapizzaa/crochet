@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import SectionWave from '../components/SectionWave.astro';
 ---
 
 <Layout
@@ -7,7 +8,7 @@ import Layout from '../layouts/Layout.astro';
   description="Can't find what you need? Request a new crochet design, yarn, tool, or other product and we'll try to source it for you."
 >
   <!-- Header -->
-  <section class="bg-white border-b border-cream-300 py-12">
+  <section class="relative bg-white py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <nav class="text-xs text-slate-light mb-3 flex items-center gap-1.5">
         <a href="/" class="hover:text-mint-dark transition-colors">Home</a>
@@ -27,7 +28,8 @@ import Layout from '../layouts/Layout.astro';
   </section>
 
   <!-- Form Section -->
-  <section class="py-16 bg-brand-gradient">
+  <section class="relative bg-brand-gradient py-16">
+    <SectionWave fill="#FBF1CA" variant={1} />
     <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8">
       <form id="request-form" class="bg-white rounded-3xl shadow-xl p-8 sm:p-10">
         <!-- Request Type -->
@@ -138,7 +140,8 @@ import Layout from '../layouts/Layout.astro';
   </section>
 
   <!-- Back to Shop CTA -->
-  <section class="py-12 bg-sky-muted/40">
+  <section class="relative bg-sky-muted/40 py-12">
+    <SectionWave fill="var(--lemon-wash)" variant={2} />
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <p class="text-slate-warm text-sm">
         Want to browse what's already available?

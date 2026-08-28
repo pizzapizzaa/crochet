@@ -1,4 +1,6 @@
 ---
+import SectionWave from './SectionWave.astro';
+
 const navLinks = [
   { label: 'Home', href: '/' },
   { label: 'Shop', href: '/store' },
@@ -23,12 +25,16 @@ const isActive = (href: string) => {
 ---
 
 <!--
-  Sticky, translucent: paper at ~90% + 10px backdrop blur, hairline cream bottom
-  border. The header is the only fixed element in the system besides modals.
+  Sticky, translucent: paper at ~90% + 10px backdrop blur. The header is the
+  only fixed element in the system besides modals.
+
+  Its bottom edge is crocheted rather than ruled — the hairline cream border
+  that used to close it was the one machine-made line at the top of every page.
+  The wave is opaque paper where the bar itself is 90%, which is deliberate: a
+  translucent edge over scrolling content reads as a smear, and the edge is the
+  part that has to stay crisp.
 -->
-<header
-  class="sticky top-0 z-50 border-b border-cream-300 bg-paper/90 backdrop-blur-[10px]"
->
+<header class="sticky top-0 z-50 bg-paper/90 backdrop-blur-[10px]">
   <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
     <div class="flex h-16 items-center justify-between md:h-20">
       <!-- Lockup: granny-square mark + Baloo 2 wordmark -->
@@ -217,6 +223,8 @@ const isActive = (href: string) => {
       Shop Now
     </a>
   </div>
+
+  <SectionWave fill="var(--paper)" edge="bottom" variant={0} height="h-6 sm:h-9" />
 </header>
 
 <script>

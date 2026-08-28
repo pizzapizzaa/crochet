@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
+import SectionWave from '../components/SectionWave.astro';
 import PatternGenerator from '../components/PatternGenerator';
 import { isAuthed } from '../lib/auth';
 
@@ -15,7 +16,7 @@ if (!isAuthed(Astro.cookies)) {
   description="Free crochet pattern generator — calculate stitch counts, rows, and yarn estimates from your gauge. Export a printable pattern instantly."
 >
   <!-- Header -->
-  <section class="bg-white border-b border-cream-300 py-12">
+  <section class="relative bg-white py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <nav class="text-xs text-brown-light mb-3 flex items-center gap-1.5">
         <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
@@ -58,7 +59,7 @@ if (!isAuthed(Astro.cookies)) {
   </section>
 
   <!-- How-to guide (collapsible) -->
-  <section class="bg-white border-b border-cream-300">
+  <section class="relative bg-white">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <details class="group">
         <summary class="flex items-center justify-between gap-4 py-4 cursor-pointer list-none select-none">
@@ -109,14 +110,16 @@ if (!isAuthed(Astro.cookies)) {
   </section>
 
   <!-- Generator -->
-  <section class="py-12 bg-cream-100">
+  <section class="relative bg-cream-100 py-12">
+    <SectionWave fill="var(--cream-100)" variant={1} />
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <PatternGenerator client:load />
     </div>
   </section>
 
   <!-- Shop CTA -->
-  <section class="py-12 bg-cream-200">
+  <section class="relative bg-cream-200 py-12">
+    <SectionWave fill="var(--cream-200)" variant={2} />
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       <p class="text-brown-warm text-sm">
         Want a finished piece instead? Browse the shop for ready-made crochet items.

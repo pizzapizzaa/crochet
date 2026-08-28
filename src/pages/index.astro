@@ -4,6 +4,7 @@
 export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
+import SectionWave from '../components/SectionWave.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { getProducts } from '../lib/catalog';
 
@@ -208,7 +209,8 @@ const btnGhost =
   <!-- ============================================================
        Shop by Type — paper band
        ============================================================ -->
-  <section class="bg-paper py-24">
+  <section class="relative bg-paper py-24">
+    <SectionWave fill="var(--paper)" variant={1} />
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <div class="mb-9 text-center">
         <h2 class="font-display text-[28px] font-extrabold text-ink">Shop by Type</h2>
@@ -271,7 +273,8 @@ const btnGhost =
   <!-- ============================================================
        Featured Kits — sunken band (cream-200)
        ============================================================ -->
-  <section class="bg-cream-200 py-24">
+  <section class="relative bg-cream-200 py-24">
+    <SectionWave fill="var(--cream-200)" variant={2} />
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
@@ -305,7 +308,8 @@ const btnGhost =
        Pattern generator — the one full-bleed --btn-gradient band.
        It is a LIGHT gradient, so everything on it is ink dark.
        ============================================================ -->
-  <section class="bg-btn-gradient py-[88px] text-ink">
+  <section class="relative bg-btn-gradient py-[88px] text-ink">
+    <SectionWave gradient={[["0%", "#21FFA8"], ["52%", "#8CFAC4"], ["100%", "#FFEB6C"]]} fill="#8CFAC4" variant={0} />
     <div
       class="mx-auto grid max-w-container items-center gap-12 px-4 py-2 sm:px-6 lg:grid-cols-2 lg:px-8"
     >
@@ -350,7 +354,8 @@ const btnGhost =
   <!-- ============================================================
        My Story — paper band
        ============================================================ -->
-  <section id="about" class="bg-paper py-24">
+  <section id="about" class="relative bg-paper py-24">
+    <SectionWave fill="var(--paper)" variant={2} />
     <div
       class="mx-auto grid max-w-container items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8"
     >
@@ -401,7 +406,8 @@ const btnGhost =
   <!-- ============================================================
        Newsletter — --forest-wash band
        ============================================================ -->
-  <section class="bg-forest-wash py-[72px] text-center">
+  <section class="relative bg-forest-wash py-[72px] text-center">
+    <SectionWave fill="var(--forest-wash)" variant={1} />
     <div class="mx-auto max-w-narrow px-4 sm:px-6 lg:px-8">
       <div class="text-[34px]">💌</div>
       <h2 class="mt-2 font-display text-[28px] font-extrabold text-ink">Join the maker's list</h2>

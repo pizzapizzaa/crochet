@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
+import SectionWave from '../components/SectionWave.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { getCategories, getProducts } from '../lib/catalog';
 
@@ -50,7 +51,7 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
 
 <Layout title="Shop" description="Browse yarn, crochet hooks, project kits, bundles and patterns — everything you need to create.">
   <!-- Page Header -->
-  <section class="bg-white border-b border-cream-300 py-10">
+  <section class="relative bg-white py-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -101,7 +102,9 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
     </div>
   </section>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="relative bg-cream-100">
+    <SectionWave fill="var(--cream-100)" variant={1} />
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <div class="flex flex-col lg:flex-row gap-10">
       <!-- Sidebar Filters -->
       <aside class="w-full shrink-0 space-y-4 lg:w-56">
@@ -266,6 +269,7 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
           </div>
         </section>
       </div>
+    </div>
     </div>
   </div>
 </Layout>

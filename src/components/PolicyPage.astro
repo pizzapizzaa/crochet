@@ -14,6 +14,7 @@
  * stale.
  */
 import Layout from '../layouts/Layout.astro';
+import SectionWave from './SectionWave.astro';
 
 export interface Props {
   title: string;
@@ -31,7 +32,7 @@ const updatedLabel = new Date(updated).toLocaleDateString('en-US', { dateStyle: 
 ---
 
 <Layout title={title} description={description}>
-  <section class="border-b border-cream-300 bg-hero-wash py-12">
+  <section class="relative bg-hero-wash py-12">
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
         <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
@@ -44,7 +45,9 @@ const updatedLabel = new Date(updated).toLocaleDateString('en-US', { dateStyle: 
     </div>
   </section>
 
-  <div class="mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
+  <div class="relative bg-cream-100">
+    <SectionWave fill="var(--cream-100)" variant={1} />
+    <div class="mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
     <article class="policy">
       <slot />
     </article>
@@ -56,6 +59,7 @@ const updatedLabel = new Date(updated).toLocaleDateString('en-US', { dateStyle: 
         doing its job.
       </p>
     </footer>
+    </div>
   </div>
 </Layout>
 

@@ -3,6 +3,7 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import MakeCard from '../../components/MakeCard.astro';
+import SectionWave from '../../components/SectionWave.astro';
 import { getMakes } from '../../lib/makes';
 import { DIFFICULTIES } from '../../lib/database.types';
 
@@ -47,8 +48,8 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
   title="Makes"
   description="Getting started with crocheting? Or eyeing on a crochet project from Pinterest? We've got you covered."
 >
-  <!-- Header -->
-  <section class="border-b border-cream-300 bg-hero-wash py-12">
+  <!-- Header. Its top seam is the wave hanging off the site header. -->
+  <section class="relative bg-hero-wash py-12">
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
         <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
@@ -70,7 +71,8 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
   -->
   {
     featured.length > 0 && (
-      <section class="border-b border-lime-mid/40 bg-lime">
+      <section class="relative bg-lime">
+        <SectionWave fill="var(--lime)" variant={1} />
         <div class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
           <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 class="flex items-center gap-2 font-display text-2xl font-extrabold text-ink">
@@ -93,7 +95,13 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
     )
   }
 
-  <div class="mx-auto max-w-container px-4 py-12 sm:px-6 lg:px-8">
+  <!--
+    The browsable list. Its own band is the page ground, so its wave is cream
+    reaching back up over the lime — which is what closes the featured row.
+  -->
+  <div class="relative bg-cream-100">
+    <SectionWave fill="var(--cream-100)" variant={2} />
+    <div class="mx-auto max-w-container px-4 py-12 sm:px-6 lg:px-8">
     <!--
       Search and difficulty filter sit with the browsable list they drive,
       under the featured row rather than under the page title.
@@ -215,5 +223,6 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
         }
       </div>
     </section>
+    </div>
   </div>
 </Layout>

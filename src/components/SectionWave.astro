@@ -1,0 +1,150 @@
+---
+/*
+ * The seam between two bands, drawn rather than ruled.
+ *
+ * Every band on the site used to end in a 1px border, which is the one line in
+ * the whole design that looks machine-made. This replaces it with a crocheted
+ * edge: the band's own colour carried past its rectangle in a wave, with a
+ * strand of yarn laid along the crest.
+ *
+ * ── WHY EVERY SEAM IS DRAWN BY THE BAND BELOW IT ────────────────────────────
+ * A section can only paint over its previous sibling, never its next one — DOM
+ * order decides that, and no amount of z-index fixes it without every section
+ * on the page having to agree on a stacking order.
+ *
+ * So each band reaches *up* into the one above it rather than down into the one
+ * below. One wave per seam, painted by the band that comes second, layering
+ * exactly the way rows of crochet do. Every section still both starts and ends
+ * with a wave: its own at the top, and its neighbour's at the bottom.
+ *
+ * The exception is the last band before the footer, which has nothing after it
+ * to draw its bottom edge — that one asks for `edge="bottom"` explicitly.
+ *
+ * ── USAGE ───────────────────────────────────────────────────────────────────
+ * The parent needs `relative` and must not clip its overflow:
+ *
+ *   <section class="relative bg-lime">
+ *     <SectionWave fill="var(--lime)" />
+ *     …
+ *   </section>
+ *
+ * `fill` is the band's OWN colour — the wave is that band spilling over its
+ * edge, so anything else reads as a stripe rather than an edge.
+ */
+
+export interface Props {
+  /** The band's own background colour, as a CSS colour. */
+  fill: string;
+  /**
+   * For a band that is a gradient rather than a flat colour: its stops, as
+   * [offset, colour] pairs, painted left to right.
+   *
+   * The site's gradients run at 135°, but a wave strip is a hundred times
+   * wider than it is tall, so across that sliver a 135° ramp and a horizontal
+   * one are the same ramp. Taking it as horizontal keeps the SVG simple and
+   * the seam matches the band it hangs off.
+   */
+  gradient?: [string, string][];
+  /** Which edge of the parent this draws. Top reaches up, bottom reaches down. */
+  edge?: 'top' | 'bottom';
+  /** The yarn laid along the crest. Pass null for the shape alone. */
+  strand?: string | null;
+  /**
+   * Which of the three waves to draw. Consecutive seams should differ —
+   * a repeated wave down a page reads as a border again.
+   */
+  variant?: 0 | 1 | 2;
+  /** Tailwind height. The wave is drawn to fill it, so taller means deeper. */
+  height?: string;
+}
+
+const {
+  fill,
+  gradient,
+  edge = 'top',
+  strand = 'var(--lemon)',
+  variant = 0,
+  height = 'h-6 sm:h-10',
+} = Astro.props;
+
+// Unique per instance: two waves sharing a gradient id would both take the
+// first one, and a page has several of these.
+const gradientId = `wave-grad-${crypto.randomUUID().slice(0, 8)}`;
+
+/*
+ * Three waves, all oscillating around the middle of a 1440×48 box. They over-
+ * and under-shoot the box on both sides so a rounded stroke cap never ends up
+ * parked at the edge of the screen.
+ *
+ * These are the same hand-drawn rhythm as the strand along the top of the
+ * footer — irregular on purpose, because an even sine wave reads as a graphic
+ * and the point of this is that somebody drew it.
+ */
+const WAVES = [
+  'M-20 30C90 8 190 4 300 20S500 46 620 32S820 4 960 14S1180 42 1300 26S1420 12 1460 18',
+  'M-20 18C120 40 240 44 360 26S620 2 760 16S1000 42 1140 28S1360 8 1460 20',
+  'M-20 26C100 6 220 2 340 18S560 44 700 34S940 6 1080 16S1320 40 1460 26',
+];
+
+const line = WAVES[variant] ?? WAVES[0];
+
+/*
+ * The filled shape is the wave closed off away from the seam: a top edge fills
+ * downward into its own band, a bottom edge fills upward. Closing well outside
+ * the viewBox means the flat side can never show as a hairline.
+ */
+const shape = edge === 'top' ? `${line}L1460 200L-20 200Z` : `${line}L1460 -160L-20 -160Z`;
+
+// Top edges sit entirely above the parent, bottom edges entirely below, so the
+// parent's own rectangle is never covered by its own wave.
+const place = edge === 'top' ? 'bottom-full' : 'top-full';
+---
+
+<span
+  class={`pointer-events-none absolute inset-x-0 ${place} ${height} block`}
+  aria-hidden="true"
+>
+  <svg class="h-full w-full" viewBox="0 0 1440 48" preserveAspectRatio="none" fill="none">
+    {
+      gradient && (
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="1440" y2="0" gradientUnits="userSpaceOnUse">
+            {gradient.map(([offset, color]) => (
+              <stop offset={offset} stop-color={color} />
+            ))}
+          </linearGradient>
+        </defs>
+      )
+    }
+    <path d={shape} fill={gradient ? `url(#${gradientId})` : fill} />
+    {
+      /*
+       * The strand rides the seam itself — half over this band, half over the
+       * one it is reaching into — which is what stops it reading as a border
+       * drawn under the wave. non-scaling-stroke keeps it an even weight while
+       * the box stretches to the viewport; without it the flat runs come out
+       * as hairlines and every turn comes out fat.
+       */
+      strand && (
+        <>
+          <path
+            d={line}
+            stroke={strand}
+            stroke-width="5"
+            stroke-linecap="round"
+            vector-effect="non-scaling-stroke"
+          />
+          <path
+            d={line}
+            stroke="var(--lemon-soft)"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            opacity="0.55"
+            vector-effect="non-scaling-stroke"
+            transform="translate(0 -4)"
+          />
+        </>
+      )
+    }
+  </svg>
+</span>
