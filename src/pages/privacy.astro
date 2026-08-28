@@ -1,0 +1,235 @@
+---
+/*
+ * Privacy.
+ *
+ * Written from what the code actually does rather than from a template. Every
+ * processor listed below is one this site really sends data to — Supabase for
+ * the database, payOS for the transfer, Vercel for the hosting, Resend for the
+ * one email form, Google for the fonts and the pattern generator's model.
+ *
+ * If a service is added or dropped, this list is the thing to change. A privacy
+ * page that lists processors the site no longer uses is worse than none: it
+ * reads as boilerplate and stops being believed.
+ */
+import PolicyPage from '../components/PolicyPage.astro';
+import { RETURNS_WINDOW_DAYS, SHOP_ADDRESS, SHOP_EMAIL } from '../lib/shop';
+
+const processors = [
+  {
+    name: 'Supabase',
+    role: 'Stores the shop database — the catalogue and your order.',
+    where: 'Hosted database',
+  },
+  {
+    name: 'payOS',
+    role: 'Takes the bank transfer. Receives your name, email and the amount.',
+    where: 'Vietnam',
+  },
+  {
+    name: 'Vercel',
+    role: 'Hosts and serves this site, and keeps short-lived request logs.',
+    where: 'Global CDN',
+  },
+  {
+    name: 'Resend',
+    role: 'Delivers the email from the product-request form.',
+    where: 'Email delivery',
+  },
+  {
+    name: 'Google Fonts',
+    role: 'Serves the typefaces. Your browser fetches these directly.',
+    where: 'Global CDN',
+  },
+  {
+    name: 'Google Gemini',
+    role: 'Generates images in the pattern generator, from the prompt you type.',
+    where: 'AI model API',
+  },
+  {
+    name: 'Your courier',
+    role: 'Receives your name, address and phone number so the parcel can arrive.',
+    where: 'Varies by destination',
+  },
+];
+---
+
+<PolicyPage
+  title="Privacy"
+  eyebrow="Your details"
+  description="What this shop collects, why it needs it, who else sees it, and how long it is kept."
+  intro="A small shop needs surprisingly little about you. Here is all of it, why each piece is needed, and everywhere it goes."
+  updated="2026-08-28"
+>
+  <div class="callout">
+    <p>
+      <strong>The short version.</strong> There are no accounts, no advertising trackers and no
+      analytics on this site. Your details are collected to send you a parcel, and that is what they
+      are used for.
+    </p>
+  </div>
+
+  <h2>What is collected, and why</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>What</th>
+        <th>Why it is needed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Name</td>
+        <td>To address the parcel and to know who I am talking to.</td>
+      </tr>
+      <tr>
+        <td>Email address</td>
+        <td>
+          To confirm the order and to answer you. It is also half the key to your order tracking.
+        </td>
+      </tr>
+      <tr>
+        <td>Phone number</td>
+        <td>Couriers here will not attempt a delivery without one.</td>
+      </tr>
+      <tr>
+        <td>Delivery address</td>
+        <td>To get the parcel to the right door.</td>
+      </tr>
+      <tr>
+        <td>What you ordered, and what you paid</td>
+        <td>To pack it, to account for it, and to handle a return later.</td>
+      </tr>
+      <tr>
+        <td>Anything you type in the note box</td>
+        <td>Because you asked me to read it.</td>
+      </tr>
+      <tr>
+        <td>A bank reference from payOS</td>
+        <td>To match your transfer to your order. No card or account number reaches this site.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Your basket lives in your own browser's local storage until you check out. It is not sent
+    anywhere until you ask for a price or place an order, and clearing your browser data clears it.
+  </p>
+
+  <h2>What is not collected</h2>
+
+  <ul>
+    <li>
+      <strong>No card or bank details.</strong> Payment happens entirely inside payOS and your own
+      banking app. This site never sees them and could not store them if it wanted to.
+    </li>
+    <li><strong>No accounts and no passwords.</strong> There is nothing to sign up for.</li>
+    <li>
+      <strong>No analytics, advertising pixels or third-party trackers.</strong> Nothing here follows
+      you to another site.
+    </li>
+    <li>
+      <strong>No marketing emails.</strong> Your address is not added to a list, because there is no
+      list.
+    </li>
+  </ul>
+
+  <h2>Cookies</h2>
+
+  <p>
+    One, and only for me: signing in to the back office sets a session cookie so the admin pages stay
+    unlocked for a day. Shoppers are never issued a cookie. That is why there is no cookie banner —
+    there is nothing to consent to.
+  </p>
+
+  <h2>Who else sees your details</h2>
+
+  <p>
+    Only the services that have to, and only the part each one needs. Nothing is ever sold, rented or
+    handed to anyone for marketing.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Service</th>
+        <th>What it does</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        processors.map((p) => (
+          <tr>
+            <td>
+              <strong>{p.name}</strong>
+              <br />
+              <span style="font-size:0.8125rem;opacity:0.7">{p.where}</span>
+            </td>
+            <td>{p.role}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <p>
+    Because these services operate internationally, your details may be processed outside your own
+    country. There is no way to run an online shop otherwise.
+  </p>
+
+  <h2>The pattern generator</h2>
+
+  <p>
+    Prompts typed into the pattern generator are sent to Google's Gemini API to produce an image. Do
+    not type anything into it you would not want leaving this site. Prompts are not stored in the
+    shop database.
+  </p>
+
+  <h2>How long things are kept</h2>
+
+  <ul>
+    <li>
+      <strong>Orders</strong> — kept while they are useful for accounting and for handling a return
+      or a query, which is well beyond the {RETURNS_WINDOW_DAYS}-day returns window.
+    </li>
+    <li>
+      <strong>Abandoned checkouts</strong> — an order that is never paid for is cancelled
+      automatically once its payment window closes.
+    </li>
+    <li>
+      <strong>Emails you send me</strong> — kept as long as the conversation is useful, then deleted.
+    </li>
+  </ul>
+
+  <h2>What you can ask for</h2>
+
+  <p>
+    Email <a href={`mailto:${SHOP_EMAIL}`}>{SHOP_EMAIL}</a> and I will:
+  </p>
+
+  <ul>
+    <li>Tell you everything held about you, and send you a copy.</li>
+    <li>Correct anything wrong — a mistyped address, a changed name.</li>
+    <li>
+      Delete it, once nothing outstanding depends on it. Records tied to a completed sale may need to
+      be kept for accounting.
+    </li>
+  </ul>
+
+  <p>
+    This is one person reading that inbox rather than a department, so expect a human reply within a
+    few days.
+  </p>
+
+  <h2>Who is responsible</h2>
+
+  <p>
+    ZippyZack, {SHOP_ADDRESS.join(', ')}. Questions about any of this go to{' '}
+    <a href={`mailto:${SHOP_EMAIL}`}>{SHOP_EMAIL}</a>.
+  </p>
+
+  <p>
+    If this page changes in a way that affects what happens to details already collected, the date
+    below changes with it.
+  </p>
+</PolicyPage>

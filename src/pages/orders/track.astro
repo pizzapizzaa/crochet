@@ -6,12 +6,17 @@
  * either redirects to the receipt or says it found nothing. No accounts, no
  * session — the pair of facts *is* the credential, which is why the failure
  * message below never distinguishes "no such order" from "wrong email".
+ *
+ * Reachable from the header, the footer and the receipt. It used to be linked
+ * from nowhere but the receipt, which meant the page for finding a lost order
+ * could only be found by people who had not lost theirs.
  */
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
 import { findOrder } from '../../lib/orders';
+import { SHOP_EMAIL } from '../../lib/shop';
 
 const number = (Astro.url.searchParams.get('number') ?? '').trim();
 const email = (Astro.url.searchParams.get('email') ?? '').trim();
@@ -35,7 +40,7 @@ if (searched) {
       <h1 class="mt-2 font-display text-4xl font-extrabold text-ink">Track your order</h1>
       <p class="mt-3 text-sm text-ink-muted">
         Your order number looks like <span class="font-mono font-bold text-ink-body">ZZ-7K3P9M</span>
-        — it is in the confirmation you saw after paying.
+        — it is on the confirmation page you saw after paying.
       </p>
     </div>
 
@@ -60,6 +65,7 @@ if (searched) {
           required
           value={number}
           placeholder="ZZ-7K3P9M"
+          autocomplete="off"
           class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 font-mono text-sm uppercase text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
         />
       </label>
@@ -83,5 +89,38 @@ if (searched) {
         Find my order
       </button>
     </form>
+
+    <!--
+      The dead end this page used to have. Somebody who cannot find their number
+      has nothing to type into the form above, and telling them to check again
+      is not help — the way out is a human.
+    -->
+    <div class="mt-6 rounded-card border border-cream-300 bg-paper/60 px-6 py-5">
+      <h2 class="font-display text-base font-bold text-ink">Lost the number?</h2>
+      <p class="mt-1.5 text-sm text-ink-muted">
+        <a
+          href={`mailto:${SHOP_EMAIL}?subject=${encodeURIComponent('Lost my order number')}`}
+          class="font-bold text-mint-deep hover:underline"
+        >
+          Email me
+        </a>{' '}
+        from the address you ordered with and I will look it up and send it back to you. Include
+        roughly when you ordered and what was in it, and it will be quicker.
+      </p>
+
+      <h2 class="mt-5 font-display text-base font-bold text-ink">Just paid and nothing shows?</h2>
+      <p class="mt-1.5 text-sm text-ink-muted">
+        Bank transfers take a minute or two to land. Wait a moment and search again — the order
+        exists either way, and its status updates on its own once the transfer arrives.
+      </p>
+
+      <p class="mt-5 border-t border-cream-300 pt-4 text-sm text-ink-muted">
+        Wondering how long delivery should take?{' '}
+        <a href="/shipping" class="font-bold text-mint-deep hover:underline">
+          Shipping and returns
+        </a>{' '}
+        has the timings.
+      </p>
+    </div>
   </section>
 </Layout>

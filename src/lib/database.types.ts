@@ -21,6 +21,12 @@ export const ORDER_STATUSES: OrderStatus[] = [
  */
 export type PaymentStatus = 'unpaid' | 'paid' | 'failed' | 'refunded';
 
+/**
+ * What an order_events row is about. Kept loose on purpose — this is a history
+ * log, and a kind nobody has written a filter for yet should still be storable.
+ */
+export type OrderEventKind = 'status' | 'payment' | 'stock' | 'attention' | 'note';
+
 export interface Database {
   public: {
     Tables: {
@@ -264,6 +270,19 @@ export interface Database {
           payment_reference: string | null;
           amount_charged: number | null;
           charged_currency: string | null;
+          payment_expires_at: string | null;
+          shipped_at: string | null;
+          delivered_at: string | null;
+          cancelled_at: string | null;
+          carrier: string | null;
+          tracking_number: string | null;
+          tracking_url: string | null;
+          customer_phone: string | null;
+          refunded_at: string | null;
+          refund_reference: string | null;
+          needs_attention: boolean;
+          attention_reason: string | null;
+          stock_committed: boolean;
         };
         Insert: {
           id?: string;
@@ -287,9 +306,54 @@ export interface Database {
           payment_reference?: string | null;
           amount_charged?: number | null;
           charged_currency?: string | null;
+          payment_expires_at?: string | null;
+          shipped_at?: string | null;
+          delivered_at?: string | null;
+          cancelled_at?: string | null;
+          carrier?: string | null;
+          tracking_number?: string | null;
+          tracking_url?: string | null;
+          customer_phone?: string | null;
+          refunded_at?: string | null;
+          refund_reference?: string | null;
+          needs_attention?: boolean;
+          attention_reason?: string | null;
+          stock_committed?: boolean;
         };
         Update: Partial<Database['public']['Tables']['orders']['Insert']>;
         Relationships: [];
+      };
+      order_events: {
+        Row: {
+          id: string;
+          created_at: string;
+          order_id: string;
+          kind: OrderEventKind;
+          from_status: string | null;
+          to_status: string | null;
+          message: string | null;
+          actor: string;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          order_id: string;
+          kind: OrderEventKind;
+          from_status?: string | null;
+          to_status?: string | null;
+          message?: string | null;
+          actor?: string;
+        };
+        Update: Partial<Database['public']['Tables']['order_events']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'order_events_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+        ];
       };
     };
     Views: {
@@ -319,6 +383,16 @@ export interface Database {
         Args: { p_order_id: string; p_payment_ref: string };
         Returns: undefined;
       };
+      /** Draws an order's units off the shelf — see supabase/fulfilment-schema.sql. */
+      draw_order_stock: {
+        Args: { p_order_id: string };
+        Returns: undefined;
+      };
+      /** The other half of draw_order_stock — see supabase/fulfilment-schema.sql. */
+      restock_order: {
+        Args: { p_order_id: string };
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
   };
@@ -329,6 +403,7 @@ export type Category = Database['public']['Tables']['categories']['Row'];
 export type Product = Database['public']['Tables']['products']['Row'];
 export type GalleryItem = Database['public']['Tables']['gallery_items']['Row'];
 export type Order = Database['public']['Tables']['orders']['Row'];
+export type OrderEvent = Database['public']['Tables']['order_events']['Row'];
 
 export type Make = Database['public']['Tables']['makes']['Row'];
 export type MakeItem = Database['public']['Tables']['make_items']['Row'];

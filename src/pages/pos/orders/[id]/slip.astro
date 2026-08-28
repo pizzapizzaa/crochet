@@ -1,0 +1,297 @@
+---
+/*
+ * The packing slip.
+ *
+ * A page that exists to leave the screen: it goes in the box, or on the wall
+ * while the box is filled. Deliberately not wrapped in PosLayout — a sidebar
+ * that prints as a black column down the left of every slip is exactly the
+ * thing that stops people printing them.
+ *
+ * Two jobs on one sheet. The top half is the address and the items, which is
+ * what the customer reads. The bottom half is the picking list — the actual
+ * products off the actual shelves, bundles broken open — which is what the
+ * person filling the box reads and then throws away.
+ */
+export const prerender = false;
+
+import '../../../../styles/design-system.css';
+import { isAuthed, loginUrl } from '../../../../lib/auth';
+import { getSupabaseAdmin } from '../../../../lib/supabaseAdmin';
+import { formatAddress, orderItems, pickList, shippingAddress } from '../../../../lib/orders';
+import { carrierLabel } from '../../../../lib/fulfilment';
+import { money } from '../../../../lib/makes';
+import { SHOP_ADDRESS, SHOP_DOMAIN, SHOP_EMAIL, SHOP_NAME, SHOP_PHONE } from '../../../../lib/shop';
+import type { Order } from '../../../../lib/database.types';
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect(loginUrl(Astro.url));
+}
+
+const { id } = Astro.params;
+const admin = getSupabaseAdmin();
+
+if (!admin) {
+  return Astro.redirect('/pos/orders?error=' + encodeURIComponent('Supabase is not connected.'));
+}
+
+const { data } = await admin.from('orders').select('*').eq('id', id!).maybeSingle();
+if (!data) {
+  return Astro.redirect('/pos/orders?error=' + encodeURIComponent('That order no longer exists.'));
+}
+
+const order = data as Order;
+const items = orderItems(order);
+const picks = await pickList(admin, items.units);
+const address = formatAddress(shippingAddress(order));
+
+const when = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('en-US', { dateStyle: 'long' }) : '—';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Packing slip {order.order_number}</title>
+  </head>
+  <body class="bg-cream-100 font-sans text-ink-body antialiased">
+    <!-- Screen-only controls. Nothing here reaches the paper. -->
+    <div class="no-print mx-auto flex max-w-[210mm] items-center justify-between gap-3 px-6 py-4">
+      <a href={`/pos/orders/${order.id}`} class="text-sm font-bold text-ink-muted hover:text-ink">
+        ← Back to the order
+      </a>
+      <button
+        type="button"
+        id="print"
+        class="rounded-pill bg-forest px-6 py-2.5 text-sm font-bold text-paper transition-all duration-fast ease-out hover:brightness-110"
+      >
+        Print
+      </button>
+    </div>
+
+    <article class="slip mx-auto max-w-[210mm] bg-paper px-10 py-10 shadow-sm">
+      <!-- Who it is from, and which order this is -->
+      <header class="flex items-start justify-between gap-6 border-b-2 border-ink pb-5">
+        <div>
+          <p class="font-display text-2xl font-extrabold text-ink">{SHOP_NAME}</p>
+          <address class="mt-1.5 text-xs not-italic leading-relaxed text-ink-muted">
+            {SHOP_ADDRESS.map((row) => <span class="block">{row}</span>)}
+            <span class="mt-1 block">{SHOP_PHONE}</span>
+            <span class="block">{SHOP_EMAIL}</span>
+          </address>
+        </div>
+        <div class="text-right">
+          <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Packing slip</p>
+          <p class="font-mono text-2xl font-extrabold text-ink">{order.order_number}</p>
+          <p class="mt-1 text-xs text-ink-muted">Placed {when(order.created_at)}</p>
+          {order.paid_at && <p class="text-xs text-ink-muted">Paid {when(order.paid_at)}</p>}
+        </div>
+      </header>
+
+      <!-- Where it goes -->
+      <section class="mt-6 grid grid-cols-2 gap-8">
+        <div>
+          <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Deliver to</p>
+          <p class="mt-1.5 font-display text-lg font-bold text-ink">{order.customer_name}</p>
+          <address class="mt-1 text-sm not-italic leading-relaxed text-ink-body">
+            {address.map((row) => <span class="block">{row}</span>)}
+          </address>
+          {
+            order.customer_phone && (
+              <p class="mt-2 text-sm font-semibold text-ink-body">{order.customer_phone}</p>
+            )
+          }
+          <p class="mt-1 text-xs text-ink-muted">{order.customer_email}</p>
+        </div>
+
+        <div>
+          <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Carriage</p>
+          <dl class="mt-1.5 space-y-1 text-sm">
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-muted">Carrier</dt>
+              <dd class="font-semibold text-ink-body">{carrierLabel(order.carrier) || '—'}</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-muted">Tracking</dt>
+              <dd class="break-all font-mono text-xs text-ink-body">
+                {order.tracking_number ?? '—'}
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-ink-muted">Shipping paid</dt>
+              <dd class="font-semibold text-ink-body">
+                {Number(order.shipping_total) === 0 ? 'Free' : money(Number(order.shipping_total))}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- What the customer bought, in the words they bought it in -->
+      <section class="mt-7">
+        <h2 class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">In this parcel</h2>
+        <table class="mt-2 w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-cream-400">
+              <th class="w-[60px] py-2 font-display text-xs font-bold text-ink">Qty</th>
+              <th class="py-2 font-display text-xs font-bold text-ink">Item</th>
+              <th class="w-[90px] py-2 text-right font-display text-xs font-bold text-ink">Each</th>
+              <th class="w-[90px] py-2 text-right font-display text-xs font-bold text-ink">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              items.lines.map((line) => (
+                <tr class="border-b border-cream-300">
+                  <td class="py-2 font-bold text-ink">{line.qty}</td>
+                  <td class="py-2 text-ink-body">
+                    {line.name}
+                    {line.kind === 'bundle' && (
+                      <span class="ml-1 text-xs text-ink-muted">(bundle)</span>
+                    )}
+                  </td>
+                  <td class="py-2 text-right text-ink-muted">{money(line.unitPrice)}</td>
+                  <td class="py-2 text-right font-semibold text-ink">{money(line.lineTotal)}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+
+        <dl class="ml-auto mt-3 w-[240px] space-y-1 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Subtotal</dt>
+            <dd class="text-ink-body">{money(Number(order.subtotal))}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Shipping</dt>
+            <dd class="text-ink-body">
+              {Number(order.shipping_total) === 0 ? 'Free' : money(Number(order.shipping_total))}
+            </dd>
+          </div>
+          <div class="flex justify-between border-t border-ink pt-1">
+            <dt class="font-display font-bold text-ink">Total</dt>
+            <dd class="font-display font-extrabold text-ink">{money(Number(order.total))}</dd>
+          </div>
+        </dl>
+      </section>
+
+      {
+        order.customer_note && (
+          <section class="mt-5 rounded-field border border-cream-400 bg-cream-50 px-4 py-3">
+            <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+              What they asked for
+            </p>
+            <p class="mt-1 whitespace-pre-wrap text-sm text-ink-body">{order.customer_note}</p>
+          </section>
+        )
+      }
+
+      <!--
+        The picking list. Everything above is for the customer; this is for
+        whoever fills the box, which is why it is ruled off and labelled as
+        something to remove. Bundles are broken open here into the products
+        actually coming off the shelf — the half of the order the slip above
+        cannot show.
+      -->
+      <section class="mt-8 border-t-2 border-dashed border-ink-faint pt-5">
+        <div class="flex items-baseline justify-between">
+          <h2 class="font-display text-sm font-bold text-ink">Picking list</h2>
+          <p class="text-xs text-ink-muted">Shop copy — take this out before sealing</p>
+        </div>
+
+        {
+          picks.length === 0 ? (
+            <p class="mt-2 text-sm text-ink-muted">
+              No stock lines recorded against this order.
+            </p>
+          ) : (
+            <table class="mt-2 w-full text-left text-sm">
+              <thead>
+                <tr class="border-b border-cream-400">
+                  <th class="w-[60px] py-1.5 font-display text-xs font-bold text-ink">Qty</th>
+                  <th class="py-1.5 font-display text-xs font-bold text-ink">Product</th>
+                  <th class="w-[130px] py-1.5 font-display text-xs font-bold text-ink">SKU</th>
+                  <th class="w-[90px] py-1.5 text-right font-display text-xs font-bold text-ink">
+                    Left
+                  </th>
+                  <th class="w-[40px] py-1.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {picks.map((pick) => (
+                  <tr class="border-b border-cream-300">
+                    <td class="py-1.5 font-bold text-ink">{pick.quantity}</td>
+                    <td class="py-1.5 text-ink-body">
+                      {pick.name}
+                      {pick.missing && (
+                        <span class="ml-1 text-xs font-bold text-lemon-deep">
+                          — no longer in the catalogue
+                        </span>
+                      )}
+                    </td>
+                    <td class="py-1.5 font-mono text-xs text-ink-muted">{pick.sku ?? '—'}</td>
+                    <td class="py-1.5 text-right text-xs text-ink-muted">
+                      {pick.stock === null ? '—' : pick.stock}
+                    </td>
+                    {/* Something to tick with a pen while the box fills. */}
+                    <td class="py-1.5 text-right">
+                      <span class="inline-block h-3.5 w-3.5 border border-ink-faint" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
+        }
+      </section>
+
+      <footer class="mt-8 border-t border-cream-300 pt-4 text-center">
+        <p class="font-display text-sm font-bold text-ink">Thank you — I hope you love it.</p>
+        <p class="mt-1 text-xs text-ink-muted">
+          Anything wrong? {SHOP_EMAIL} · Track it at {SHOP_DOMAIN}/orders/track with{' '}
+          {order.order_number}
+        </p>
+      </footer>
+    </article>
+
+    <style is:global>
+      /*
+       * One slip per sheet, and nothing of the browser's own furniture on it.
+       * The shadow and the page background are screen affordances — on paper
+       * they are wasted toner, so both are dropped.
+       */
+      @media print {
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
+
+        .no-print {
+          display: none !important;
+        }
+
+        body {
+          background: #fff;
+        }
+
+        .slip {
+          max-width: none;
+          padding: 0;
+          box-shadow: none;
+        }
+
+        /* A picking table split across two sheets is a mis-picked order. */
+        table {
+          break-inside: avoid;
+        }
+      }
+    </style>
+
+    <script>
+      document.getElementById('print')?.addEventListener('click', () => window.print());
+    </script>
+  </body>
+</html>

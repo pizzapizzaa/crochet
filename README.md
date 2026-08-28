@@ -51,13 +51,19 @@ You can find these in your [Supabase project settings → API](https://supabase.
 
 ### 3. Set up the database
 
-In your Supabase dashboard, open the **SQL Editor** and run the contents of `supabase/schema.sql`.
+In your Supabase dashboard, open the **SQL Editor** and run each file in
+`supabase/` **in this order**. They are idempotent, so re-running one is safe.
 
-This creates:
-- `products` — your crochet items
-- `gallery_items` — gallery photos linked to products
-- `orders` — customer orders
-- Row Level Security policies
+| # | File | What it adds |
+|---|------|--------------|
+| 1 | `schema.sql` | `products`, `gallery_items`, `orders`, RLS policies |
+| 2 | `pos-schema.sql` | `categories` and the columns the back office edits |
+| 3 | `makes-schema.sql` | `makes` and `make_items` — the bundles |
+| 4 | `shop-schema.sql` | Checkout columns and `commit_order()` |
+| 5 | `fulfilment-schema.sql` | Delivery tracking, `order_events`, refunds, `restock_order()` |
+
+Step 5 is required for the orders screens to work — without it the POS cannot
+read `needs_attention`, `tracking_number` or the order history.
 
 ### 4. Create a Storage bucket
 

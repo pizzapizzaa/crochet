@@ -11,6 +11,7 @@ import {
   type ShippingAddress,
 } from '../../../lib/orders';
 import { isPayOSConfigured, newOrderCode, PROVIDER, startPayment } from '../../../lib/payos';
+import { PAYMENT_WINDOW_MINUTES } from '../../../lib/shop';
 import type { OrderInsert } from '../../../lib/database.types';
 
 /*
@@ -42,10 +43,13 @@ export const POST: APIRoute = async ({ request }) => {
 
   const name = text(body.name, 120);
   const email = text(body.email, 200).toLowerCase();
+  const phone = text(body.phone, 40);
   const note = text(body.note, 1000);
 
   if (!name) return json({ error: 'We need a name for the parcel.' }, 400);
   if (!isEmail(email)) return json({ error: 'That email address does not look right.' }, 400);
+  // Couriers here will not attempt a delivery without a number to call.
+  if (!isPhone(phone)) return json({ error: 'We need a phone number for the courier.' }, 400);
 
   const raw = (body.address ?? {}) as Record<string, unknown>;
   const address: ShippingAddress = {
@@ -78,10 +82,19 @@ export const POST: APIRoute = async ({ request }) => {
   const code = newOrderCode();
   const amountVnd = usdToVnd(priced.total);
 
+  /*
+   * How long this order waits for its money. The same instant is given to the
+   * payOS link and written on the row, so the QR dying and the order being
+   * swept away happen together rather than leaving a window where the customer
+   * can still pay for something we have already written off.
+   */
+  const expiresAt = new Date(Date.now() + PAYMENT_WINDOW_MINUTES * 60_000);
+
   const payload: OrderInsert = {
     order_number: number,
     customer_name: name,
     customer_email: email,
+    customer_phone: phone,
     customer_note: note || null,
     items: { lines: priced.lines, units: priced.units } as unknown as OrderInsert['items'],
     subtotal: priced.subtotal,
@@ -96,6 +109,7 @@ export const POST: APIRoute = async ({ request }) => {
     // we control, and if it is ever changed this is what was really charged.
     amount_charged: amountVnd,
     charged_currency: 'VND',
+    payment_expires_at: expiresAt.toISOString(),
   };
 
   const { data: created, error } = await admin
@@ -116,6 +130,7 @@ export const POST: APIRoute = async ({ request }) => {
       name,
       email,
       origin: new URL(request.url).origin,
+      expiresAt,
     });
 
     await admin
@@ -146,6 +161,16 @@ function text(value: unknown, max: number): string {
 /** Deliberately loose: the delivery is the real test, not the regex. */
 function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/*
+ * Looser still. Phone numbers are written a dozen ways — +84, 0084, 0, spaces,
+ * dots, brackets — and every strict validator eventually rejects a real number
+ * belonging to a real customer who then does not buy anything. Digits, and
+ * enough of them to be a phone number, is the whole test.
+ */
+function isPhone(value: string): boolean {
+  return value.replace(/\D/g, '').length >= 8;
 }
 
 const json = (body: unknown, status = 200) =>

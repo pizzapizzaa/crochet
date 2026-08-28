@@ -1,0 +1,213 @@
+---
+/*
+ * Shipping & Returns.
+ *
+ * Linked from the footer since the footer existed, and a 404 until now — which
+ * is the worst place to have a gap, because this is the page somebody opens
+ * with their card already out, or after a parcel is late.
+ *
+ * Every number on it is read from lib/orders.ts and lib/shop.ts rather than
+ * typed into the prose. The free-shipping threshold quoted here is therefore
+ * the same constant the checkout charges against, and cannot drift from it.
+ */
+import PolicyPage from '../components/PolicyPage.astro';
+import { FREE_SHIPPING_OVER, SHIPPING_FLAT } from '../lib/orders';
+import {
+  DELIVERY_DAYS,
+  DISPATCH_DAYS,
+  PAYMENT_WINDOW_MINUTES,
+  RETURNS_WINDOW_DAYS,
+  SHOP_EMAIL,
+} from '../lib/shop';
+import { CARRIERS } from '../lib/fulfilment';
+
+const flat = `$${SHIPPING_FLAT.toFixed(2)}`;
+const free = `$${FREE_SHIPPING_OVER.toFixed(2)}`;
+const payWindowHours = Math.round(PAYMENT_WINDOW_MINUTES / 60);
+
+/* The couriers that actually collect from the workshop, minus the two non-couriers. */
+const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
+---
+
+<PolicyPage
+  title="Shipping & Returns"
+  eyebrow="Getting it to you"
+  description="What shipping costs, how long it takes, how to track it, and what happens if something is not right."
+  intro="Everything is made and packed by one person in Binh Loi Trung. Here is exactly what that means for how long you wait and what happens if something goes wrong."
+  updated="2026-08-28"
+>
+  <h2>What shipping costs</h2>
+
+  <div class="callout">
+    <p>
+      <strong>{flat} flat, anywhere.</strong> Free on orders over {free}. The basket works this out
+      before you pay, so the total you see at checkout is the total.
+    </p>
+  </div>
+
+  <p>
+    There is one shipping price rather than a table of zones. It is simpler to quote and it is
+    honest about what this is: a small workshop posting parcels, not a fulfilment operation with
+    negotiated carrier rates. On far-away orders it costs me more than {flat} and I absorb the
+    difference.
+  </p>
+
+  <h2>How long it takes</h2>
+
+  <p>
+    Two separate waits, and it helps to think of them separately — the time it takes me to make and
+    pack your order, and the time the courier then has it.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Stage</th>
+        <th>How long</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Packed and handed over</td>
+        <td>{DISPATCH_DAYS.min}–{DISPATCH_DAYS.max} working days</td>
+      </tr>
+      <tr>
+        <td>In transit — within Vietnam</td>
+        <td>{DELIVERY_DAYS.vietnam.min}–{DELIVERY_DAYS.vietnam.max} working days</td>
+      </tr>
+      <tr>
+        <td>In transit — everywhere else</td>
+        <td>{DELIVERY_DAYS.international.min}–{DELIVERY_DAYS.international.max} working days</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    These are the honest usual, not a guarantee. Tết, a bad storm and the fortnight before Christmas
+    all stretch them, and a customs desk can hold an international parcel for as long as it likes.
+    If yours is drifting past the top of that range, <a href={`mailto:${SHOP_EMAIL}`}>tell me</a> —
+    I would far rather chase it than have you wondering.
+  </p>
+
+  <h3>Bundles take the longest</h3>
+
+  <p>
+    A bundle is several things gathered into one box, and it does not go out until every part of it
+    is in. If one component is on its way to me, that is what your order is waiting on.
+  </p>
+
+  <h2>Following your parcel</h2>
+
+  <p>
+    Every order gets a number that looks like <strong>ZZ-7K3P9M</strong>. Pair it with the email
+    address you ordered under at <a href="/orders/track">order tracking</a> and you will see where
+    it has got to — including the courier's own consignment number and a link into their tracking,
+    once it has one.
+  </p>
+
+  <p>
+    That pair is deliberately the whole key: no account, no password. It also means the order number
+    on its own opens nothing, which is why I can safely print it on the packing slip.
+  </p>
+
+  <p>Parcels go out with whichever of these makes sense for the destination:</p>
+
+  <ul>
+    {couriers.map((name) => <li>{name}</li>)}
+  </ul>
+
+  <p>
+    Orders inside Ho Chi Minh City are sometimes brought round in person instead. Those have no
+    tracking number because there is no courier — the status page will say delivered when it is.
+  </p>
+
+  <h2>Paying</h2>
+
+  <p>
+    Checkout hands you to payOS, where you scan a VietQR code with any Vietnamese banking app. No
+    card details pass through this site because none are ever asked for.
+  </p>
+
+  <p>
+    The catalogue is priced in US dollars and the transfer settles in Vietnamese dong, so the
+    checkout shows you both figures before you commit. The rate used is a fixed one I set, not a
+    live market feed — you are never quoted one number and charged another because a rate moved
+    while you were deciding.
+  </p>
+
+  <div class="callout">
+    <p>
+      <strong>A payment link lasts {payWindowHours} hours.</strong> Nothing is reserved until the
+      transfer lands, so an unpaid order does not hold stock. If the window closes, the order is
+      cancelled and you are free to start again — nothing was taken.
+    </p>
+  </div>
+
+  <h2>If something is not right</h2>
+
+  <p>
+    Tell me within <strong>{RETURNS_WINDOW_DAYS} days</strong> of the parcel arriving. Email{' '}
+    <a href={`mailto:${SHOP_EMAIL}`}>{SHOP_EMAIL}</a> with your order number and, if it is a damage
+    or a wrong-item problem, a photograph. A photo usually settles it in one message rather than
+    three.
+  </p>
+
+  <h3>What I will always put right</h3>
+
+  <ul>
+    <li>The wrong thing arrived.</li>
+    <li>It arrived damaged, or damaged in transit.</li>
+    <li>It never arrived at all.</li>
+    <li>It is not what the listing described.</li>
+  </ul>
+
+  <p>
+    In those cases you get a replacement or a full refund including the shipping you paid, whichever
+    you prefer, and you will not be asked to post anything back at your own cost.
+  </p>
+
+  <h3>Changed your mind</h3>
+
+  <p>
+    Unused items in their original condition can come back within the same{' '}
+    {RETURNS_WINDOW_DAYS} days for a refund of what you paid for the goods. Return postage is yours
+    in that case, and the original shipping is not refunded — it was genuinely spent getting the
+    parcel to you.
+  </p>
+
+  <h3>What cannot come back</h3>
+
+  <ul>
+    <li>
+      <strong>Yarn that has been wound, cut or worked with.</strong> Once a skein is wound it cannot
+      be sold again, and that is usually the first thing that happens to it.
+    </li>
+    <li>
+      <strong>Made-to-order and customised pieces</strong>, unless the fault is mine.
+    </li>
+    <li><strong>Digital patterns</strong>, which cannot be un-downloaded.</li>
+  </ul>
+
+  <h2>How a refund reaches you</h2>
+
+  <p>
+    By bank transfer, back to you, by hand. payOS does not reverse a VietQR payment, so there is no
+    button either of us can press — I send the money back the same way it came. Expect it within a
+    few working days of us agreeing the refund, and I will give you the transfer reference so you
+    can find it on your statement.
+  </p>
+
+  <h2>Cancelling</h2>
+
+  <p>
+    If your order has not been packed yet, email me and I will cancel it and refund you in full.
+    Once it has been handed to a courier it has to run its course — at that point it becomes a
+    return rather than a cancellation.
+  </p>
+
+  <p>
+    Handmade things vary a little: colours shift between dye lots and between screens, and no two
+    pieces come out identical. That is the nature of the thing rather than a fault — but if what
+    arrived is not what you thought you were buying, say so and we will sort it out.
+  </p>
+</PolicyPage>

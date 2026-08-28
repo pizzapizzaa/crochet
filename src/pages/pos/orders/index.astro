@@ -8,77 +8,57 @@ import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
 import { orderItems } from '../../../lib/orders';
 import { money } from '../../../lib/makes';
 import { ORDER_STATUSES, type Order } from '../../../lib/database.types';
+import {
+  loadOrders,
+  PAGE_SIZE,
+  readFilter,
+  TABS,
+  tabCounts,
+  totalTaken,
+} from '../../../lib/posOrders';
 
 if (!isAuthed(Astro.cookies)) {
   return Astro.redirect(loginUrl(Astro.url));
 }
 
+const params = Astro.url.searchParams;
+const filter = readFilter(params);
+
 const admin = getSupabaseAdmin();
-let orders: Order[] = [];
+
+let page = { rows: [] as Order[], total: 0, page: 1, pageCount: 1, error: null as string | null };
+let counts: Record<string, number> = {};
+let taken = { revenue: 0, orders: 0 };
 let loadError: string | null = null;
 
 if (!admin) {
   loadError = 'Supabase is not connected — check PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.';
 } else {
-  const { data, error } = await admin
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(200);
-  if (error) loadError = `Could not load orders: ${error.message}`;
-  else orders = (data ?? []) as Order[];
+  // The page of rows, the tab counts and the running total are independent
+  // questions, so they are asked at the same time rather than in a queue.
+  [page, counts, taken] = await Promise.all([
+    loadOrders(admin, filter),
+    tabCounts(admin, filter.q),
+    totalTaken(admin),
+  ]);
+  loadError = page.error;
 }
 
-const params = Astro.url.searchParams;
-const statusFilter = params.get('status') ?? 'open';
-const q = (params.get('q') ?? '').trim().toLowerCase();
+const rows = page.rows;
 
-/*
- * "Open" is the useful default: everything still owed work. An order that is
- * delivered or cancelled is history, and history should not be the first thing
- * on the screen every morning.
- */
-const isOpen = (o: Order) =>
-  o.status !== 'delivered' && o.status !== 'cancelled' && o.payment_status === 'paid';
-
-const rows = orders.filter((o) => {
-  if (statusFilter === 'open' && !isOpen(o)) return false;
-  if (statusFilter === 'unpaid' && o.payment_status === 'paid') return false;
-  if ((ORDER_STATUSES as string[]).includes(statusFilter) && o.status !== statusFilter) return false;
-
-  if (!q) return true;
-  return (
-    o.order_number.toLowerCase().includes(q) ||
-    o.customer_name.toLowerCase().includes(q) ||
-    o.customer_email.toLowerCase().includes(q)
-  );
-});
-
-const tabs = [
-  { key: 'open', label: 'Open', count: orders.filter(isOpen).length },
-  { key: 'all', label: 'All', count: orders.length },
-  ...ORDER_STATUSES.map((s) => ({
-    key: s,
-    label: s[0].toUpperCase() + s.slice(1),
-    count: orders.filter((o) => o.status === s).length,
-  })),
-  {
-    key: 'unpaid',
-    label: 'Not paid',
-    count: orders.filter((o) => o.payment_status !== 'paid').length,
-  },
-];
-
+/** Keep the current tab and search while changing one thing about the view. */
 const qs = (next: Record<string, string>) => {
-  const merged = new URLSearchParams({ status: statusFilter, q });
+  const merged = new URLSearchParams({
+    status: filter.status,
+    q: filter.q,
+    page: String(filter.page),
+  });
   for (const [k, v] of Object.entries(next)) merged.set(k, v);
-  for (const [k, v] of [...merged]) if (!v) merged.delete(k);
+  // A tab change should always land on page one; anything else keeps its place.
+  if (next.status && !next.page) merged.set('page', '1');
+  for (const [k, v] of [...merged]) if (!v || v === '1' && k === 'page') merged.delete(k);
   return `/pos/orders?${merged}`;
 };
-
-const revenue = orders
-  .filter((o) => o.payment_status === 'paid')
-  .reduce((sum, o) => sum + Number(o.total), 0);
 
 const STATUS_CLASS: Record<string, string> = {
   pending: 'bg-lemon-wash text-lemon-deep',
@@ -91,53 +71,112 @@ const STATUS_CLASS: Record<string, string> = {
 const when = (iso: string) =>
   new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
+const first = rows.length === 0 ? 0 : (page.page - 1) * PAGE_SIZE + 1;
+const last = (page.page - 1) * PAGE_SIZE + rows.length;
+
 const ok = params.get('ok');
 const err = params.get('error');
+
+// The export follows whatever the screen is showing, so "download what I am
+// looking at" needs no second set of controls.
+const exportHref = `/api/pos/orders-export?status=${encodeURIComponent(
+  filter.status,
+)}&q=${encodeURIComponent(filter.q)}`;
 ---
 
 <PosLayout title="Orders" section="orders">
-  <header class="mb-6">
-    <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Shop</p>
-    <h1 class="mt-1 font-display text-3xl font-extrabold text-ink sm:text-4xl">Orders</h1>
-    <p class="mt-1.5 text-sm text-ink-muted">
-      {rows.length} shown · {money(revenue)} taken across {
-        orders.filter((o) => o.payment_status === 'paid').length
-      } paid orders
-    </p>
+  <header class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Shop</p>
+      <h1 class="mt-1 font-display text-3xl font-extrabold text-ink sm:text-4xl">Orders</h1>
+      <p class="mt-1.5 text-sm text-ink-muted">
+        {money(taken.revenue)} taken across {taken.orders} paid order{taken.orders === 1 ? '' : 's'}
+      </p>
+    </div>
+
+    <div class="flex shrink-0 flex-wrap gap-2">
+      <form method="POST" action="/api/pos/orders-sweep">
+        <input type="hidden" name="next" value={Astro.url.pathname + Astro.url.search} />
+        <button
+          type="submit"
+          class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+          title="Cancel unpaid orders whose payment window has closed"
+        >
+          Sweep abandoned
+        </button>
+      </form>
+      <a
+        href={exportHref}
+        class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+      >
+        Export CSV
+      </a>
+    </div>
   </header>
 
   <Flash ok={ok} error={err ?? loadError} />
+
+  {
+    (counts.attention ?? 0) > 0 && filter.status !== 'attention' && (
+      <a
+        href={qs({ status: 'attention' })}
+        class="mb-5 flex items-center gap-3 rounded-card border border-lemon-soft bg-lemon-wash px-5 py-4 transition-colors duration-fast ease-out hover:brightness-[0.98]"
+      >
+        <span class="text-xl">⚠</span>
+        <span class="min-w-0">
+          <span class="block font-display text-sm font-bold text-lemon-deep">
+            {counts.attention} order{counts.attention === 1 ? '' : 's'} need a human
+          </span>
+          <span class="block text-sm text-ink-body">
+            A payment landed that stock could not be drawn for, or came in short. Open them.
+          </span>
+        </span>
+      </a>
+    )
+  }
 
   <div class="mb-5 rounded-card border border-cream-300 bg-paper p-4 shadow-sm">
     <form method="GET" action="/pos/orders" class="flex flex-col gap-3 sm:flex-row">
       <input
         type="search"
         name="q"
-        value={q}
-        placeholder="Order number, name or email…"
+        value={filter.q}
+        placeholder="Order number, name, email or tracking number…"
         class="flex-1 rounded-field border border-cream-300 bg-cream-50 px-4 py-2.5 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
       />
-      <input type="hidden" name="status" value={statusFilter} />
+      <input type="hidden" name="status" value={filter.status} />
       <button
         type="submit"
         class="rounded-pill border border-cream-300 bg-cream-100 px-5 py-2.5 text-sm font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
       >
         Search
       </button>
+      {
+        filter.q && (
+          <a
+            href={qs({ q: '' })}
+            class="rounded-pill px-4 py-2.5 text-center text-sm font-bold text-ink-muted transition-colors duration-fast ease-out hover:text-ink"
+          >
+            Clear
+          </a>
+        )
+      }
     </form>
 
     <div class="mt-3 flex flex-wrap gap-1.5 border-t border-cream-300 pt-3">
       {
-        tabs.map((t) => (
+        TABS.map((t) => (
           <a
             href={qs({ status: t.key })}
             class={`rounded-pill px-3 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
-              statusFilter === t.key
+              filter.status === t.key
                 ? 'bg-forest text-paper'
-                : 'bg-cream-100 text-ink-muted hover:bg-cream-200'
+                : t.key === 'attention' && (counts.attention ?? 0) > 0
+                  ? 'bg-lemon-wash text-lemon-deep hover:brightness-95'
+                  : 'bg-cream-100 text-ink-muted hover:bg-cream-200'
             }`}
           >
-            {t.label} <span class="opacity-60">{t.count}</span>
+            {t.label} <span class="opacity-60">{counts[t.key] ?? 0}</span>
           </a>
         ))
       }
@@ -148,86 +187,258 @@ const err = params.get('error');
     rows.length === 0 ? (
       <div class="rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-16 text-center">
         <p class="text-3xl">📦</p>
+        {/* No orders at all is a different situation from none in this tab. */}
         <h3 class="mt-3 font-display text-lg font-bold text-ink">
-          {orders.length === 0 ? 'No orders yet' : 'Nothing matches that'}
+          {(counts.all ?? 0) === 0 && !filter.q ? 'No orders yet' : 'Nothing matches that'}
         </h3>
         <p class="mt-1 text-sm text-ink-muted">
-          {orders.length === 0
+          {(counts.all ?? 0) === 0 && !filter.q
             ? 'When someone checks out, their order lands here.'
             : 'Try another search or a different tab.'}
         </p>
       </div>
     ) : (
-      <div class="overflow-x-auto rounded-card border border-cream-300 bg-paper shadow-sm">
-        <table class="w-full min-w-[820px] table-fixed text-left">
-          <thead>
-            <tr class="border-b border-cream-300 bg-cream-50">
-              {[
-                { label: 'Order', width: 'w-[190px]' },
-                { label: 'Customer', width: '' },
-                { label: 'Items', width: 'w-[80px]' },
-                { label: 'Total', width: 'w-[110px]' },
-                { label: 'Payment', width: 'w-[110px]' },
-                { label: 'Status', width: 'w-[120px]' },
-              ].map((c) => (
-                <th
-                  class={`px-4 py-3 text-micro font-bold uppercase tracking-eyebrow text-ink-muted ${c.width}`}
-                >
-                  {c.label}
-                </th>
+      /*
+       * The whole table is one form. Ticking rows and choosing a status in the
+       * bar below submits them together, which is the difference between
+       * marking twelve parcels shipped and opening twelve tabs.
+       */
+      <form method="POST" action="/api/pos/order-bulk-status" id="bulk-form">
+        <input type="hidden" name="next" value={Astro.url.pathname + Astro.url.search} />
+
+        <div
+          id="bulk-bar"
+          class="mb-3 hidden flex-col gap-2 rounded-card border border-forest bg-forest px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p class="text-sm font-bold text-paper">
+            <span data-selected-count>0</span> selected
+          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <select
+              name="status"
+              required
+              class="rounded-field border border-forest-tint bg-paper px-3 py-2 text-sm font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-mint/40"
+            >
+              <option value="">Move to…</option>
+              {ORDER_STATUSES.map((s) => (
+                <option value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
               ))}
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-cream-300">
-            {rows.map((o) => {
-              const items = orderItems(o);
-              const count = items.lines.reduce((sum, l) => sum + l.qty, 0);
-              return (
-                <tr class="transition-colors duration-fast ease-out hover:bg-cream-50">
-                  <td class="px-4 py-3">
-                    <a href={`/pos/orders/${o.id}`} class="block">
-                      <span class="block font-mono text-sm font-bold text-ink">{o.order_number}</span>
-                      <span class="block text-[11px] text-ink-faint">{when(o.created_at)}</span>
-                    </a>
-                  </td>
-                  <td class="px-4 py-3">
-                    <a href={`/pos/orders/${o.id}`} class="block min-w-0">
-                      <span class="block truncate text-sm font-semibold text-ink-body">
-                        {o.customer_name}
+            </select>
+            <button
+              type="submit"
+              class="rounded-pill bg-mint px-5 py-2 text-sm font-bold text-ink transition-all duration-fast ease-out hover:brightness-105"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              id="bulk-clear"
+              class="rounded-pill px-3 py-2 text-xs font-bold text-cream-200 transition-colors duration-fast ease-out hover:text-paper"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-card border border-cream-300 bg-paper shadow-sm">
+          <table class="w-full min-w-[900px] table-fixed text-left">
+            <thead>
+              <tr class="border-b border-cream-300 bg-cream-50">
+                <th class="w-[44px] px-4 py-3">
+                  <input
+                    type="checkbox"
+                    id="bulk-all"
+                    aria-label="Select every order on this page"
+                    class="h-4 w-4 cursor-pointer rounded border-cream-400 accent-forest"
+                  />
+                </th>
+                {[
+                  { label: 'Order', width: 'w-[180px]' },
+                  { label: 'Customer', width: '' },
+                  { label: 'Items', width: 'w-[70px]' },
+                  { label: 'Total', width: 'w-[100px]' },
+                  { label: 'Payment', width: 'w-[105px]' },
+                  { label: 'Status', width: 'w-[110px]' },
+                  { label: 'Tracking', width: 'w-[150px]' },
+                ].map((c) => (
+                  <th
+                    class={`px-4 py-3 text-micro font-bold uppercase tracking-eyebrow text-ink-muted ${c.width}`}
+                  >
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-cream-300">
+              {rows.map((o) => {
+                const items = orderItems(o);
+                const count = items.lines.reduce((sum, l) => sum + l.qty, 0);
+                return (
+                  <tr
+                    class={`transition-colors duration-fast ease-out hover:bg-cream-50 ${
+                      o.needs_attention ? 'bg-lemon-wash/40' : ''
+                    }`}
+                  >
+                    <td class="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        name="ids"
+                        value={o.id}
+                        aria-label={`Select order ${o.order_number}`}
+                        class="h-4 w-4 cursor-pointer rounded border-cream-400 accent-forest"
+                        data-bulk-row
+                      />
+                    </td>
+                    <td class="px-4 py-3">
+                      <a href={`/pos/orders/${o.id}`} class="block">
+                        <span class="block font-mono text-sm font-bold text-ink">
+                          {o.needs_attention && <span title="Needs a human">⚠ </span>}
+                          {o.order_number}
+                        </span>
+                        <span class="block text-[11px] text-ink-faint">{when(o.created_at)}</span>
+                      </a>
+                    </td>
+                    <td class="px-4 py-3">
+                      <a href={`/pos/orders/${o.id}`} class="block min-w-0">
+                        <span class="block truncate text-sm font-semibold text-ink-body">
+                          {o.customer_name}
+                        </span>
+                        <span class="block truncate text-[11px] text-ink-faint">
+                          {o.customer_email}
+                        </span>
+                      </a>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-ink-body">{count}</td>
+                    <td class="px-4 py-3 font-display text-sm font-extrabold text-ink">
+                      {money(Number(o.total))}
+                    </td>
+                    <td class="px-4 py-3">
+                      <span
+                        class={`rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${
+                          o.payment_status === 'paid'
+                            ? 'bg-mint-wash text-mint-deep'
+                            : o.payment_status === 'refunded'
+                              ? 'bg-cream-200 text-ink-muted'
+                              : 'bg-lemon-wash text-lemon-deep'
+                        }`}
+                      >
+                        {o.payment_status}
                       </span>
-                      <span class="block truncate text-[11px] text-ink-faint">
-                        {o.customer_email}
+                    </td>
+                    <td class="px-4 py-3">
+                      <span
+                        class={`rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${STATUS_CLASS[o.status]}`}
+                      >
+                        {o.status}
                       </span>
-                    </a>
-                  </td>
-                  <td class="px-4 py-3 text-sm text-ink-body">{count}</td>
-                  <td class="px-4 py-3 font-display text-sm font-extrabold text-ink">
-                    {money(Number(o.total))}
-                  </td>
-                  <td class="px-4 py-3">
-                    <span
-                      class={`rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${
-                        o.payment_status === 'paid'
-                          ? 'bg-mint-wash text-mint-deep'
-                          : 'bg-lemon-wash text-lemon-deep'
-                      }`}
-                    >
-                      {o.payment_status}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3">
-                    <span
-                      class={`rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${STATUS_CLASS[o.status]}`}
-                    >
-                      {o.status}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    </td>
+                    <td class="px-4 py-3">
+                      {o.tracking_number ? (
+                        <span class="block truncate font-mono text-[11px] text-ink-body">
+                          {o.tracking_number}
+                        </span>
+                      ) : (
+                        <span class="text-[11px] text-ink-faint">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </form>
+    )
+  }
+
+  {
+    rows.length > 0 && (
+      <nav class="mt-4 flex items-center justify-between gap-3">
+        <p class="text-xs text-ink-muted">
+          {first}–{last} of {page.total}
+        </p>
+        <div class="flex gap-1.5">
+          <a
+            href={qs({ page: String(page.page - 1) })}
+            aria-disabled={page.page <= 1}
+            class={`rounded-pill border border-cream-300 px-4 py-2 text-xs font-bold transition-colors duration-fast ease-out ${
+              page.page <= 1
+                ? 'pointer-events-none bg-cream-100 text-ink-faint'
+                : 'bg-paper text-ink-body hover:bg-cream-100'
+            }`}
+          >
+            Previous
+          </a>
+          <span class="rounded-pill px-3 py-2 text-xs font-bold text-ink-muted">
+            {page.page} / {page.pageCount}
+          </span>
+          <a
+            href={qs({ page: String(page.page + 1) })}
+            aria-disabled={page.page >= page.pageCount}
+            class={`rounded-pill border border-cream-300 px-4 py-2 text-xs font-bold transition-colors duration-fast ease-out ${
+              page.page >= page.pageCount
+                ? 'pointer-events-none bg-cream-100 text-ink-faint'
+                : 'bg-paper text-ink-body hover:bg-cream-100'
+            }`}
+          >
+            Next
+          </a>
+        </div>
+      </nav>
     )
   }
 </PosLayout>
+
+<script>
+  /*
+   * The bulk bar only exists while something is ticked. Everything it needs is
+   * already in the DOM — the checkboxes are the state — so this just counts
+   * them and shows or hides the bar.
+   */
+  const form = document.getElementById('bulk-form');
+
+  if (form) {
+    const bar = document.getElementById('bulk-bar')!;
+    const all = document.getElementById('bulk-all') as HTMLInputElement;
+    const clear = document.getElementById('bulk-clear')!;
+    const boxes = [...form.querySelectorAll<HTMLInputElement>('[data-bulk-row]')];
+    const label = bar.querySelector('[data-selected-count]')!;
+
+    function sync() {
+      const picked = boxes.filter((b) => b.checked).length;
+      label.textContent = String(picked);
+      bar.classList.toggle('hidden', picked === 0);
+      bar.classList.toggle('flex', picked > 0);
+      all.checked = picked === boxes.length && picked > 0;
+      all.indeterminate = picked > 0 && picked < boxes.length;
+    }
+
+    all.addEventListener('change', () => {
+      boxes.forEach((b) => (b.checked = all.checked));
+      sync();
+    });
+
+    clear.addEventListener('click', () => {
+      boxes.forEach((b) => (b.checked = false));
+      sync();
+    });
+
+    boxes.forEach((b) => b.addEventListener('change', sync));
+
+    // Bulk moves are the one POS action that can go wrong on a scale worth
+    // pausing over, so it asks — once, with the number in it.
+    form.addEventListener('submit', (event) => {
+      const picked = boxes.filter((b) => b.checked).length;
+      const status = (form.querySelector('[name="status"]') as HTMLSelectElement).value;
+      if (!status) {
+        event.preventDefault();
+        return;
+      }
+      if (!confirm(`Move ${picked} order${picked === 1 ? '' : 's'} to ${status}?`)) {
+        event.preventDefault();
+      }
+    });
+
+    sync();
+  }
+</script>

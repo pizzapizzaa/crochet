@@ -55,7 +55,9 @@ export const POST: APIRoute = async ({ request }) => {
   const { error } = await resend.emails.send({
     from: 'ZippyZack <onboarding@resend.dev>',
     to: ownerEmail,
-    reply_to: email,
+    // Resend's SDK takes camelCase. Spelled snake_case this was silently
+    // dropped, so hitting reply on a request went to the sender, not the asker.
+    replyTo: email,
     subject: `Product Request: ${categoryLabel} from ${name}`,
     html: `
       <h2>New Product Request</h2>

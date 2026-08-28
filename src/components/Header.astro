@@ -126,6 +126,27 @@ const isActive = (href: string) => {
           ></span>
         </button>
 
+        <!--
+          "Where is my order?" is a question people bring to the header, and
+          until now the tracking page could only be reached by already having
+          the receipt it is there to replace. Quiet on purpose — it matters
+          enormously to the few looking for it and not at all to anyone else.
+        -->
+        <a
+          href="/orders/track"
+          class="hidden items-center gap-1.5 rounded-pill px-3 py-2 text-sm font-semibold text-ink-muted transition-colors duration-fast ease-out hover:text-mint-deep lg:inline-flex"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+              d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0zM3 5h11v9H3V5zm11 3h4l3 3v3h-7V8z"
+            />
+          </svg>
+          Track order
+        </a>
+
         <!-- Primary: light gradient fill, so the label is forest ink. -->
         <a
           href="/store"
@@ -183,6 +204,12 @@ const isActive = (href: string) => {
         </a>
       ))
     }
+    <a
+      href="/orders/track"
+      class="block rounded-field px-3 py-2 text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+    >
+      Track My Order
+    </a>
     <a
       href="/store"
       class="mt-2 block rounded-pill bg-btn-gradient px-4 py-2.5 text-center text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:brightness-105"

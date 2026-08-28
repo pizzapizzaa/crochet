@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, MakeWithBundle, Order, Product } from './database.types';
 import { priceBundle } from './makes';
+import { flagForAttention, logEvent } from './fulfilment';
 
 /*
  * Where a basket turns into money.
@@ -309,6 +310,61 @@ export function orderItems(order: Order): OrderItems {
   return { lines: raw?.lines ?? [], units: raw?.units ?? [] };
 }
 
+/** A unit of stock with enough about it to actually go and find the thing. */
+export interface PickLine extends Unit {
+  name: string;
+  slug: string | null;
+  /** Where it sits in the shelf list, when the supplier gave it a code. */
+  sku: string | null;
+  image: string | null;
+  /** How many are left after this order — a heads-up while picking. */
+  stock: number | null;
+  /** True when the product has since been deleted from the catalogue. */
+  missing: boolean;
+}
+
+/**
+ * Turn the order's stock snapshot into something a person can pick from.
+ *
+ * `units` is stored as product ids and counts, which is exactly right for
+ * drawing stock down and useless for standing in front of a shelf. A bundle
+ * line hides its components entirely, so without this the picking list for a
+ * bundle order is a single row saying "1 × Cosy Blanket Kit" and no clue what
+ * goes in the box.
+ *
+ * A product deleted since the order was placed still gets a row — it was sold
+ * and it has to be found — flagged so the gap is obvious rather than silent.
+ */
+export async function pickList(admin: Admin, units: Unit[]): Promise<PickLine[]> {
+  if (units.length === 0) return [];
+
+  const { data } = await admin
+    .from('products')
+    .select('id, name, slug, images, stock, supplier_sku')
+    .in(
+      'id',
+      units.map((u) => u.product_id),
+    );
+
+  type Row = Pick<Product, 'id' | 'name' | 'slug' | 'images' | 'stock' | 'supplier_sku'>;
+  const byId = new Map(((data ?? []) as Row[]).map((p) => [p.id, p]));
+
+  return units
+    .map((unit) => {
+      const product = byId.get(unit.product_id);
+      return {
+        ...unit,
+        name: product?.name ?? 'Deleted product',
+        slug: product?.slug ?? null,
+        sku: product?.supplier_sku ?? null,
+        image: product?.images?.[0] ?? null,
+        stock: product?.stock ?? null,
+        missing: !product,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export interface ShippingAddress {
   line1: string;
   line2: string;
@@ -353,19 +409,29 @@ export async function settleOrder(
     p_payment_ref: reference ?? '',
   });
 
-  if (!error) return 'paid';
+  if (!error) {
+    await logEvent(admin, {
+      orderId,
+      kind: 'payment',
+      message: reference
+        ? `Payment confirmed (${reference}) and stock drawn down.`
+        : 'Payment confirmed and stock drawn down.',
+    });
+    return 'paid';
+  }
 
   /*
    * Money in, stock not moved — someone bought the last one while this customer
    * was scanning the QR code. The payment is real and must not be denied, so
-   * the order is flagged for a human instead: it shows as paid in the POS with
-   * a note, and gets refunded or restocked by hand.
+   * the order is marked paid anyway and flagged for a human, who can either
+   * restock the shelf and draw it down again or refund it. Both of those are
+   * buttons on the order page; neither happens on its own.
    */
   console.error('commit_order failed', orderId, error.message);
 
   const { data } = await admin
     .from('orders')
-    .select('customer_note')
+    .select('id, customer_note')
     .eq('id', orderId)
     .maybeSingle();
 
@@ -375,12 +441,15 @@ export async function settleOrder(
       payment_status: 'paid',
       payment_reference: reference,
       paid_at: new Date().toISOString(),
-      // Appended, never replaced — the customer's own note still matters.
-      customer_note: [data?.customer_note, `⚠ Stock not adjusted: ${error.message}`]
-        .filter(Boolean)
-        .join('\n'),
     })
     .eq('id', orderId);
+
+  await flagForAttention(
+    admin,
+    { id: orderId, customer_note: data?.customer_note ?? null },
+    'Paid, but the stock could not be drawn down — something sold out mid-payment.',
+    `⚠ Stock not adjusted: ${error.message}`,
+  );
 
   return 'needs-attention';
 }

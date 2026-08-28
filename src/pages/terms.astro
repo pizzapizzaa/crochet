@@ -1,0 +1,168 @@
+---
+/*
+ * Terms.
+ *
+ * The last of the four footer links that went nowhere. Kept deliberately short
+ * and in the same voice as the rest of the site: a wall of unreadable clauses
+ * protects nobody, because nobody reads it and a term nobody has read is a term
+ * that will be argued about anyway.
+ *
+ * The numbers come from the same constants the checkout uses, so the contract
+ * and the code cannot disagree.
+ */
+import PolicyPage from '../components/PolicyPage.astro';
+import { FREE_SHIPPING_OVER, SHIPPING_FLAT, VND_PER_USD } from '../lib/orders';
+import { PAYMENT_WINDOW_MINUTES, RETURNS_WINDOW_DAYS, SHOP_ADDRESS, SHOP_EMAIL } from '../lib/shop';
+
+const rate = new Intl.NumberFormat('en-US').format(VND_PER_USD);
+const payWindowHours = Math.round(PAYMENT_WINDOW_MINUTES / 60);
+---
+
+<PolicyPage
+  title="Terms"
+  eyebrow="The agreement"
+  description="The terms you and I are working under when you buy something here — pricing, payment, delivery, returns and the limits of what I promise."
+  intro="Short, and in plain words. Buying something from this shop means agreeing to what is on this page."
+  updated="2026-08-28"
+>
+  <h2>Who you are dealing with</h2>
+
+  <p>
+    ZippyZack, a one-person crochet workshop at {SHOP_ADDRESS.join(', ')}, reachable at{' '}
+    <a href={`mailto:${SHOP_EMAIL}`}>{SHOP_EMAIL}</a>. "I" and "me" below mean that workshop; "you"
+    means whoever is placing the order.
+  </p>
+
+  <h2>Placing an order</h2>
+
+  <p>
+    Adding something to a basket is not an order, and an order is not accepted until the payment
+    lands. Until then nothing is reserved for you — stock is drawn down at the moment the transfer
+    is confirmed, so it is possible for the last of something to sell while you are at the payment
+    screen.
+  </p>
+
+  <p>
+    If that happens, you will not be left out of pocket: I will either restock and send it, or refund
+    you in full. It is a rare situation and it is dealt with by hand.
+  </p>
+
+  <p>
+    A payment link is good for <strong>{payWindowHours} hours</strong>. After that the order is
+    cancelled automatically and you are free to place a new one.
+  </p>
+
+  <p>
+    I may decline or cancel an order — a listing that was priced wrongly, stock that turns out not to
+    exist, or an address I cannot post to. If money has already been taken it goes straight back.
+  </p>
+
+  <h2>Prices and currency</h2>
+
+  <p>
+    The catalogue is priced in <strong>US dollars</strong>. Payment settles in{' '}
+    <strong>Vietnamese dong</strong> through payOS, converted at a fixed rate I set — currently
+    ₫{rate} to the dollar. Both figures are shown at checkout before you commit, and the dong figure
+    is what actually leaves your account.
+  </p>
+
+  <p>
+    That rate is deliberately a number I choose rather than a live market feed, so you are never
+    quoted one amount and charged another because a rate moved while you were deciding. It is
+    reviewed from time to time and can change for future orders, never for one already placed.
+  </p>
+
+  <p>
+    Shipping is <strong>${SHIPPING_FLAT.toFixed(2)}</strong>, or free over{' '}
+    <strong>${FREE_SHIPPING_OVER.toFixed(2)}</strong>. Any import duty or tax charged on the way into
+    your country is yours to pay — I have no way to know or collect it in advance.
+  </p>
+
+  <p>
+    Prices can change at any time. The price you were shown at checkout is the price of your order.
+  </p>
+
+  <h2>Payment</h2>
+
+  <p>
+    By VietQR bank transfer through payOS. No card details are handled by this site. If a transfer
+    arrives for less than the order total, the order is held rather than shipped and I will contact
+    you to sort out the difference.
+  </p>
+
+  <h2>Delivery</h2>
+
+  <p>
+    Delivery times on the <a href="/shipping">shipping page</a> are honest estimates from experience,
+    not guarantees, and once a parcel is with a courier its progress is out of my hands. Risk passes
+    to you on delivery — until the parcel reaches you, a loss in transit is my problem to solve.
+  </p>
+
+  <p>
+    An address typed wrongly is the one case I cannot fix for free. Check it at checkout; if you spot
+    a mistake, email me immediately and I will change it if the parcel has not gone.
+  </p>
+
+  <h2>Handmade means varied</h2>
+
+  <p>
+    Everything here is made by hand from natural materials. Dye lots differ, screens render colour
+    differently, and no two pieces come out identical. Small variations in colour, size and texture
+    are the nature of the thing rather than defects.
+  </p>
+
+  <p>
+    Where a listing gives measurements, treat them as close rather than exact. If a piece needs to
+    fit something precisely, ask before ordering.
+  </p>
+
+  <h2>Returns</h2>
+
+  <p>
+    Set out in full on the <a href="/shipping">shipping and returns page</a>, which forms part of
+    these terms. In short: {RETURNS_WINDOW_DAYS} days from arrival, anything wrong with the order is
+    put right at my cost, and a change of mind is fine on unused goods with return postage yours.
+    Wound or worked yarn, made-to-order pieces and digital patterns cannot come back.
+  </p>
+
+  <h2>Patterns and images</h2>
+
+  <p>
+    Patterns bought or downloaded here are for your own personal use. You are welcome to sell
+    finished items you have made from them — that is what they are for. You may not resell,
+    redistribute or republish the pattern itself.
+  </p>
+
+  <p>
+    The photographs, illustrations, text and design of this site are mine. The pattern generator
+    produces images from your prompt using a third-party AI model; do not rely on generated images or
+    generated instructions being accurate, original, or safe to use commercially.
+  </p>
+
+  <h2>What I do not promise</h2>
+
+  <p>
+    The site is provided as it is. I keep it working and accurate, but I cannot promise it will never
+    be down, never contain a mistake, or that a listing is free of typos.
+  </p>
+
+  <p>
+    If something goes wrong with an order, what I owe you is capped at what you paid for that order.
+    I am not liable for indirect losses — a deadline missed because a parcel was late, a project
+    abandoned, and so on. Nothing here limits liability for anything that cannot lawfully be limited,
+    including death, personal injury or fraud.
+  </p>
+
+  <h2>Changes and disputes</h2>
+
+  <p>
+    These terms may change; the version in force for your order is the one published when you placed
+    it. If any part of this page turns out to be unenforceable, the rest still stands.
+  </p>
+
+  <p>
+    Vietnamese law governs any dispute, and the courts of Vietnam have jurisdiction. Before it ever
+    gets that far, though, <a href={`mailto:${SHOP_EMAIL}`}>email me</a>. Almost everything is
+    fixable in one message.
+  </p>
+</PolicyPage>

@@ -6,6 +6,9 @@
  * from /orders/track. Either way the order number alone is not enough — it is
  * printed on packing slips and forwarded in emails, so the address the order
  * was placed under has to match before anything is shown.
+ *
+ * The timeline is built by lib/fulfilment.ts, the same function the POS reads,
+ * so "shipped" cannot mean one thing on this page and another behind the till.
  */
 export const prerender = false;
 
@@ -18,9 +21,11 @@ import {
   settleOrder,
   shippingAddress,
 } from '../../lib/orders';
+import { carrierLabel, statusCopy, timeline, trackingLink } from '../../lib/fulfilment';
 import { readPayment } from '../../lib/payos';
 import { money } from '../../lib/makes';
-import { ORDER_STATUSES, type Order } from '../../lib/database.types';
+import { DELIVERY_DAYS, DISPATCH_DAYS, SHOP_EMAIL } from '../../lib/shop';
+import type { Order } from '../../lib/database.types';
 import { ON_IMG_ERROR, productImage } from '../../lib/images';
 
 const { number } = Astro.params;
@@ -52,22 +57,20 @@ if (admin && order && order.payment_status === 'unpaid' && order.provider_order_
 
 const items = order ? orderItems(order) : { lines: [], units: [] };
 const address = order ? formatAddress(shippingAddress(order)) : [];
-
-// Cancelled orders leave the track entirely, so no step is "current".
-const timeline = ORDER_STATUSES.filter((s) => s !== 'cancelled');
-const reached = order ? timeline.indexOf(order.status) : -1;
+const steps = order ? timeline(order) : [];
+const tracking = order ? trackingLink(order) : null;
 
 const placed = order
   ? new Date(order.created_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })
   : '';
 
-const STATUS_COPY: Record<string, string> = {
-  pending: 'We have your order and are getting to it.',
-  processing: 'It is being made and packed right now.',
-  shipped: 'It is on its way to you.',
-  delivered: 'Delivered — we hope you love it.',
-  cancelled: 'This order was cancelled.',
-};
+/** Dates on the timeline are days, not minutes — the hour is noise here. */
+const day = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+
+const cancelled = order?.status === 'cancelled';
+const refunded = order?.payment_status === 'refunded';
+const awaiting = Boolean(order) && order!.payment_status === 'unpaid';
 ---
 
 <Layout title={order ? `Order ${order.order_number}` : 'Order not found'}>
@@ -93,47 +96,120 @@ const STATUS_COPY: Record<string, string> = {
           <div class="rounded-card border border-cream-300 bg-paper p-6 shadow-sm sm:p-8">
             <p
               class={`text-micro font-bold uppercase tracking-eyebrow ${
-                order.payment_status === 'paid' ? 'text-mint-deep' : 'text-lemon-deep'
+                cancelled
+                  ? 'text-ink-muted'
+                  : order.payment_status === 'paid'
+                    ? 'text-mint-deep'
+                    : 'text-lemon-deep'
               }`}
             >
-              {order.payment_status === 'paid' ? 'Paid · thank you' : 'Awaiting payment'}
+              {cancelled
+                ? refunded
+                  ? 'Cancelled · refunded'
+                  : 'Cancelled'
+                : order.payment_status === 'paid'
+                  ? 'Paid · thank you'
+                  : 'Awaiting payment'}
             </p>
             <h1 class="mt-1.5 font-display text-3xl font-extrabold text-ink sm:text-4xl">
               Order {order.order_number}
             </h1>
             <p class="mt-1.5 text-sm text-ink-muted">Placed {placed}</p>
 
-            {order.payment_status === 'paid' ? (
-              <p class="mt-4 rounded-field bg-mint-wash px-4 py-3 text-sm font-semibold text-mint-deep">
-                {STATUS_COPY[order.status]}
-              </p>
-            ) : (
+            {awaiting ? (
               <p class="mt-4 rounded-field bg-lemon-wash px-4 py-3 text-sm text-ink-body">
                 <span class="font-bold text-lemon-deep">We have not seen the transfer yet.</span> If
                 you have just paid, give it a minute and refresh — bank transfers take a moment to
                 land. Nothing is reserved until it does.
               </p>
+            ) : cancelled ? (
+              <p class="mt-4 rounded-field bg-cream-100 px-4 py-3 text-sm text-ink-body">
+                {statusCopy(order)}{' '}
+                {refunded
+                  ? 'The money has been sent back by bank transfer.'
+                  : 'Nothing was taken for it.'}
+              </p>
+            ) : (
+              <p class="mt-4 rounded-field bg-mint-wash px-4 py-3 text-sm font-semibold text-mint-deep">
+                {statusCopy(order)}
+              </p>
             )}
 
-            {order.status !== 'cancelled' && (
+            {/*
+              Four steps with the date each one happened under it. The bar
+              before this could only say which step was current — never when it
+              changed — which is no answer at all to "you said it shipped, when?"
+            */}
+            {steps.length > 0 && (
               <ol class="mt-6 flex gap-1.5">
-                {timeline.map((step, i) => (
-                  <li class="flex-1">
-                    <div
-                      class={`h-1.5 rounded-pill ${i <= reached ? 'bg-mint' : 'bg-cream-300'}`}
-                    />
+                {steps.map((step) => (
+                  <li class="min-w-0 flex-1">
+                    <div class={`h-1.5 rounded-pill ${step.done ? 'bg-mint' : 'bg-cream-300'}`} />
                     <p
-                      class={`mt-1.5 text-[11px] font-bold capitalize ${
-                        i <= reached ? 'text-ink-body' : 'text-ink-faint'
+                      class={`mt-1.5 truncate text-[11px] font-bold ${
+                        step.done ? 'text-ink-body' : 'text-ink-faint'
                       }`}
                     >
-                      {step}
+                      {step.label}
                     </p>
+                    <p class="text-[10px] text-ink-faint">{day(step.at)}</p>
                   </li>
                 ))}
               </ol>
             )}
+
+            {/* What happens next, in days, while there is still a next. */}
+            {!cancelled && !awaiting && order.status !== 'delivered' && (
+              <p class="mt-4 text-xs text-ink-muted">
+                {order.status === 'shipped'
+                  ? `Usually ${DELIVERY_DAYS.vietnam.min}–${DELIVERY_DAYS.vietnam.max} working days within Vietnam, ${DELIVERY_DAYS.international.min}–${DELIVERY_DAYS.international.max} elsewhere.`
+                  : `Orders are packed and handed to a courier within ${DISPATCH_DAYS.min}–${DISPATCH_DAYS.max} working days.`}{' '}
+                <a href="/shipping" class="font-bold text-mint-deep hover:underline">
+                  More on delivery
+                </a>
+              </p>
+            )}
           </div>
+
+          {/*
+            Tracking. "Shipped" on its own is a word the customer can read and
+            not act on; this is the half that lets them go and look.
+          */}
+          {(order.tracking_number || tracking) && (
+            <div class="mt-6 rounded-card border border-mint-soft bg-mint-wash p-6 shadow-sm sm:p-8">
+              <h2 class="font-display text-lg font-bold text-ink">Following your parcel</h2>
+              <dl class="mt-3 space-y-1.5 text-sm">
+                {order.carrier && (
+                  <div class="flex justify-between gap-3">
+                    <dt class="text-ink-muted">Carrier</dt>
+                    <dd class="font-semibold text-ink-body">{carrierLabel(order.carrier)}</dd>
+                  </div>
+                )}
+                {order.tracking_number && (
+                  <div class="flex justify-between gap-3">
+                    <dt class="text-ink-muted">Tracking number</dt>
+                    <dd class="break-all font-mono text-sm font-semibold text-ink-body">
+                      {order.tracking_number}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {tracking && (
+                <a
+                  href={tracking}
+                  target="_blank"
+                  rel="noopener"
+                  class="mt-4 block rounded-pill bg-btn-gradient px-6 py-3 text-center text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+                >
+                  Track it with the courier ↗
+                </a>
+              )}
+              <p class="mt-3 text-xs text-ink-muted">
+                A courier's own tracking can take a day to start showing movement after a parcel is
+                collected.
+              </p>
+            </div>
+          )}
 
           <div class="mt-6 rounded-card border border-cream-300 bg-paper p-6 shadow-sm sm:p-8">
             <h2 class="font-display text-lg font-bold text-ink">What you ordered</h2>
@@ -179,7 +255,7 @@ const STATUS_COPY: Record<string, string> = {
               </div>
               {order.amount_charged && order.charged_currency === 'VND' && (
                 <div class="flex justify-between">
-                  <dt class="text-ink-muted">Charged</dt>
+                  <dt class="text-ink-muted">{refunded ? 'Refunded' : 'Charged'}</dt>
                   <dd class="font-semibold text-ink-body">
                     {new Intl.NumberFormat('vi-VN').format(Number(order.amount_charged))}₫
                   </dd>
@@ -202,7 +278,21 @@ const STATUS_COPY: Record<string, string> = {
                 <span class="block">{row}</span>
               ))}
             </address>
+            {order.customer_phone && (
+              <p class="mt-2 text-sm text-ink-muted">{order.customer_phone}</p>
+            )}
             <p class="mt-3 text-xs text-ink-muted">{order.customer_email}</p>
+
+            <p class="mt-4 border-t border-cream-300 pt-3 text-xs text-ink-muted">
+              Wrong address, or something else to change?{' '}
+              <a
+                href={`mailto:${SHOP_EMAIL}?subject=${encodeURIComponent(`Order ${order.order_number}`)}`}
+                class="font-bold text-mint-deep hover:underline"
+              >
+                Email me
+              </a>{' '}
+              — if it has not been packed yet I can still change it.
+            </p>
           </div>
 
           <p class="mt-6 text-center text-sm text-ink-muted">

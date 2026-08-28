@@ -1,18 +1,23 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { SHOP_ADDRESS, SHOP_EMAIL, SHOP_PHONE } from '../lib/shop';
 
 /*
  * Contact. Three facts and nothing else: where the parcels come from, the
  * number, the address. No form — /request-product already owns that job, and a
  * second one here would only split where things land.
+ *
+ * The three facts come from lib/shop.ts because the policy pages and the
+ * packing slip state them too, and a workshop that has moved on one page and
+ * not the others is worse than one that has not moved at all.
  */
-const address = ['96/114 Dang Thuy Tram', 'Binh Loi Trung', 'Vietnam'];
+const address = SHOP_ADDRESS;
 
 /* What actually happens at that address, in the order it happens. */
 const workshopSteps = ['Designing', 'Sourcing', 'Bundling', 'Packing'];
 
-const phone = '+84 902 672 192';
-const email = 'zippyzack@proton.me';
+const phone = SHOP_PHONE;
+const email = SHOP_EMAIL;
 ---
 
 <Layout

@@ -89,6 +89,21 @@ const vndPerUsd = new Intl.NumberFormat('en-US').format(VND_PER_USD);
           </label>
 
           <label class="block sm:col-span-2">
+            <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Phone</span>
+            <input
+              name="phone"
+              type="tel"
+              required
+              autocomplete="tel"
+              placeholder="+84 …"
+              class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+            />
+            <span class="mt-1 block text-xs text-ink-muted">
+              For the courier — most will not attempt a delivery without one.
+            </span>
+          </label>
+
+          <label class="block sm:col-span-2">
             <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Address</span>
             <input
               name="line1"
@@ -299,7 +314,7 @@ const vndPerUsd = new Intl.NumberFormat('en-US').format(VND_PER_USD);
     const first = form.querySelector(':invalid') as HTMLElement | null;
     first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     (first as HTMLInputElement)?.focus();
-    showError('Fill in your name, email and address first.');
+    showError('Fill in your name, email, phone and address first.');
     return false;
   }
 
@@ -309,6 +324,7 @@ const vndPerUsd = new Intl.NumberFormat('en-US').format(VND_PER_USD);
     return {
       name: get('name'),
       email: get('email'),
+      phone: get('phone'),
       note: get('note'),
       address: {
         line1: get('line1'),

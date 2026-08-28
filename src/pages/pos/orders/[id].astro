@@ -5,10 +5,16 @@ import PosLayout from '../../../layouts/PosLayout.astro';
 import Flash from '../../../components/pos/Flash.astro';
 import { isAuthed, loginUrl } from '../../../lib/auth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
-import { formatAddress, orderItems, shippingAddress } from '../../../lib/orders';
+import { formatAddress, orderItems, pickList, shippingAddress } from '../../../lib/orders';
 import { money } from '../../../lib/makes';
 import { transferNote } from '../../../lib/payos';
-import { ORDER_STATUSES, type Order } from '../../../lib/database.types';
+import {
+  CARRIERS,
+  carrierLabel,
+  nextStatuses,
+  trackingLink,
+} from '../../../lib/fulfilment';
+import type { Order, OrderEvent } from '../../../lib/database.types';
 import { ON_IMG_ERROR, productImage } from '../../../lib/images';
 
 if (!isAuthed(Astro.cookies)) {
@@ -19,9 +25,7 @@ const { id } = Astro.params;
 const admin = getSupabaseAdmin();
 
 if (!admin) {
-  return Astro.redirect(
-    '/pos/orders?error=' + encodeURIComponent('Supabase is not connected.'),
-  );
+  return Astro.redirect('/pos/orders?error=' + encodeURIComponent('Supabase is not connected.'));
 }
 
 const { data, error } = await admin.from('orders').select('*').eq('id', id!).maybeSingle();
@@ -32,7 +36,22 @@ if (error || !data) {
 
 const order = data as Order;
 const items = orderItems(order);
+
+// The picking list and the history are independent lookups; ask together.
+const [picks, eventRes] = await Promise.all([
+  pickList(admin, items.units),
+  admin
+    .from('order_events')
+    .select('*')
+    .eq('order_id', order.id)
+    .order('created_at', { ascending: false })
+    .limit(50),
+]);
+
+const events = (eventRes.data ?? []) as OrderEvent[];
 const address = formatAddress(shippingAddress(order));
+const tracking = trackingLink(order);
+const moves = nextStatuses(order);
 
 const ok = Astro.url.searchParams.get('ok');
 const err = Astro.url.searchParams.get('error');
@@ -41,6 +60,24 @@ const when = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 
 const next = `/pos/orders/${order.id}`;
+
+/* Every date this order carries, in the order things happened. */
+const stamps = [
+  { label: 'Placed', at: order.created_at },
+  { label: 'Paid', at: order.paid_at },
+  { label: 'Shipped', at: order.shipped_at },
+  { label: 'Delivered', at: order.delivered_at },
+  { label: 'Cancelled', at: order.cancelled_at },
+  { label: 'Refunded', at: order.refunded_at },
+].filter((s) => s.at);
+
+const EVENT_ICON: Record<string, string> = {
+  status: '→',
+  payment: '₫',
+  stock: '⧉',
+  attention: '⚠',
+  note: '·',
+};
 ---
 
 <PosLayout title={`Order ${order.order_number}`} section="orders">
@@ -57,8 +94,12 @@ const next = `/pos/orders/${order.id}`;
       </nav>
       <h1 class="font-mono text-3xl font-extrabold text-ink sm:text-4xl">{order.order_number}</h1>
       <p class="mt-1.5 text-sm text-ink-muted">
-        Placed {when(order.created_at)}
-        {order.paid_at && ` · paid ${when(order.paid_at)}`}
+        {stamps.map((s, i) => (
+          <span>
+            {i > 0 && ' · '}
+            {s.label} {when(s.at)}
+          </span>
+        ))}
       </p>
     </div>
 
@@ -67,11 +108,19 @@ const next = `/pos/orders/${order.id}`;
         class={`rounded-pill px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
           order.payment_status === 'paid'
             ? 'bg-mint-wash text-mint-deep'
-            : 'bg-lemon-wash text-lemon-deep'
+            : order.payment_status === 'refunded'
+              ? 'bg-cream-200 text-ink-muted'
+              : 'bg-lemon-wash text-lemon-deep'
         }`}
       >
         {order.payment_status}
       </span>
+      <a
+        href={`/pos/orders/${order.id}/slip`}
+        class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+      >
+        Packing slip
+      </a>
       <a
         href={`mailto:${order.customer_email}?subject=${encodeURIComponent(`Your ZippyZack order ${order.order_number}`)}`}
         class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
@@ -84,95 +133,225 @@ const next = `/pos/orders/${order.id}`;
   <Flash ok={ok} error={err} />
 
   {
-    order.customer_note?.includes('⚠ Stock not adjusted') && (
+    /*
+     * The banner that used to say "check the note, then either restock or
+     * refund" and give you nothing to do it with. Every sentence in it is now
+     * a button.
+     */
+    order.needs_attention && (
       <div class="mb-5 rounded-card border border-lemon-soft bg-lemon-wash px-5 py-4">
         <p class="font-display text-sm font-bold text-lemon-deep">This one needs a human</p>
         <p class="mt-1 text-sm text-ink-body">
-          The payment landed but stock could not be drawn down — something sold out while the
-          customer was paying. Check the note below, then either restock or refund.
+          {order.attention_reason ?? 'Flagged for attention.'}
         </p>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          {!order.stock_committed && order.payment_status === 'paid' && (
+            <form method="POST" action="/api/pos/order-stock">
+              <input type="hidden" name="id" value={order.id} />
+              <input type="hidden" name="next" value={next} />
+              <input type="hidden" name="action" value="draw" />
+              <button
+                type="submit"
+                class="rounded-pill bg-forest px-4 py-2 text-xs font-bold text-paper transition-all duration-fast ease-out hover:brightness-110"
+                title="Draw this order's units off the shelf now that they are back in stock"
+              >
+                Draw the stock now
+              </button>
+            </form>
+          )}
+
+          <form method="POST" action="/api/pos/order-attention">
+            <input type="hidden" name="id" value={order.id} />
+            <input type="hidden" name="next" value={next} />
+            <input type="hidden" name="action" value="clear" />
+            <button
+              type="submit"
+              class="rounded-pill border border-lemon-deep/30 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+            >
+              Mark as sorted
+            </button>
+          </form>
+        </div>
       </div>
     )
   }
 
   <div class="grid gap-5 lg:grid-cols-[1fr_320px]">
     <!-- Items -->
-    <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
-      <h2 class="font-display text-lg font-bold text-ink">Items</h2>
+    <div class="space-y-5">
+      <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <h2 class="font-display text-lg font-bold text-ink">Items</h2>
 
-      <ul class="mt-4 divide-y divide-cream-300">
+        <ul class="mt-4 divide-y divide-cream-300">
+          {
+            items.lines.map((line) => (
+              <li class="flex items-center gap-3 py-3">
+                <img
+                  src={productImage(line.image)}
+                  onerror={ON_IMG_ERROR}
+                  alt=""
+                  class="h-12 w-12 shrink-0 rounded-field object-cover"
+                  loading="lazy"
+                />
+                <div class="min-w-0 flex-1">
+                  <a
+                    href={line.href}
+                    target="_blank"
+                    rel="noopener"
+                    class="block font-display text-sm font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
+                  >
+                    {line.name}
+                  </a>
+                  <p class="text-xs text-ink-muted">
+                    {line.qty} × {money(line.unitPrice)}
+                    {line.kind === 'bundle' && ' · bundle'}
+                  </p>
+                </div>
+                <span class="shrink-0 font-display text-sm font-extrabold text-ink">
+                  {money(line.lineTotal)}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <dl class="mt-4 space-y-1.5 border-t border-cream-300 pt-4 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Subtotal</dt>
+            <dd class="font-semibold text-ink-body">{money(Number(order.subtotal))}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-ink-muted">Shipping</dt>
+            <dd class="font-semibold text-ink-body">
+              {Number(order.shipping_total) === 0 ? 'Free' : money(Number(order.shipping_total))}
+            </dd>
+          </div>
+          <div class="flex justify-between border-t border-cream-300 pt-1.5">
+            <dt class="font-display font-bold text-ink">Total</dt>
+            <dd class="font-display text-lg font-extrabold text-ink">
+              {money(Number(order.total))}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <!--
+        The picking list. This used to print raw product UUIDs, which made it
+        the one part of the POS nobody could act on. Bundles are broken open
+        here — a bundle line hides its components, so without this half the
+        order is invisible.
+      -->
+      <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 class="font-display text-lg font-bold text-ink">Off the shelf</h2>
+          <span
+            class={`rounded-pill px-2.5 py-1 text-micro font-bold uppercase tracking-wide ${
+              order.stock_committed ? 'bg-mint-wash text-mint-deep' : 'bg-cream-200 text-ink-muted'
+            }`}
+          >
+            {order.stock_committed ? 'stock drawn' : 'not drawn'}
+          </span>
+        </div>
+
         {
-          items.lines.map((line) => (
-            <li class="flex items-center gap-3 py-3">
-              <img
-                src={productImage(line.image)}
-                onerror={ON_IMG_ERROR}
-                alt=""
-                class="h-12 w-12 shrink-0 rounded-field object-cover"
-                loading="lazy"
-              />
-              <div class="min-w-0 flex-1">
-                <a
-                  href={line.href}
-                  target="_blank"
-                  rel="noopener"
-                  class="block font-display text-sm font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
-                >
-                  {line.name}
-                </a>
-                <p class="text-xs text-ink-muted">
-                  {line.qty} × {money(line.unitPrice)}
-                  {line.kind === 'bundle' && ' · bundle'}
-                </p>
-              </div>
-              <span class="shrink-0 font-display text-sm font-extrabold text-ink">
-                {money(line.lineTotal)}
-              </span>
-            </li>
-          ))
-        }
-      </ul>
-
-      <dl class="mt-4 space-y-1.5 border-t border-cream-300 pt-4 text-sm">
-        <div class="flex justify-between">
-          <dt class="text-ink-muted">Subtotal</dt>
-          <dd class="font-semibold text-ink-body">{money(Number(order.subtotal))}</dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-ink-muted">Shipping</dt>
-          <dd class="font-semibold text-ink-body">
-            {Number(order.shipping_total) === 0 ? 'Free' : money(Number(order.shipping_total))}
-          </dd>
-        </div>
-        <div class="flex justify-between border-t border-cream-300 pt-1.5">
-          <dt class="font-display font-bold text-ink">Total</dt>
-          <dd class="font-display text-lg font-extrabold text-ink">{money(Number(order.total))}</dd>
-        </div>
-      </dl>
-
-      {
-        /*
-         * What actually came off the shelf. A bundle line hides its components,
-         * so without this the picking list would be guesswork.
-         */
-        items.units.length > 0 && (
-          <details class="mt-4 border-t border-cream-300 pt-4">
-            <summary class="cursor-pointer text-xs font-bold uppercase tracking-eyebrow text-ink-muted">
-              Stock drawn ({items.units.length} product{items.units.length === 1 ? '' : 's'})
-            </summary>
-            <ul class="mt-2 space-y-1">
-              {items.units.map((unit) => (
-                <li class="font-mono text-[11px] text-ink-faint">
-                  {unit.quantity} × {unit.product_id}
+          picks.length === 0 ? (
+            <p class="mt-3 text-sm text-ink-muted">No stock lines recorded against this order.</p>
+          ) : (
+            <ul class="mt-3 divide-y divide-cream-300">
+              {picks.map((pick) => (
+                <li class="flex items-center gap-3 py-2.5">
+                  <img
+                    src={productImage(pick.image)}
+                    onerror={ON_IMG_ERROR}
+                    alt=""
+                    class="h-9 w-9 shrink-0 rounded-field object-cover"
+                    loading="lazy"
+                  />
+                  <div class="min-w-0 flex-1">
+                    {pick.slug ? (
+                      <a
+                        href={`/store/${pick.slug}`}
+                        target="_blank"
+                        rel="noopener"
+                        class="block truncate text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:text-mint-deep"
+                      >
+                        {pick.name}
+                      </a>
+                    ) : (
+                      <span class="block truncate text-sm font-semibold text-lemon-deep">
+                        {pick.name}
+                      </span>
+                    )}
+                    <span class="block text-[11px] text-ink-faint">
+                      {pick.sku ? `${pick.sku} · ` : ''}
+                      {pick.stock === null ? 'no longer stocked' : `${pick.stock} left`}
+                    </span>
+                  </div>
+                  <span class="shrink-0 font-display text-sm font-extrabold text-ink">
+                    ×{pick.quantity}
+                  </span>
                 </li>
               ))}
             </ul>
-          </details>
-        )
-      }
+          )
+        }
+
+        {
+          order.stock_committed && (
+            <form method="POST" action="/api/pos/order-stock" class="mt-4 border-t border-cream-300 pt-3">
+              <input type="hidden" name="id" value={order.id} />
+              <input type="hidden" name="next" value={next} />
+              <input type="hidden" name="action" value="restock" />
+              <button
+                type="submit"
+                data-confirm="Put every one of these back on the shelf?"
+                class="text-xs font-bold text-ink-muted underline transition-colors duration-fast ease-out hover:text-ink"
+              >
+                Put it all back on the shelf
+              </button>
+            </form>
+          )
+        }
+      </div>
+
+      <!--
+        History. updated_at only ever shows the last touch, which is no answer
+        at all to "you told me it shipped last Tuesday".
+      -->
+      <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <h2 class="font-display text-lg font-bold text-ink">History</h2>
+
+        {
+          events.length === 0 ? (
+            <p class="mt-3 text-sm text-ink-muted">
+              Nothing recorded yet. Events start from the moment this order is next touched.
+            </p>
+          ) : (
+            <ol class="mt-3 space-y-2.5">
+              {events.map((event) => (
+                <li class="flex gap-3">
+                  <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-pill bg-cream-100 text-xs text-ink-muted">
+                    {EVENT_ICON[event.kind] ?? '·'}
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm text-ink-body">
+                      {event.message ??
+                        `${event.from_status ?? '?'} → ${event.to_status ?? '?'}`}
+                    </p>
+                    <p class="text-[11px] text-ink-faint">
+                      {when(event.created_at)} · {event.actor}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )
+        }
+      </div>
     </div>
 
-    <!-- Customer + status -->
+    <!-- Customer, status, delivery, payment -->
     <div class="space-y-5">
       <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
         <h2 class="font-display text-base font-bold text-ink">Ship to</h2>
@@ -180,9 +359,19 @@ const next = `/pos/orders/${order.id}`;
         <address class="mt-1 text-sm not-italic leading-relaxed text-ink-muted">
           {address.map((row) => <span class="block">{row}</span>)}
         </address>
+        {
+          order.customer_phone && (
+            <a
+              href={`tel:${order.customer_phone.replace(/\s/g, '')}`}
+              class="mt-2 block text-sm font-semibold text-mint-deep hover:underline"
+            >
+              {order.customer_phone}
+            </a>
+          )
+        }
         <a
           href={`mailto:${order.customer_email}`}
-          class="mt-3 block break-all text-xs font-semibold text-mint-deep hover:underline"
+          class="mt-1 block break-all text-xs font-semibold text-mint-deep hover:underline"
         >
           {order.customer_email}
         </a>
@@ -197,33 +386,136 @@ const next = `/pos/orders/${order.id}`;
         }
       </div>
 
+      <!--
+        Status. The dropdown only offers moves this order can actually make —
+        an unpaid order cannot be marked shipped, a delivered one cannot walk
+        back to pending — so the rules are visible rather than being a flash
+        message after the fact.
+      -->
       <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
-        <h2 class="font-display text-base font-bold text-ink">Status</h2>
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="font-display text-base font-bold text-ink">Status</h2>
+          <span class="rounded-pill bg-cream-100 px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-ink-body">
+            {order.status}
+          </span>
+        </div>
         <p class="mt-1 text-xs text-ink-muted">The customer sees this on their tracking page.</p>
 
-        <form method="POST" action="/api/pos/order-status" class="mt-3 space-y-2">
-          <input type="hidden" name="id" value={order.id} />
-          <input type="hidden" name="next" value={next} />
-          <select
-            name="status"
-            class="w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
-          >
-            {
-              ORDER_STATUSES.map((s) => (
-                <option value={s} selected={order.status === s}>
-                  {s[0].toUpperCase() + s.slice(1)}
-                </option>
-              ))
-            }
-          </select>
-          <button
-            type="submit"
-            class="w-full rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
-          >
-            Save status
-          </button>
-        </form>
+        {
+          moves.length === 0 ? (
+            <p class="mt-3 rounded-field bg-cream-100 px-3 py-2.5 text-xs text-ink-muted">
+              {order.payment_status === 'paid'
+                ? 'This order is finished — there is nowhere left to move it.'
+                : 'Nothing can move until the payment lands. Cancel it if it never will.'}
+            </p>
+          ) : (
+            <form method="POST" action="/api/pos/order-status" class="mt-3 space-y-2.5">
+              <input type="hidden" name="id" value={order.id} />
+              <input type="hidden" name="next" value={next} />
+
+              <select
+                name="status"
+                id="status-select"
+                class="w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+              >
+                {moves.map((s) => (
+                  <option value={s}>Move to {s}</option>
+                ))}
+              </select>
+
+              {/*
+                Tracking travels with the move to 'shipped' rather than sitting
+                in a second form to be forgotten: a parcel is given its
+                consignment number at the moment it goes out, or never.
+              */}
+              {moves.includes('shipped') && (
+                <div id="shipping-fields" class="hidden space-y-2 rounded-field bg-cream-50 p-3">
+                  <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+                    Tracking (optional)
+                  </p>
+                  <select
+                    name="carrier"
+                    class="w-full rounded-field border border-cream-300 bg-paper px-3 py-2 text-sm text-ink focus:border-mint-mid focus:outline-none"
+                  >
+                    <option value="">Carrier…</option>
+                    {CARRIERS.map((c) => (
+                      <option value={c.key} selected={order.carrier === c.key}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    name="tracking_number"
+                    value={order.tracking_number ?? ''}
+                    placeholder="Consignment number"
+                    class="w-full rounded-field border border-cream-300 bg-paper px-3 py-2 font-mono text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none"
+                  />
+                  <input
+                    name="tracking_url"
+                    type="url"
+                    value={order.tracking_url ?? ''}
+                    placeholder="Tracking link (only if the courier is not listed)"
+                    class="w-full rounded-field border border-cream-300 bg-paper px-3 py-2 text-xs text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {/*
+                Cancelling does not restock on its own — by then the yarn may
+                well have been wound — so it is a deliberate tick.
+              */}
+              {moves.includes('cancelled') && order.stock_committed && (
+                <label id="restock-field" class="hidden items-start gap-2 rounded-field bg-cream-50 p-3">
+                  <input
+                    type="checkbox"
+                    name="restock"
+                    class="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-cream-400 accent-forest"
+                  />
+                  <span class="text-xs text-ink-body">
+                    Put the stock back on the shelf as well
+                  </span>
+                </label>
+              )}
+
+              <button
+                type="submit"
+                class="w-full rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+              >
+                Save status
+              </button>
+            </form>
+          )
+        }
       </div>
+
+      {
+        /* Where the parcel is, once there is a parcel. */
+        (order.tracking_number || order.carrier) && (
+          <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+            <h2 class="font-display text-base font-bold text-ink">Delivery</h2>
+            <dl class="mt-2 space-y-1.5 text-xs">
+              <div>
+                <dt class="text-ink-muted">Carrier</dt>
+                <dd class="font-semibold text-ink-body">{carrierLabel(order.carrier) || '—'}</dd>
+              </div>
+              <div>
+                <dt class="text-ink-muted">Consignment</dt>
+                <dd class="break-all font-mono text-ink-body">{order.tracking_number ?? '—'}</dd>
+              </div>
+            </dl>
+            {tracking && (
+              <a
+                href={tracking}
+                target="_blank"
+                rel="noopener"
+                class="mt-3 block rounded-pill border border-cream-300 bg-cream-50 px-4 py-2 text-center text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+              >
+                Follow the parcel ↗
+              </a>
+            )}
+          </div>
+        )
+      }
 
       <div class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
         <h2 class="font-display text-base font-bold text-ink">Payment</h2>
@@ -256,12 +548,126 @@ const next = `/pos/orders/${order.id}`;
             <dt class="text-ink-muted">Payment link</dt>
             <dd class="break-all font-mono text-ink-body">{order.provider_payment_id ?? '—'}</dd>
           </div>
+          {
+            order.refunded_at && (
+              <div>
+                <dt class="text-ink-muted">Refunded</dt>
+                <dd class="font-semibold text-ink-body">
+                  {when(order.refunded_at)}
+                  {order.refund_reference && (
+                    <span class="block break-all font-mono font-normal text-ink-muted">
+                      {order.refund_reference}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            )
+          }
         </dl>
-        <p class="mt-3 text-xs text-ink-muted">
-          Refunds are sent back by bank transfer — payOS does not reverse a VietQR payment for you.
-          The bank reference is what to quote.
-        </p>
+
+        {
+          /*
+           * Recording a refund, not making one — payOS does not reverse a
+           * VietQR transfer, so the money goes back through a banking app and
+           * this is the note that it did. Without it the only way to mark an
+           * order refunded was the Supabase table editor.
+           */
+          order.payment_status === 'paid' ? (
+            <details class="mt-4 border-t border-cream-300 pt-3">
+              <summary class="cursor-pointer text-xs font-bold uppercase tracking-eyebrow text-ink-muted">
+                Record a refund
+              </summary>
+              <form method="POST" action="/api/pos/order-refund" class="mt-3 space-y-2">
+                <input type="hidden" name="id" value={order.id} />
+                <input type="hidden" name="next" value={next} />
+                <p class="text-xs text-ink-muted">
+                  Send the transfer in your banking app first — this only writes down that you did.
+                </p>
+                <input
+                  name="reference"
+                  placeholder="Transfer reference"
+                  class="w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2 font-mono text-xs text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none"
+                />
+                {order.stock_committed && (
+                  <label class="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      name="restock"
+                      class="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-cream-400 accent-forest"
+                    />
+                    <span class="text-xs text-ink-body">Put the stock back as well</span>
+                  </label>
+                )}
+                <button
+                  type="submit"
+                  data-confirm="Mark this order refunded?"
+                  class="w-full rounded-pill border border-cream-300 bg-cream-100 px-4 py-2 text-xs font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+                >
+                  Record the refund
+                </button>
+              </form>
+            </details>
+          ) : (
+            <p class="mt-3 border-t border-cream-300 pt-3 text-xs text-ink-muted">
+              Refunds are sent back by bank transfer — payOS does not reverse a VietQR payment for
+              you. The bank reference is what to quote.
+            </p>
+          )
+        }
       </div>
+
+      {
+        !order.needs_attention && (
+          <form method="POST" action="/api/pos/order-attention" class="rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+            <input type="hidden" name="id" value={order.id} />
+            <input type="hidden" name="next" value={next} />
+            <input type="hidden" name="action" value="raise" />
+            <h2 class="font-display text-base font-bold text-ink">Something wrong?</h2>
+            <p class="mt-1 text-xs text-ink-muted">
+              Flag it and this order gets its own tab on the list, so it does not slip away.
+            </p>
+            <input
+              name="reason"
+              placeholder="Customer says it never arrived…"
+              class="mt-2.5 w-full rounded-field border border-cream-300 bg-cream-50 px-3 py-2 text-xs text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none"
+            />
+            <button
+              type="submit"
+              class="mt-2 w-full rounded-pill border border-cream-300 bg-cream-100 px-4 py-2 text-xs font-bold text-ink transition-colors duration-fast ease-out hover:bg-cream-200"
+            >
+              Flag for attention
+            </button>
+          </form>
+        )
+      }
     </div>
   </div>
 </PosLayout>
+
+<script>
+  /*
+   * The tracking fields and the restock tick only mean anything for one
+   * destination each, so they appear when that destination is chosen rather
+   * than sitting there being ignored the rest of the time.
+   */
+  const select = document.getElementById('status-select') as HTMLSelectElement | null;
+  const shipping = document.getElementById('shipping-fields');
+  const restock = document.getElementById('restock-field');
+
+  function syncFields() {
+    if (!select) return;
+    shipping?.classList.toggle('hidden', select.value !== 'shipped');
+    restock?.classList.toggle('hidden', select.value !== 'cancelled');
+    restock?.classList.toggle('flex', select.value === 'cancelled');
+  }
+
+  select?.addEventListener('change', syncFields);
+  syncFields();
+
+  // Anything that moves stock or money asks first, once.
+  document.querySelectorAll<HTMLButtonElement>('[data-confirm]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      if (!confirm(button.dataset.confirm!)) event.preventDefault();
+    });
+  });
+</script>

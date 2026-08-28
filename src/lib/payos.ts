@@ -71,6 +71,8 @@ export interface StartPaymentInput {
   name: string;
   email: string;
   origin: string;
+  /** When the QR stops working. Kept in step with the order's own expiry. */
+  expiresAt: Date;
 }
 
 export interface StartedPayment {
@@ -103,6 +105,13 @@ export async function startPayment(input: StartPaymentInput): Promise<StartedPay
     })),
     returnUrl: back,
     cancelUrl: `${input.origin}/checkout?cancelled=1`,
+    /*
+     * payOS takes seconds, not milliseconds. Giving the link the same deadline
+     * the order carries is what keeps the sweep honest: without it a QR code
+     * stays scannable after we have written the order off, and a customer can
+     * pay for something already cancelled.
+     */
+    expiredAt: Math.floor(input.expiresAt.getTime() / 1000),
   });
 
   return {

@@ -1,0 +1,131 @@
+---
+/*
+ * Care instructions.
+ *
+ * The other footer link that was a 404. Less urgent than shipping and more
+ * useful over time: this is the page somebody comes back to a year later
+ * because the blanket needs washing and they have forgotten what it is made of.
+ *
+ * Written as advice rather than as policy, because that is what it is. The one
+ * rule it insists on is reading the band — anything here is a default that a
+ * specific yarn can overrule.
+ */
+import PolicyPage from '../components/PolicyPage.astro';
+import { SHOP_EMAIL } from '../lib/shop';
+---
+
+<PolicyPage
+  title="Care Instructions"
+  eyebrow="Making it last"
+  description="How to wash, dry, block and store crocheted pieces and the yarn they are made from, without felting anything."
+  intro="Crochet outlives almost everything else in a wardrobe if it is treated gently. Most of that is one rule — do not shock it with heat or agitation."
+  updated="2026-08-28"
+>
+  <div class="callout">
+    <p>
+      <strong>Read the band first.</strong> Every yarn I sell keeps its own label, and what the
+      manufacturer says beats anything on this page. Superwash merino and pure alpaca want opposite
+      things.
+    </p>
+  </div>
+
+  <h2>Washing</h2>
+
+  <p>
+    Hand wash in cool water — lukewarm at most, and the same temperature start to finish. It is not
+    heat on its own that felts wool, it is the change in temperature combined with movement, so a
+    cold rinse after a warm wash is exactly what to avoid.
+  </p>
+
+  <ol>
+    <li>Fill a basin with cool water and a little wool wash or mild shampoo.</li>
+    <li>Submerge the piece and press it gently. Do not rub, wring or swirl.</li>
+    <li>Leave it fifteen minutes.</li>
+    <li>Rinse in water of the same temperature until it runs clear.</li>
+    <li>Press the water out against the side of the basin — never twist.</li>
+  </ol>
+
+  <p>
+    Roll the piece in a dry towel and press to take the last of the water out. Then lay it flat, in
+    shape, out of direct sun. A wet crocheted piece hung on a line will stretch under its own weight
+    and stay stretched.
+  </p>
+
+  <h3>The machine</h3>
+
+  <p>
+    Only if the band says superwash, and only then in a mesh bag on a wool cycle at 30°C or below,
+    with the spin as low as it goes. Never a tumble dryer. Cotton and acrylic pieces tolerate a
+    gentle machine wash better than wool does, but they still lose their shape in a hot dryer.
+  </p>
+
+  <h2>Blocking</h2>
+
+  <p>
+    Blocking is what turns a slightly wonky square into a flat one, and it is the difference between
+    a project that looks homemade and one that looks handmade. It is worth doing once, after
+    finishing, and again after each wash if the piece needs it.
+  </p>
+
+  <ul>
+    <li>
+      <strong>Wet blocking</strong> — soak, squeeze out, pin to shape on a towel or a foam mat, and
+      leave until bone dry. Best for wool.
+    </li>
+    <li>
+      <strong>Steam blocking</strong> — pin to shape dry, then hover a steam iron just above the
+      surface without touching it. Fast, and good for cotton. Never on acrylic.
+    </li>
+    <li>
+      <strong>Acrylic</strong> — heat permanently "kills" the fibre and it will not come back. If you
+      want a crisp edge on an acrylic piece that is how to get it, but there is no undoing it.
+    </li>
+  </ul>
+
+  <h2>Storing</h2>
+
+  <p>
+    Fold, do not hang. A hanger puts the entire weight of a garment on two points of a fabric built
+    to stretch, and shoulders never recover.
+  </p>
+
+  <ul>
+    <li>Somewhere dry and dark — sunlight fades dyed yarn faster than washing does.</li>
+    <li>Loosely, with room to breathe. A vacuum bag crushes the stitch pattern flat.</li>
+    <li>
+      Cedar or lavender near wool, not mothballs. Moths go for natural fibres and ignore acrylic
+      entirely.
+    </li>
+    <li>Clean before storing for a season. Moths are drawn to the traces we leave in fabric.</li>
+  </ul>
+
+  <h2>Pilling and snags</h2>
+
+  <p>
+    Pills are normal on any yarn that has a halo, and they are not a fault — they are short fibres
+    working loose. A fabric shaver or a sweater comb takes them off. Do not pull them; that drags the
+    fibres they are attached to.
+  </p>
+
+  <p>
+    A snagged loop is not a hole. Do not cut it. Use a crochet hook or a needle to work the pulled
+    strand back through to the wrong side and ease the stitches either side of it back into shape.
+  </p>
+
+  <h2>Looking after your tools</h2>
+
+  <ul>
+    <li>Wipe wooden and bamboo hooks dry, and keep them out of water — they can warp and splinter.</li>
+    <li>A little wax or oil on a wooden hook once a year keeps the shaft smooth.</li>
+    <li>Store hooks in a roll or a case. Loose in a drawer is how points get chipped.</li>
+    <li>Keep stitch markers and scissors somewhere they cannot snag your yarn.</li>
+  </ul>
+
+  <h2>When in doubt</h2>
+
+  <p>
+    Test on something that does not matter — a swatch, a tail, the inside of a seam. And if you are
+    unsure what a particular piece will take, <a href={`mailto:${SHOP_EMAIL}`}>ask me</a>. I know
+    what went into it, and I would much rather answer than hear that something felted.
+  </p>
+</PolicyPage>
