@@ -28,8 +28,8 @@ if (urlSearch) {
 }
 
 /*
- * Two bands. Featured makes get lifted out entirely and shown first on the hot
- * flame row; everything else follows in the same Beginner → Advanced ramp the
+ * Two bands. Featured makes get lifted out entirely and shown first on the
+ * lime row; everything else follows in the same Beginner → Advanced ramp the
  * difficulty tags read as. Makes with no difficulty set sit at the end.
  */
 const rank = (difficulty: string | null | undefined) => {
@@ -60,65 +60,21 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
         Getting started with crocheting? Or eyeing on a crochet project from Pinterest? We've got you covered.
       </p>
 
-      <form method="GET" action="/makes" class="mt-6 flex max-w-md gap-2">
-        <div class="relative flex-1">
-          <svg
-            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="search"
-            name="q"
-            value={urlSearch}
-            placeholder="Search makes…"
-            class="w-full rounded-pill border border-cream-300 bg-paper py-2.5 pl-9 pr-4 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
-          />
-        </div>
-        <button
-          type="submit"
-          class="rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
-        >
-          Go
-        </button>
-      </form>
-
-      {
-        difficulties.length > 1 && (
-          <div class="mt-4 flex flex-wrap gap-1.5">
-            {difficulties.map((d) => (
-              <a
-                href={`/makes?difficulty=${encodeURIComponent(d as string)}${urlSearch ? `&q=${encodeURIComponent(urlSearch)}` : ''}`}
-                class={`rounded-pill px-3.5 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
-                  urlDifficulty === d
-                    ? 'bg-forest text-paper'
-                    : 'bg-paper text-ink-body hover:bg-cream-200'
-                }`}
-              >
-                {d}
-              </a>
-            ))}
-          </div>
-        )
-      }
     </div>
   </section>
 
   <!--
-    Featured row. Full-bleed flame so it reads as a band across the page rather
-    than as another card, and the paper cards sit on it at full contrast. Flame
+    Featured row. Full-bleed lime so it reads as a band across the page rather
+    than as another card, and the paper cards sit on it at full contrast. Lime
     is a fill: every label on it is ink.
   -->
   {
     featured.length > 0 && (
-      <section class="border-b border-flame-mid/40 bg-flame">
+      <section class="border-b border-lime-mid/40 bg-lime">
         <div class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
           <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h2 class="flex items-center gap-2 font-display text-2xl font-extrabold text-ink">
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-pill bg-ink text-sm text-flame">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-pill bg-ink text-sm text-lime">
                 ★
               </span>
               Featured makes
@@ -138,6 +94,56 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
   }
 
   <div class="mx-auto max-w-container px-4 py-12 sm:px-6 lg:px-8">
+    <!--
+      Search and difficulty filter sit with the browsable list they drive,
+      under the featured row rather than under the page title.
+    -->
+    <form method="GET" action="/makes" class="flex max-w-md gap-2">
+      <div class="relative flex-1">
+        <svg
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="search"
+          name="q"
+          value={urlSearch}
+          placeholder="Search makes…"
+          class="w-full rounded-pill border border-cream-300 bg-paper py-2.5 pl-9 pr-4 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
+        />
+      </div>
+      <button
+        type="submit"
+        class="rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+      >
+        Go
+      </button>
+    </form>
+
+    {
+      difficulties.length > 1 && (
+        <div class="mt-4 flex flex-wrap gap-1.5">
+          {difficulties.map((d) => (
+            <a
+              href={`/makes?difficulty=${encodeURIComponent(d as string)}${urlSearch ? `&q=${encodeURIComponent(urlSearch)}` : ''}`}
+              class={`rounded-pill px-3.5 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
+                urlDifficulty === d
+                  ? 'bg-forest text-paper'
+                  : 'bg-paper text-ink-body hover:bg-cream-200'
+              }`}
+            >
+              {d}
+            </a>
+          ))}
+        </div>
+      )
+    }
+
+    <div class="mt-8">
     {
       makes.length === 0 ? (
         <div class="py-20 text-center">
@@ -174,6 +180,7 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
         )
       )
     }
+    </div>
 
     <!-- How this works -->
     <section class="mt-16 rounded-card border border-cream-300 bg-paper p-6 sm:p-8">

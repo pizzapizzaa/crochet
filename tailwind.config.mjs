@@ -46,16 +46,16 @@ export default {
           300: '#EBD9A0', // hairline borders
           400: '#DCC784',
         },
-        // The one hot accent, reserved for "featured". Not a fifth brand
+        // The one extra accent, reserved for "featured". Not a fifth brand
         // colour — it exists so ONE thing on a page can outrank lemon and
-        // mint. Same rule as the other bright fills: flame is a FILL and
-        // takes an ink label (4.8:1); flame-deep is the readable text shade.
-        flame: {
-          DEFAULT: '#FF7A2E', // fill only
-          deep: '#8A3400', // the readable one
-          mid: '#D75A00',
-          soft: '#FFC6A1',
-          wash: '#FFF1E6',
+        // mint. Same rule as the other bright fills: lime is a FILL and
+        // takes an ink label (8:1); lime-deep is the readable text shade.
+        lime: {
+          DEFAULT: '#8BE56F', // fill only
+          deep: '#37701F', // the readable one
+          mid: '#5CB33F',
+          soft: '#C4F2B3',
+          wash: '#EFFBE9',
         },
         forest: {
           DEFAULT: '#005247',

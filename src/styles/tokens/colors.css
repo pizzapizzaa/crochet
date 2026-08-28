@@ -26,13 +26,13 @@
 /* --- Lemon ramp — lemon itself is a fill; lemon-deep is the readable one --- */
 --lemon-deep:#7A5E00;--lemon-mid:#C9A400;--lemon-soft:#FFF4A6;--lemon-wash:#FFFBE4;
 
-/* --- Flame ramp — the one hot accent, reserved for "featured".
+/* --- Lime ramp — the one extra accent, reserved for "featured".
    Not a fifth brand colour: it exists so ONE thing on a page can outrank
    lemon and mint, and it earns nothing else. Same rule as the other two
-   bright fills — flame is a FILL, ink is its label (4.8:1); flame-deep is
+   bright fills — lime is a FILL, ink is its label (8:1); lime-deep is
    the readable one for text on cream. --- */
---flame:#FF7A2E;
---flame-deep:#8A3400;--flame-mid:#D75A00;--flame-soft:#FFC6A1;--flame-wash:#FFF1E6;
+--lime:#8BE56F;
+--lime-deep:#37701F;--lime-mid:#5CB33F;--lime-soft:#C4F2B3;--lime-wash:#EFFBE9;
 
 /* --- Semantic: text (all >=4.8:1 on cream or paper) --- */
 --text-strong:var(--ink);          /* 9.5:1 on cream  */
@@ -54,7 +54,7 @@
 --surface-inverse-deep:var(--forest-deep);
 --surface-accent:var(--mint-wash);
 --surface-highlight:var(--lemon-wash);
---surface-featured:var(--flame);
+--surface-featured:var(--lime);
 
 /* --- Semantic: border --- */
 --border-hairline:var(--cream-300);
