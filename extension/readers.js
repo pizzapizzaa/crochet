@@ -107,7 +107,14 @@ export function readProduct() {
    */
   const asking = [];
   const crossed = [];
-  if (offerPrices.length === 0) {
+  /*
+   * The text the asking price was read out of, and the text around it. On a
+   * page that publishes no currency anywhere, the symbol sitting in front of
+   * the number is the only thing that says what this money is — so it is kept
+   * rather than thrown away with the rest of the string.
+   */
+  const priceTexts = [];
+  {
     const candidates = document.querySelectorAll(
       '[itemprop="price"], [data-price], [class*="price" i], [id*="price" i], del, s',
     );
@@ -120,19 +127,115 @@ export function readProduct() {
       const struck =
         el.closest('s, del, .compare-at, [class*="compare" i], [class*="was" i], [class*="strike" i]') !==
         null;
-      (struck ? crossed : asking).push(value);
+      // The numbers are only read off the page when there is no offer to read
+      // them from; the text is always worth having, because an offer can name
+      // a price without naming a currency.
+      if (offerPrices.length === 0) (struck ? crossed : asking).push(value);
+      if (struck) continue;
+      priceTexts.push(
+        clean(el.textContent).slice(0, 60),
+        clean(el.parentElement ? el.parentElement.textContent : '').slice(0, 120),
+      );
     }
   }
 
   const price = offerPrices.length ? Math.min(...offerPrices) : (asking[0] ?? null);
   const compareAt = crossed.length ? Math.max(...crossed) : null;
 
+  /* ── Currency ────────────────────────────────────────────────
+   *
+   * Worth as much care as the number itself. The catalogue is in dollars and
+   * almost nothing we import is, so a price read without its currency is how
+   * ¥120 of yarn becomes a $120 product and the margin goes quietly the wrong
+   * way. A page with structured data names the currency outright. A great many
+   * shops — including most of the Chinese ones we buy from — name it nowhere
+   * at all, and have only the symbol in front of the price.
+   */
+  const SYMBOL_CODES = [
+    // Longest first: "US$" and "A$" both end in the sign for dollars, so a
+    // plain "$" can only be tried once the qualified ones have been ruled out.
+    ['US$', 'USD'],
+    ['A$', 'AUD'],
+    ['C$', 'CAD'],
+    ['NZ$', 'NZD'],
+    ['HK$', 'HKD'],
+    ['NT$', 'TWD'],
+    ['S$', 'SGD'],
+    ['R$', 'BRL'],
+    ['€', 'EUR'],
+    ['£', 'GBP'],
+    ['₫', 'VND'],
+    ['₹', 'INR'],
+    ['₩', 'KRW'],
+    ['฿', 'THB'],
+    ['₱', 'PHP'],
+    ['₽', 'RUB'],
+    ['₺', 'TRY'],
+  ];
+
+  /*
+   * ¥ is both yuan and yen, and the page is the only tiebreaker there is. A
+   * Japanese shop says so in its lang or its hostname; everything else pricing
+   * in ¥ here is a Chinese supplier, which is nearly all of them. Guessing yen
+   * for a yuan price would be worse than not converting: the rate is out by a
+   * factor of twenty, and the figure would still look plausible.
+   */
+  const yenish =
+    /^ja\b/i.test(document.documentElement.lang || '') || /\.jp$/i.test(location.hostname);
+
+  // Only codes the shop might hold a rate for, so a stray "NEW" or "ADD" in a
+  // price row cannot be mistaken for money.
+  const CODE_PATTERN =
+    /\b(USD|CNY|RMB|JPY|EUR|GBP|KRW|VND|INR|THB|PHP|HKD|TWD|SGD|MYR|IDR|CHF|SEK|NOK|DKK|PLN|TRY|RUB|AUD|CAD|NZD|AED|ZAR|BRL|MXN)\b/;
+
+  /** A currency out of a scrap of price text, by its code or by its symbol. */
+  const codeFrom = (value) => {
+    const text = clean(value);
+    if (!text) return null;
+    // A written code beats a symbol: "US$ 12" and "USD 12" say which dollars
+    // they mean, "$12" does not.
+    const iso = text.toUpperCase().match(CODE_PATTERN);
+    if (iso) return iso[1] === 'RMB' ? 'CNY' : iso[1];
+    for (const [symbol, code] of SYMBOL_CODES) {
+      if (text.includes(symbol)) return code;
+    }
+    if (/[¥￥]|元|人民币/.test(text)) return yenish ? 'JPY' : 'CNY';
+    if (text.includes('$')) return 'USD';
+    return null;
+  };
+
+  /** A code somebody declared, which arrives as "CNY", "cny" or ".../CNY". */
+  const declared = (value) => {
+    const name = nameOf(value);
+    if (!name) return null;
+    const code = name
+      .replace(/^.*\//, '')
+      .toUpperCase()
+      .replace(/[^A-Z]/g, '')
+      .slice(0, 3);
+    return code.length === 3 ? code : null;
+  };
+
   const currencyText =
-    offers.map((o) => nameOf(o.priceCurrency)).find(Boolean) ||
-    meta('product:price:currency') ||
-    meta('og:price:currency') ||
-    // Capped: some pages carry a novel's worth of text and this is a guess.
-    (document.body.textContent.slice(0, 20000).match(/\b(USD|EUR|GBP|CAD|AUD|VND|JPY|INR)\b/) || [])[0] ||
+    offers
+      .map(
+        (o) =>
+          declared(o.priceCurrency) ||
+          declared(o.priceSpecification && o.priceSpecification.priceCurrency),
+      )
+      .find(Boolean) ||
+    declared(meta('product:price:currency')) ||
+    declared(meta('og:price:currency')) ||
+    declared(
+      (document.querySelector('[itemprop="priceCurrency"]') || {}).getAttribute?.('content'),
+    ) ||
+    /*
+     * Last, the price as it is printed. Deliberately not a sweep of the whole
+     * page: a currency switcher offering "USD" on a page priced in yuan used
+     * to be read as the price's own currency, which turned the conversion off
+     * on exactly the pages that needed it most.
+     */
+    priceTexts.map(codeFrom).find(Boolean) ||
     null;
 
   /* ── Images ──────────────────────────────────────────────────── */

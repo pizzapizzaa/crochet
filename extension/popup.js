@@ -5,6 +5,7 @@ import {
   loadRates,
   loadSettings,
   money,
+  normaliseCode,
   normaliseShopUrl,
 } from './shared.js';
 import { collectPins, readProduct } from './readers.js';
@@ -28,6 +29,15 @@ let scraped = null;
 // What the conversion did to this page's price, kept so the import can record
 // the rate on the product rather than leaving a margin nobody can explain.
 let fxUsed = null;
+
+// Whether the shop answered with any rates at all. When it did not, an
+// unconverted price is handed over unconverted and the shop does the sum.
+let fxAvailable = false;
+
+// A foreign price this popup could not convert because it had no rates to
+// convert with. The import says so rather than passing the figure off as
+// dollars.
+let foreignUnconverted = false;
 
 const isPinterest = (url) => {
   try {
@@ -99,8 +109,15 @@ async function setUpProduct() {
    */
   const rates = await loadRates(settings);
   const fx = convertToUsd(scraped.price, scraped.currency, rates);
-  const foreign = Boolean(scraped.currency && scraped.currency !== 'USD');
+  // Normalised, because what a page declares is not always a tidy code, and a
+  // currency we fail to recognise still must not pass for dollars.
+  const code = normaliseCode(scraped.currency);
+  const foreign = Boolean(code && code !== 'USD');
   const usdPrice = fx ? fx.usd : scraped.price;
+  // Empty when the shop could not be asked for rates at all, which is a
+  // different problem from a currency it holds no rate for, and gets a
+  // different answer below.
+  fxAvailable = Object.keys(rates).length > 0;
 
   const meta = $('product-meta');
   meta.textContent = '';
@@ -111,21 +128,23 @@ async function setUpProduct() {
       : 'no price found';
 
   const parts = [
-    pricePart,
+    { text: pricePart },
     // Only worth a pill when we could not do the sum; a converted price says
-    // what it came from already.
-    foreign && !fx ? `${scraped.currency} — not converted` : null,
+    // what it came from already. A price whose currency was never established
+    // gets one too — it is being treated as dollars on nothing but hope.
+    foreign && !fx ? { text: `${code} — not converted`, pill: true } : null,
+    !code && scraped.price !== null ? { text: 'currency not stated', pill: true } : null,
     scraped.images.length
-      ? `${scraped.images.length} photo${scraped.images.length === 1 ? '' : 's'}`
-      : 'no photos',
-    scraped.sku ? `SKU ${scraped.sku}` : null,
+      ? { text: `${scraped.images.length} photo${scraped.images.length === 1 ? '' : 's'}` }
+      : { text: 'no photos' },
+    scraped.sku ? { text: `SKU ${scraped.sku}` } : null,
   ].filter(Boolean);
 
   parts.forEach((part, i) => {
     if (i > 0) meta.appendChild(document.createTextNode(' · '));
     const span = document.createElement('span');
-    if (foreign && !fx && part.startsWith(scraped.currency)) span.className = 'pill';
-    span.textContent = part;
+    if (part.pill) span.className = 'pill';
+    span.textContent = part.text;
     meta.appendChild(span);
   });
 
@@ -160,15 +179,31 @@ async function setUpProduct() {
   // Remember what it cost them and in what, so the import can record the rate
   // on the product rather than leaving a margin nobody can explain later.
   fxUsed = fx;
+  foreignUnconverted = foreign && !fx && !fxAvailable;
 
   if (scraped.price === null) {
     say('product-note', 'No price was on the page — type one in before importing.', 'warn');
   } else if (fx) {
     say('product-note', `Converted at ${fx.rate} ${fx.code} to the dollar. Check it looks right.`, 'ok');
+  } else if (foreign && !fxAvailable) {
+    // The shop was unreachable for rates, so the box above still holds the
+    // supplier's own figure. It goes over flagged as unconverted and the shop
+    // does the sum — which is why the box must be left alone.
+    say(
+      'product-note',
+      `Could not get today's rates from your shop, so the figure above is still in ${code}. Import it as it stands and the shop will convert it — do not type dollars over it.`,
+      'warn',
+    );
   } else if (foreign) {
     say(
       'product-note',
-      `This page prices in ${scraped.currency} and your shop has no rate for it. The figure above is NOT converted — add ${scraped.currency} to FX_RATES, or type the dollar price in yourself.`,
+      `This page prices in ${code} and your shop has no rate for it. The figure above is NOT converted — add ${code} to FX_RATES, or type the dollar price in yourself.`,
+      'warn',
+    );
+  } else if (!code) {
+    say(
+      'product-note',
+      'This page never says which currency its price is in, so it is being taken as dollars. Check that before importing.',
       'warn',
     );
   }
@@ -208,12 +243,18 @@ $('import').addEventListener('click', async () => {
         : scraped.compareAtPrice,
       currency: scraped.currency,
       /*
-       * Everything above is already dollars, and the shop owner may have
-       * edited the box since. Without this flag the shop converts again on the
-       * way in — which is deliberate, and what keeps an older copy of this
-       * extension from filing raw yuan as dollars.
+       * True when the figures above are dollars already: converted here, or
+       * never anything else. The shop converts whatever arrives without this
+       * flag, which is what keeps an older copy of this extension from filing
+       * raw yuan as dollars.
+       *
+       * False in exactly one case — a foreign price and no rates to be had,
+       * because the shop could not be reached for them. Then the supplier's
+       * own figure goes over as it was found and the shop, which has the same
+       * table, does the sum. Claiming it was converted there would file ¥120
+       * as $120.
        */
-      converted: true,
+      converted: !foreignUnconverted,
       sourcePrice: scraped.price,
       sku: scraped.sku,
       images: scraped.images,

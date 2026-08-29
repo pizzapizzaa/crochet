@@ -48,7 +48,8 @@ the POS to rewrite the description before publishing.
 
 A markup of, say, 60% means the shop's price is recorded as what the item costs
 you and your price is set 60% above it. With no markup the price comes across
-as-is and no cost is recorded.
+as-is and no cost is recorded. Both figures are in dollars: a foreign price is
+converted first, and the markup is taken on the converted number.
 
 **A board of pins.** Open the board, scroll until you can see everything you
 want (Pinterest only loads a board as you scroll — the extension can only
@@ -65,9 +66,15 @@ review screen rather than straight into the database.
   forbids it, for good reasons.
 - A shop that renders nothing without an account will read as empty; sign in
   first and try again.
-- Prices come across as a number, not a currency. If the source is in euros the
-  shop records the number and notes the currency on the product's cost note —
-  convert it yourself before publishing.
+- Prices arrive in dollars. A page pricing in yuan, euros or anything else is
+  converted before the panel shows it — `¥120.00 → $16.80`, with the rate used
+  written under it and onto the product's cost note. The rates come from your
+  shop (`FX_RATES` in its environment), so the extension and the site can never
+  disagree about what a yuan is worth.
+- A page that names no currency at all, in its markup or in front of its price,
+  is flagged **currency not stated** and taken as dollars. So is one priced in
+  a currency your shop holds no rate for — add it to `FX_RATES`. In both cases
+  the panel says so rather than converting on a guess.
 - It never publishes anything by itself unless you tick the box.
 
 ## What it sends, and where
