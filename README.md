@@ -172,6 +172,28 @@ What lands in the catalogue:
 Shops that refuse anything but a browser (most large marketplaces) will come
 back empty. That is what the extension is for.
 
+#### Foreign prices
+
+The catalogue is priced in USD and almost no supplier is — the yarn comes from
+Chinese shops quoting CNY. A scraped price is converted before it is shown, and
+the row says what it did: `¥120.00 → $16.80 at 0.14 CNY/USD`. The markup is
+applied to the converted figure, and the rate is written onto the product's
+cost note so a margin can still be explained months later.
+
+Rates live in `src/lib/currency.ts` and are overridden with `FX_RATES` in the
+environment:
+
+```env
+FX_RATES=CNY:0.1385,EUR:1.09
+```
+
+They are constants you set rather than a live feed, for the same reason
+`VND_PER_USD` is — see the comment at the top of that file. VND is not listed
+there because it is derived from `VND_PER_USD`, so the two cannot disagree.
+
+A currency with no rate is never guessed at: the price comes through
+unconverted and the row says so in as many words.
+
 ### The Chrome extension — `extension/`
 
 A small MV3 extension that reads the page your browser has already rendered,
@@ -194,6 +216,7 @@ instructions, including what it can and cannot read, are in
 | `POST /api/pos/product-scrape` | Reads one shop page, writes nothing |
 | `POST /api/pos/product-import` | Creates a product from a scrape or from the extension |
 | `GET`/`POST` `/api/pos/categories-list` | Categories, for the extension's filing dropdown |
+| `GET`/`POST` `/api/pos/fx` | Exchange rates, so the extension converts at the same rate the shop does |
 
 The first three take the `admin_auth` session cookie. The last three take
 either that cookie **or** the import token — but the cookie is only accepted

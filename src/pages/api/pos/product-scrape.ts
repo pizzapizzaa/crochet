@@ -2,7 +2,9 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { authorizeImport, jsonFor, preflight } from '../../../lib/apiAuth';
+import { formatSource, normaliseCode, toUsd } from '../../../lib/currency';
 import { draftFromBrowser, scrapeProduct } from '../../../lib/scrape/product';
+import type { ProductDraft } from '../../../lib/scrape/product';
 
 /*
  * "Here is a shop link — what is on it?"
@@ -15,6 +17,44 @@ import { draftFromBrowser, scrapeProduct } from '../../../lib/scrape/product';
  */
 
 export const OPTIONS: APIRoute = ({ request }) => preflight(request);
+
+/*
+ * What the price becomes in USD, worked out here rather than in each importer.
+ *
+ * The screen and the extension both need the converted figure and they must
+ * agree on it. Doing it once on the server is what guarantees that; it also
+ * means the rate lives in one file instead of being restated in extension
+ * JavaScript that updates on a different schedule to the site.
+ *
+ * Null when there is nothing to convert — an already-USD price, or no price at
+ * all. `unconvertible` is the third case, and the interesting one: a real
+ * foreign price we hold no rate for, which the UI has to say out loud rather
+ * than quietly showing the raw number as if it were dollars.
+ */
+function conversionFor(draft: ProductDraft) {
+  const code = normaliseCode(draft.currency);
+  const isForeign = Boolean(code && code !== 'USD');
+
+  const price = toUsd(draft.price, draft.currency);
+  const compareAt = toUsd(draft.compareAtPrice, draft.currency);
+  const applied = price ?? compareAt;
+
+  if (!applied) {
+    return isForeign && draft.price !== null
+      ? { currency: code, unconvertible: true as const }
+      : null;
+  }
+
+  return {
+    currency: applied.sourceCurrency,
+    rate: applied.rate,
+    priceUsd: price?.usd ?? null,
+    compareAtUsd: compareAt?.usd ?? null,
+    /** "¥120.00", for showing beside the converted figure. */
+    sourceLabel: price ? formatSource(price.sourceAmount, price.sourceCurrency) : null,
+    unconvertible: false as const,
+  };
+}
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   // Body first: the token may be in it, which is how the extension gets to
@@ -36,6 +76,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return jsonFor(request, {
       draft,
       found,
+      conversion: conversionFor(draft),
       note: found
         ? draft.price === null
           ? 'No price was on that page — type one in.'
@@ -56,5 +97,5 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const outcome = await scrapeProduct(url);
-  return jsonFor(request, outcome);
+  return jsonFor(request, { ...outcome, conversion: conversionFor(outcome.draft) });
 };

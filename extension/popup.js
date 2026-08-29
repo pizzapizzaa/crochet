@@ -1,4 +1,12 @@
-import { callShop, loadSettings, money, normaliseShopUrl } from './shared.js';
+import {
+  callShop,
+  convertToUsd,
+  formatSource,
+  loadRates,
+  loadSettings,
+  money,
+  normaliseShopUrl,
+} from './shared.js';
 import { collectPins, readProduct } from './readers.js';
 
 /*
@@ -16,6 +24,10 @@ const show = (id, visible) => $(id).classList.toggle('hidden', !visible);
 let settings = null;
 let tab = null;
 let scraped = null;
+
+// What the conversion did to this page's price, kept so the import can record
+// the rate on the product rather than leaving a margin nobody can explain.
+let fxUsed = null;
 
 const isPinterest = (url) => {
   try {
@@ -80,20 +92,39 @@ async function setUpProduct() {
    * reach chrome.storage, where the shop's import token lives. A product name
    * with a tag in it is not going to get a script into this document.
    */
+  /*
+   * The supplier's price, in dollars. Everything downstream of this — the box
+   * the shop owner edits, the cost, what gets posted — is USD, so the
+   * conversion happens once, here, and is shown rather than hidden.
+   */
+  const rates = await loadRates(settings);
+  const fx = convertToUsd(scraped.price, scraped.currency, rates);
+  const foreign = Boolean(scraped.currency && scraped.currency !== 'USD');
+  const usdPrice = fx ? fx.usd : scraped.price;
+
   const meta = $('product-meta');
   meta.textContent = '';
+  const pricePart = fx
+    ? `${formatSource(fx.source, fx.code)} → ${money(fx.usd)}`
+    : scraped.price !== null
+      ? money(scraped.price)
+      : 'no price found';
+
   const parts = [
-    scraped.price !== null ? money(scraped.price) : 'no price found',
-    scraped.currency && scraped.currency !== 'USD' ? scraped.currency : null,
+    pricePart,
+    // Only worth a pill when we could not do the sum; a converted price says
+    // what it came from already.
+    foreign && !fx ? `${scraped.currency} — not converted` : null,
     scraped.images.length
       ? `${scraped.images.length} photo${scraped.images.length === 1 ? '' : 's'}`
       : 'no photos',
     scraped.sku ? `SKU ${scraped.sku}` : null,
   ].filter(Boolean);
+
   parts.forEach((part, i) => {
     if (i > 0) meta.appendChild(document.createTextNode(' · '));
     const span = document.createElement('span');
-    if (part === scraped.currency) span.className = 'pill';
+    if (foreign && !fx && part.startsWith(scraped.currency)) span.className = 'pill';
     span.textContent = part;
     meta.appendChild(span);
   });
@@ -116,17 +147,30 @@ async function setUpProduct() {
     thumb.appendChild(img);
   }
 
-  // A markup means the shop's price is our cost and we sell it for more.
+  // A markup means the shop's price is our cost and we sell it for more. Both
+  // figures are in dollars by this point.
   const markup = Number(settings.markup) || 0;
-  if (scraped.price !== null) {
-    $('price').value = (Math.round(scraped.price * (1 + markup / 100) * 100) / 100).toFixed(2);
-    if (markup > 0) $('cost').value = scraped.price.toFixed(2);
+  if (usdPrice !== null) {
+    $('price').value = (Math.round(usdPrice * (1 + markup / 100) * 100) / 100).toFixed(2);
+    if (markup > 0) $('cost').value = usdPrice.toFixed(2);
   }
   $('stock').value = String(settings.stock ?? 0);
   $('publish').checked = Boolean(settings.publish);
 
+  // Remember what it cost them and in what, so the import can record the rate
+  // on the product rather than leaving a margin nobody can explain later.
+  fxUsed = fx;
+
   if (scraped.price === null) {
     say('product-note', 'No price was on the page — type one in before importing.', 'warn');
+  } else if (fx) {
+    say('product-note', `Converted at ${fx.rate} ${fx.code} to the dollar. Check it looks right.`, 'ok');
+  } else if (foreign) {
+    say(
+      'product-note',
+      `This page prices in ${scraped.currency} and your shop has no rate for it. The figure above is NOT converted — add ${scraped.currency} to FX_RATES, or type the dollar price in yourself.`,
+      'warn',
+    );
   }
 
   await fillCategories();
@@ -153,8 +197,24 @@ $('import').addEventListener('click', async () => {
       description: scraped.description,
       price,
       costPrice: cost,
-      compareAtPrice: scraped.compareAtPrice,
+      /*
+       * Converted here too. It was read off the same page in the same currency
+       * as the price, and sending one in dollars beside the other in yuan is
+       * how a "was ¥180" ends up as a $180 strike-through over a $16 product.
+       */
+      compareAtPrice: fxUsed
+        ? (convertToUsd(scraped.compareAtPrice, scraped.currency, await loadRates(settings))?.usd ??
+          null)
+        : scraped.compareAtPrice,
       currency: scraped.currency,
+      /*
+       * Everything above is already dollars, and the shop owner may have
+       * edited the box since. Without this flag the shop converts again on the
+       * way in — which is deliberate, and what keeps an older copy of this
+       * extension from filing raw yuan as dollars.
+       */
+      converted: true,
+      sourcePrice: scraped.price,
       sku: scraped.sku,
       images: scraped.images,
       tags: scraped.tags,

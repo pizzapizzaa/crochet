@@ -75,3 +75,63 @@ export const money = (value) =>
   value === null || value === undefined
     ? '—'
     : '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/*
+ * ── CURRENCY ────────────────────────────────────────────────────────────────
+ *
+ * Nearly every shop we import from quotes something other than dollars — the
+ * yarn is Chinese and priced in yuan — and the catalogue is USD only. Putting
+ * the raw number in a box labelled "$" is how ¥120 becomes a $120 product and
+ * the margin goes quietly the wrong way.
+ *
+ * The rates come from the shop rather than living here, because this extension
+ * is loaded unpacked and never updates itself: a rate baked in today is still
+ * baked in next year. Fetched once per popup and cached for the life of it.
+ */
+
+const SYMBOLS = {
+  USD: '$', CNY: '¥', JPY: '¥', EUR: '€', GBP: '£',
+  KRW: '₩', VND: '₫', INR: '₹', THB: '฿', PHP: '₱',
+};
+
+let ratesCache = null;
+
+export async function loadRates(settings) {
+  if (ratesCache) return ratesCache;
+  try {
+    const { rates } = await callShop(settings, '/api/pos/fx', {});
+    ratesCache = rates && typeof rates === 'object' ? rates : {};
+  } catch {
+    // Not fatal. Without rates the popup shows the source figure as it found
+    // it, says so, and lets the shop convert on import — which it will,
+    // because the price is sent flagged as unconverted.
+    ratesCache = {};
+  }
+  return ratesCache;
+}
+
+export const normaliseCode = (code) =>
+  typeof code === 'string' ? code.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) : '';
+
+/** "¥120.00" where the symbol is known, "120.00 SEK" where it is not. */
+export function formatSource(amount, code) {
+  const figure = Number(amount).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return SYMBOLS[code] ? `${SYMBOLS[code]}${figure}` : `${figure} ${code}`;
+}
+
+/**
+ * The source price in USD, or null when there is nothing to do — already
+ * dollars, no price, or a currency the shop holds no rate for. Null always
+ * means "leave it alone", never "it is zero".
+ */
+export function convertToUsd(amount, currency, rates) {
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0) return null;
+  const code = normaliseCode(currency);
+  if (!code || code === 'USD') return null;
+  const rate = rates?.[code];
+  if (!rate || !Number.isFinite(rate)) return null;
+  return { usd: Math.round(amount * rate * 100) / 100, rate, code, source: amount };
+}

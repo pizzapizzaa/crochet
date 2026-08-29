@@ -5,6 +5,7 @@ import { authorizeImport, jsonFor, preflight } from '../../../lib/apiAuth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
 import { copySlug, slugify } from '../../../lib/posForms';
 import { mirrorImages } from '../../../lib/mirror';
+import { conversionNote, formatSource, toUsd } from '../../../lib/currency';
 import { draftFromBrowser, scrapeProduct, tidySourceUrl } from '../../../lib/scrape/product';
 import type { ProductDraft } from '../../../lib/scrape/product';
 import type { ProductInsert } from '../../../lib/database.types';
@@ -120,14 +121,39 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 
-  const price = num(body.price) ?? draft?.price ?? null;
-  if (price === null || price < 0) {
+  const sentPrice = num(body.price) ?? draft?.price ?? null;
+  if (sentPrice === null || sentPrice < 0) {
     return jsonFor(
       request,
       { error: 'No usable price. Type one in, or set a markup so one can be worked out.' },
       422,
     );
   }
+
+  /*
+   * Everything below this line is in USD.
+   *
+   * Both importers convert before they show a price, so a caller that knows
+   * about currency sends `converted: true` and the figure is taken as given —
+   * the shop owner may well have edited it, and re-converting an edited price
+   * would be a second conversion of something already converted.
+   *
+   * Without that flag, a foreign currency is converted here. That is not
+   * belt-and-braces: the extension is loaded unpacked and never auto-updates,
+   * so an older copy of it will keep posting raw yuan long after this endpoint
+   * learned better. The server is the only place that can be sure.
+   */
+  const sourceCurrency = text(body.currency, 3) ?? draft?.currency ?? null;
+  const alreadyConverted = body.converted === true || !sourceCurrency || sourceCurrency === 'USD';
+
+  const priceConversion = alreadyConverted ? null : toUsd(sentPrice, sourceCurrency);
+  const price = priceConversion ? priceConversion.usd : sentPrice;
+
+  // A currency we hold no rate for cannot be converted, only flagged. Better a
+  // loud draft than a silent wrong number.
+  const unconvertible = Boolean(
+    sourceCurrency && sourceCurrency !== 'USD' && !alreadyConverted && !priceConversion,
+  );
 
   // A duplicate is the likeliest mistake in a one-click tool: the button is
   // easy to press twice, and two pages of the same shop can share a URL.
@@ -201,15 +227,33 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const { data: slugRows } = await admin.from('products').select('slug');
   const slug = copySlug(slugStem, (slugRows ?? []).map((r) => r.slug));
 
-  const currency = text(body.currency, 3) ?? draft?.currency ?? null;
-  const costPrice = num(body.costPrice);
-  const compareAt = num(body.compareAtPrice) ?? draft?.compareAtPrice ?? null;
+  const currency = sourceCurrency;
+
+  // The cost follows the price: if one needed converting so did the other,
+  // since they came off the same page in the same currency.
+  const sentCost = num(body.costPrice);
+  const costConversion = alreadyConverted ? null : toUsd(sentCost, sourceCurrency);
+  const costPrice = costConversion ? costConversion.usd : sentCost;
+
+  const compareAtSent = num(body.compareAtPrice) ?? draft?.compareAtPrice ?? null;
+  const compareAtConversion = alreadyConverted ? null : toUsd(compareAtSent, sourceCurrency);
+  const compareAt = compareAtConversion ? compareAtConversion.usd : compareAtSent;
+
+  /*
+   * What the rate was, written onto the row. A margin that looks wrong in six
+   * months is answerable from the product itself rather than from whatever the
+   * rate table happened to say at the time.
+   */
+  const sourceAmount = num(body.sourcePrice) ?? draft?.price ?? null;
+  const noteConversion =
+    priceConversion ?? (sourceAmount !== null ? toUsd(sourceAmount, sourceCurrency) : null);
 
   const noteParts = [
     `Imported from ${siteName ?? 'another shop'} on ${new Date().toISOString().slice(0, 10)}.`,
-    // The shop prices in USD and has no currency column, so a foreign price is
-    // recorded as a number plus this warning rather than silently converted.
-    currency && currency !== 'USD' ? `Source price was in ${currency} — convert before trusting it.` : null,
+    noteConversion ? conversionNote(noteConversion) : null,
+    unconvertible
+      ? `Source price was in ${currency}, which has no rate set — the figure below is unconverted.`
+      : null,
     text(body.costNote, 200),
   ].filter(Boolean);
 
@@ -248,7 +292,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     text(body.description, 4000) === null && !draft?.description
       ? 'No description was found — write one before publishing.'
       : null,
-    currency && currency !== 'USD' ? `The source price was in ${currency}, not USD.` : null,
+    unconvertible
+      ? `The source price is in ${currency} and no rate is set for it — the price is unconverted. Add ${currency} to FX_RATES, or fix the price by hand.`
+      : null,
+    noteConversion
+      ? `Converted from ${formatSource(noteConversion.sourceAmount, noteConversion.sourceCurrency)} at ${noteConversion.rate} ${noteConversion.sourceCurrency}/USD — check the rate is still about right.`
+      : null,
     categoryName === FALLBACK_CATEGORY ? 'Filed under the hidden “Imported” category.' : null,
   ].filter((w): w is string => Boolean(w));
 

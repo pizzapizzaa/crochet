@@ -216,6 +216,16 @@ const field =
     costPrice: number | null;
     compareAtPrice: number | null;
     currency: string | null;
+    /** What the server made of the source currency, or null when USD already. */
+    fx: {
+      currency: string | null;
+      rate?: number;
+      priceUsd?: number | null;
+      sourceLabel?: string | null;
+      unconvertible: boolean;
+    } | null;
+    /** The supplier's own number, before conversion — shown beside ours. */
+    sourcePrice: number | null;
     sku: string | null;
     images: string[];
     tags: string[];
@@ -388,7 +398,26 @@ const field =
       top.appendChild(done);
     }
     if (row.via.length) top.appendChild(badge(`read via ${row.via.join(' + ')}`, 'bg-cream-100 text-ink-muted'));
-    if (row.currency && row.currency !== 'USD') {
+    /*
+     * Show the sum, not just the currency. A badge saying "priced in CNY" told
+     * you something was odd and left you to do the arithmetic; this says what
+     * was done and at what rate, which is the thing worth checking.
+     */
+    if (row.fx?.unconvertible) {
+      top.appendChild(
+        badge(
+          `${row.fx.currency} — no rate set, price NOT converted`,
+          'bg-lemon-wash text-lemon-deep',
+        ),
+      );
+    } else if (row.fx && row.sourcePrice !== null && row.fx.priceUsd != null) {
+      top.appendChild(
+        badge(
+          `${row.fx.sourceLabel} → $${row.fx.priceUsd.toFixed(2)} at ${row.fx.rate} ${row.fx.currency}/USD`,
+          'bg-mint-wash text-mint-deep',
+        ),
+      );
+    } else if (row.currency && row.currency !== 'USD') {
       top.appendChild(badge(`priced in ${row.currency}`, 'bg-lemon-wash text-lemon-deep'));
     }
     if (row.error) top.appendChild(badge(row.error, 'bg-lemon-wash text-lemon-deep'));
@@ -538,7 +567,25 @@ const field =
         if (!res.ok) throw new Error(json.error ?? 'Could not read that page.');
 
         const draft = json.draft;
-        const sourcePrice: number | null = draft.price;
+        const fx = json.conversion ?? null;
+
+        /*
+         * The supplier's number, in dollars. Almost every shop we buy from
+         * quotes something else — the yarn is Chinese and priced in yuan — and
+         * before this the figure went in raw, so ¥120 became $120 and the
+         * margin was nonsense in the direction that loses money quietly.
+         *
+         * The server does the conversion so this screen and the extension
+         * cannot disagree about the rate.
+         */
+        const rawPrice: number | null = draft.price;
+        const sourcePrice: number | null =
+          fx && !fx.unconvertible && fx.priceUsd !== null ? fx.priceUsd : rawPrice;
+        const compareAtPrice: number | null =
+          fx && !fx.unconvertible && fx.compareAtUsd !== null
+            ? fx.compareAtUsd
+            : draft.compareAtPrice;
+
         rows.push({
           url: draft.sourceUrl || url,
           siteName: draft.siteName ?? new URL(url).hostname,
@@ -551,8 +598,10 @@ const field =
               ? null
               : Math.round(sourcePrice * (1 + markup / 100) * 100) / 100,
           costPrice: markup > 0 ? sourcePrice : null,
-          compareAtPrice: draft.compareAtPrice,
+          compareAtPrice,
           currency: draft.currency,
+          fx,
+          sourcePrice: rawPrice,
           sku: draft.sku,
           images: draft.images ?? [],
           tags: draft.tags ?? [],
@@ -580,6 +629,8 @@ const field =
           costPrice: null,
           compareAtPrice: null,
           currency: null,
+          fx: null,
+          sourcePrice: null,
           sku: null,
           images: [],
           tags: [],
@@ -655,6 +706,15 @@ const field =
             costPrice: row.costPrice,
             compareAtPrice: row.compareAtPrice,
             currency: row.currency,
+            /*
+             * These figures are already dollars — the server converted them on
+             * the way in and the shop owner may have edited them since. Saying
+             * so stops the endpoint converting a second time; without the flag
+             * it assumes the worst and converts, which is what protects against
+             * an old copy of the extension posting raw yuan.
+             */
+            converted: true,
+            sourcePrice: row.sourcePrice,
             sku: row.sku,
             images: row.images,
             tags: row.tags,
