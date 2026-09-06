@@ -1,4 +1,6 @@
 ---
+import SectionWave from './SectionWave.astro';
+
 const exploreLinks = [
   { label: 'Shop All', href: '/store' },
   { label: 'Gallery', href: '/gallery' },
@@ -33,41 +35,31 @@ const socials = [
 <!-- Dark band: --dark-wash, cream type. The inverse of the gradient CTA. -->
 <footer class="relative bg-dark-wash text-cream">
   {/*
-    A strand of yarn laid along the seam between the page and the footer, so
-    the dark band starts with a drawn line rather than a ruled edge. It rides
-    the boundary — half over cream, half over forest — which is why it is
-    absolutely positioned and centred on the top edge rather than sitting
-    inside either band.
+    The footer reaches up into the page the same way every other band reaches
+    up into the one above it: forest spilling over its own top edge in a wave,
+    with a strand of mint yarn laid along the crest.
 
-    Same grammar as the loop round the active nav item: preserveAspectRatio is
-    off so the wave stretches to whatever the viewport is wide, and
-    non-scaling-stroke keeps the strand an even thickness while it stretches.
-    Without that the wide screens get a hairline through the flat runs and a
-    fat stroke through every turn. The path over- and under-shoots the viewBox
-    on both sides so no rounded cap ever appears parked at the screen edge.
+    It used to be the strand alone over a ruled edge, which left the one
+    straight line on the page exactly where the darkest, heaviest band starts —
+    the place it shows most. `fill` is --forest because that is the first stop
+    of --dark-wash: the wave is the top of the footer's own gradient carried
+    past its rectangle, so the two meet with no seam.
+
+    The highlight is mint-soft rather than the default lemon: on forest a lemon
+    thread reads as a separate line rather than the shine along this one.
+
+    Variant 0 is the one wave no page ends on, so this seam never repeats the
+    one directly above it — the header is the only other place it appears, and
+    that is a whole page away.
   */}
-  <span
-    class="pointer-events-none absolute inset-x-0 top-0 h-10 -translate-y-1/2 sm:h-14"
-    aria-hidden="true"
-  >
-    <svg class="h-full w-full" viewBox="0 0 1440 56" preserveAspectRatio="none" fill="none">
-      <path
-        d="M-20 34C90 12 190 8 300 24S500 50 620 36S820 8 960 18S1180 46 1300 30S1420 16 1460 22"
-        stroke="#21FFA8"
-        stroke-width="4"
-        stroke-linecap="round"
-        vector-effect="non-scaling-stroke"
-      />
-      <path
-        d="M-20 30C92 8 192 4 302 20S502 46 622 32S822 4 962 14S1182 42 1302 26S1422 12 1460 18"
-        stroke="#A8FFDC"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        opacity="0.6"
-        vector-effect="non-scaling-stroke"
-      />
-    </svg>
-  </span>
+  <SectionWave
+    fill="var(--forest)"
+    edge="top"
+    variant={0}
+    strand="var(--mint)"
+    strandHighlight="var(--mint-soft)"
+    height="h-8 sm:h-14"
+  />
   <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8 py-20">
     <div class="grid grid-cols-1 gap-10 md:grid-cols-4">
       <!-- Brand -->

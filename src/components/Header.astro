@@ -30,201 +30,222 @@ const isActive = (href: string) => {
 
   Its bottom edge is crocheted rather than ruled — the hairline cream border
   that used to close it was the one machine-made line at the top of every page.
-  The wave is opaque paper where the bar itself is 90%, which is deliberate: a
-  translucent edge over scrolling content reads as a smear, and the edge is the
-  part that has to stay crisp.
+  The wave is the same frosted surface as the bar rather than solid paper: at
+  90% blurred against 100% opaque, the two read as two different sheets, and
+  the join between them came out as exactly the straight line the wave is there
+  to replace. It shows most on a phone, where the bar spends the whole scroll
+  over the mint and lemon bands. The strand along the crest stays fully opaque,
+  which is the part of the edge that has to be crisp.
+
+  ── WHY THE BLUR IS ON THE SHEET AND NOT ON <header> ────────────────────────
+  A backdrop filter clips to the box it is set on, and WebKit is stricter about
+  it than Blink: descendants that hang outside are liable to be clipped away
+  with it. The wave hangs entirely *below* the bar, so on <header> it was one
+  Safari quirk away from not existing on a phone at all. Filtering an inner
+  sheet keeps the frosted bar and puts the wave outside the clip — and keeps
+  the filter off the sticky element itself, which is the combination iOS is
+  worst at compositing mid-scroll.
 -->
-<header class="sticky top-0 z-50 bg-paper/90 backdrop-blur-[10px]">
-  <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
-    <div class="flex h-16 items-center justify-between md:h-20">
-      <!-- Lockup: granny-square mark + Baloo 2 wordmark -->
-      <a href="/" class="group flex items-center gap-3" aria-label="ZippyZack.com home">
-        <img
-          src="/assets/logos/zippyzack-mark.svg"
-          alt=""
-          width="36"
-          height="36"
-          class="h-9 w-9 transition-transform duration-base ease-out group-hover:-translate-y-0.5"
-        />
-        <span class="font-display text-xl font-extrabold tracking-tight text-ink">
-          Zippy<span class="text-mint-deep">Zack</span><span class="text-ink-muted">.com</span>
-        </span>
-      </a>
-
-      <!-- Desktop nav -->
-      <nav class="hidden items-center gap-8 md:flex">
-        {
-          navLinks.map((link) => (
-            <a
-              href={link.href}
-              aria-current={isActive(link.href) ? 'page' : undefined}
-              class={`relative text-sm font-semibold transition-colors duration-fast ease-out hover:text-mint-deep ${
-                isActive(link.href) ? 'text-ink' : 'text-ink-body'
-              }`}
-            >
-              {/*
-                A strand of yarn looped round the label. Drawn rather than
-                bordered so it can overshoot the text on both axes and cross
-                over itself the way a real loop does. preserveAspectRatio is
-                off so it stretches to whatever the word is wide, and
-                non-scaling-stroke keeps the strand an even thickness while
-                it does — without that the long labels come out with thin
-                horizontal runs and fat turns.
-              */}
-              {isActive(link.href) && (
-                <span class="pointer-events-none absolute -inset-x-3 -inset-y-2" aria-hidden="true">
-                  <svg class="h-full w-full" viewBox="0 0 120 44" preserveAspectRatio="none" fill="none">
-                    <path
-                      d="M40 6C20 7 6 13 6 22c0 10 20 16 54 16s54-7 54-16c0-9-18-15-52-15-14 0-24 2-29 6"
-                      stroke="#A8FFDC"
-                      stroke-width="3"
-                      stroke-linecap="round"
-                      vector-effect="non-scaling-stroke"
-                    />
-                    <path
-                      d="M44 11C28 13 16 17 17 23c1 6 14 10 33 11"
-                      stroke="#21FFA8"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      opacity="0.55"
-                      vector-effect="non-scaling-stroke"
-                    />
-                    <path
-                      d="M33 12c-4 3-6 7-4 11"
-                      stroke="#A8FFDC"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      vector-effect="non-scaling-stroke"
-                    />
-                  </svg>
-                </span>
-              )}
-              <span class="relative">{link.label}</span>
-            </a>
-          ))
-        }
-      </nav>
-
-      <!-- Right side actions -->
-      <div class="flex items-center gap-3">
-        <!--
-          The badge is hidden until the cart script finds something in it, so a
-          server-rendered page never flashes a "0" before the browser catches up.
-        -->
-        <button
-          type="button"
-          id="cart-button"
-          aria-label="Open basket"
-          class="relative rounded-field p-2 text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
-        >
-          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.8"
-              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z"
-            />
-          </svg>
-          <span
-            id="cart-count"
-            hidden
-            class="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-pill bg-mint px-1 text-center text-[10px] font-extrabold leading-[18px] text-ink"
-          ></span>
-        </button>
-
-        <!--
-          "Where is my order?" is a question people bring to the header, and
-          until now the tracking page could only be reached by already having
-          the receipt it is there to replace. Quiet on purpose — it matters
-          enormously to the few looking for it and not at all to anyone else.
-        -->
-        <a
-          href="/orders/track"
-          class="hidden items-center gap-1.5 rounded-pill px-3 py-2 text-sm font-semibold text-ink-muted transition-colors duration-fast ease-out hover:text-mint-deep lg:inline-flex"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.8"
-              d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0zM3 5h11v9H3V5zm11 3h4l3 3v3h-7V8z"
-            />
-          </svg>
-          Track order
+<header class="sticky top-0 z-50">
+  <div class="bg-paper/90 backdrop-blur-[10px]">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      <div class="flex h-16 items-center justify-between md:h-20">
+        <!-- Lockup: granny-square mark + Baloo 2 wordmark -->
+        <a href="/" class="group flex items-center gap-3" aria-label="ZippyZack.com home">
+          <img
+            src="/assets/logos/zippyzack-mark.svg"
+            alt=""
+            width="36"
+            height="36"
+            class="h-9 w-9 transition-transform duration-base ease-out group-hover:-translate-y-0.5"
+          />
+          <span class="font-display text-xl font-extrabold tracking-tight text-ink">
+            Zippy<span class="text-mint-deep">Zack</span><span class="text-ink-muted">.com</span>
+          </span>
         </a>
 
-        <!-- Primary: light gradient fill, so the label is forest ink. -->
-        <a
-          href="/store"
-          class="hidden items-center gap-2 rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97] md:inline-flex"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z"
-            />
-          </svg>
-          Shop Now
-        </a>
+        <!-- Desktop nav -->
+        <nav class="hidden items-center gap-8 md:flex">
+          {
+            navLinks.map((link) => (
+              <a
+                href={link.href}
+                aria-current={isActive(link.href) ? 'page' : undefined}
+                class={`relative text-sm font-semibold transition-colors duration-fast ease-out hover:text-mint-deep ${
+                  isActive(link.href) ? 'text-ink' : 'text-ink-body'
+                }`}
+              >
+                {/*
+                  A strand of yarn looped round the label. Drawn rather than
+                  bordered so it can overshoot the text on both axes and cross
+                  over itself the way a real loop does. preserveAspectRatio is
+                  off so it stretches to whatever the word is wide, and
+                  non-scaling-stroke keeps the strand an even thickness while
+                  it does — without that the long labels come out with thin
+                  horizontal runs and fat turns.
+                */}
+                {isActive(link.href) && (
+                  <span class="pointer-events-none absolute -inset-x-3 -inset-y-2" aria-hidden="true">
+                    <svg class="h-full w-full" viewBox="0 0 120 44" preserveAspectRatio="none" fill="none">
+                      <path
+                        d="M40 6C20 7 6 13 6 22c0 10 20 16 54 16s54-7 54-16c0-9-18-15-52-15-14 0-24 2-29 6"
+                        stroke="#A8FFDC"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        vector-effect="non-scaling-stroke"
+                      />
+                      <path
+                        d="M44 11C28 13 16 17 17 23c1 6 14 10 33 11"
+                        stroke="#21FFA8"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        opacity="0.55"
+                        vector-effect="non-scaling-stroke"
+                      />
+                      <path
+                        d="M33 12c-4 3-6 7-4 11"
+                        stroke="#A8FFDC"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        vector-effect="non-scaling-stroke"
+                      />
+                    </svg>
+                  </span>
+                )}
+                <span class="relative">{link.label}</span>
+              </a>
+            ))
+          }
+        </nav>
 
-        <!-- Mobile menu button -->
-        <button
-          id="mobile-menu-btn"
-          class="rounded-field p-2 text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200 md:hidden"
-          aria-label="Toggle menu"
-          aria-expanded="false"
-          aria-controls="mobile-menu"
-        >
-          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          </svg>
-        </button>
+        <!-- Right side actions -->
+        <div class="flex items-center gap-3">
+          <!--
+            The badge is hidden until the cart script finds something in it, so a
+            server-rendered page never flashes a "0" before the browser catches up.
+          -->
+          <button
+            type="button"
+            id="cart-button"
+            aria-label="Open basket"
+            class="relative rounded-field p-2 text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z"
+              />
+            </svg>
+            <span
+              id="cart-count"
+              hidden
+              class="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-pill bg-mint px-1 text-center text-[10px] font-extrabold leading-[18px] text-ink"
+            ></span>
+          </button>
+
+          <!--
+            "Where is my order?" is a question people bring to the header, and
+            until now the tracking page could only be reached by already having
+            the receipt it is there to replace. Quiet on purpose — it matters
+            enormously to the few looking for it and not at all to anyone else.
+          -->
+          <a
+            href="/orders/track"
+            class="hidden items-center gap-1.5 rounded-pill px-3 py-2 text-sm font-semibold text-ink-muted transition-colors duration-fast ease-out hover:text-mint-deep lg:inline-flex"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M9 17a2 2 0 11-4 0 2 2 0 014 0zm10 0a2 2 0 11-4 0 2 2 0 014 0zM3 5h11v9H3V5zm11 3h4l3 3v3h-7V8z"
+              />
+            </svg>
+            Track order
+          </a>
+
+          <!-- Primary: light gradient fill, so the label is forest ink. -->
+          <a
+            href="/store"
+            class="hidden items-center gap-2 rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97] md:inline-flex"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z"
+              />
+            </svg>
+            Shop Now
+          </a>
+
+          <!-- Mobile menu button -->
+          <button
+            id="mobile-menu-btn"
+            class="rounded-field p-2 text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200 md:hidden"
+            aria-label="Toggle menu"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
+    </div>
+
+    <!-- Mobile nav -->
+    <div
+      id="mobile-menu"
+      class="hidden space-y-2 border-t border-cream-300 bg-paper px-4 py-4 md:hidden"
+    >
+      {
+        navLinks.map((link) => (
+          <a
+            href={link.href}
+            aria-current={isActive(link.href) ? 'page' : undefined}
+            class={`block rounded-field px-3 py-2 text-sm font-semibold transition-colors duration-fast ease-out ${
+              isActive(link.href)
+                ? 'bg-mint-wash text-mint-deep'
+                : 'text-ink-body hover:bg-cream-200'
+            }`}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+      <a
+        href="/orders/track"
+        class="block rounded-field px-3 py-2 text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+      >
+        Track My Order
+      </a>
+      <a
+        href="/store"
+        class="mt-2 block rounded-pill bg-btn-gradient px-4 py-2.5 text-center text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:brightness-105"
+      >
+        Shop Now
+      </a>
     </div>
   </div>
 
-  <!-- Mobile nav -->
-  <div
-    id="mobile-menu"
-    class="hidden space-y-2 border-t border-cream-300 bg-paper px-4 py-4 md:hidden"
-  >
-    {
-      navLinks.map((link) => (
-        <a
-          href={link.href}
-          aria-current={isActive(link.href) ? 'page' : undefined}
-          class={`block rounded-field px-3 py-2 text-sm font-semibold transition-colors duration-fast ease-out ${
-            isActive(link.href)
-              ? 'bg-mint-wash text-mint-deep'
-              : 'text-ink-body hover:bg-cream-200'
-          }`}
-        >
-          {link.label}
-        </a>
-      ))
-    }
-    <a
-      href="/orders/track"
-      class="block rounded-field px-3 py-2 text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
-    >
-      Track My Order
-    </a>
-    <a
-      href="/store"
-      class="mt-2 block rounded-pill bg-btn-gradient px-4 py-2.5 text-center text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:brightness-105"
-    >
-      Shop Now
-    </a>
-  </div>
-
-  <SectionWave fill="var(--paper)" edge="bottom" variant={0} height="h-6 sm:h-9" />
+  <SectionWave
+    fill="var(--paper)"
+    fillOpacity={0.9}
+    blur="10px"
+    edge="bottom"
+    variant={0}
+    height="h-6 sm:h-9"
+  />
 </header>
 
 <script>
