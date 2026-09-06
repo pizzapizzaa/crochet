@@ -62,6 +62,26 @@
   border-color: var(--border-accent);
 }
 
+/* Every dropdown wears the same chevron, ours rather than the engine's.
+
+   A native select arrow is drawn hard against the right border and no amount
+   of padding-right moves it — the browser draws it in the padding, not after
+   it. So the appearance is stripped and the chevron becomes a background
+   image, inset by the same distance as the text on the other side.
+
+   The selector is `:not([multiple])` for two reasons: a list box has no
+   collapsed row to point at, and the extra specificity is what lets this
+   padding survive the `px-*` utility every field in the project carries. */
+select:not([multiple]) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http%3A//www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%232E6A60'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M6%209l6%206%206-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-4) center;
+  background-size: 1rem 1rem;
+  padding-right: calc(var(--space-4) + 1.5rem);
+}
+
 /* Photo scrim, used only where text sits over an image. */
 .zz-scrim { background: var(--photo-scrim); }
 

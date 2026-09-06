@@ -121,6 +121,10 @@ const isActive = (href: string) => {
         <!-- Right side actions -->
         <div class="flex items-center gap-3">
           <!--
+            A trolley, not a bag: the "Shop Now" button beside it is a bag, and
+            two bags in one bar is a puzzle rather than a pair of buttons. The
+            bag is the shop, the trolley is what you have put in it.
+
             The badge is hidden until the cart script finds something in it, so a
             server-rendered page never flashes a "0" before the browser catches up.
           -->
@@ -135,8 +139,10 @@ const isActive = (href: string) => {
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="1.8"
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 11H4L5 9z"
+                d="M3 4h1.8l2.4 10.6a1.7 1.7 0 001.66 1.32h7.9a1.7 1.7 0 001.66-1.3L20.4 8.2H6.1"
               />
+              <circle cx="10" cy="19.4" r="1.3" stroke-width="1.8" />
+              <circle cx="17" cy="19.4" r="1.3" stroke-width="1.8" />
             </svg>
             <span
               id="cart-count"
@@ -146,14 +152,21 @@ const isActive = (href: string) => {
           </button>
 
           <!--
-            "Where is my order?" is a question people bring to the header, and
-            until now the tracking page could only be reached by already having
-            the receipt it is there to replace. Quiet on purpose — it matters
-            enormously to the few looking for it and not at all to anyone else.
+            "Where is my order?" is a question people bring to the header — but
+            only the people who have one. It stays out of the bar until this
+            browser remembers a parcel still on its way (see lib/openOrder), at
+            which point the script below hands it back its display class.
+
+            Server-rendered hidden, revealed by script: the alternative is a
+            link that flashes in on every page load for everyone. Anyone whose
+            order this browser has never seen still reaches the page from the
+            footer, which is where you look when you have lost the receipt.
           -->
           <a
             href="/orders/track"
-            class="hidden items-center gap-1.5 rounded-pill px-3 py-2 text-sm font-semibold text-ink-muted transition-colors duration-fast ease-out hover:text-mint-deep lg:inline-flex"
+            id="track-order"
+            hidden
+            class="hidden items-center gap-1.5 rounded-pill px-3 py-2 text-sm font-semibold text-ink-muted transition-colors duration-fast ease-out hover:text-mint-deep"
           >
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -223,9 +236,12 @@ const isActive = (href: string) => {
           </a>
         ))
       }
+      <!-- Same rule as the bar above: shown only to a browser with a parcel out. -->
       <a
         href="/orders/track"
-        class="block rounded-field px-3 py-2 text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
+        id="track-order-mobile"
+        hidden
+        class="rounded-field px-3 py-2 text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-200"
       >
         Track My Order
       </a>
@@ -250,6 +266,7 @@ const isActive = (href: string) => {
 
 <script>
   import { CART_EVENT, cartCount } from '../lib/cart';
+  import { OPEN_ORDER_EVENT, openOrder } from '../lib/openOrder';
 
   const btn = document.getElementById('mobile-menu-btn');
   const menu = document.getElementById('mobile-menu');
@@ -275,4 +292,30 @@ const isActive = (href: string) => {
   // Another tab may have added something since this page was rendered.
   window.addEventListener('storage', paintBadge);
   paintBadge();
+
+  /*
+   * The tracking link, in both navs. Each is server-rendered hidden and gets
+   * its display class back only if this browser is waiting on a parcel — the
+   * class differs because one is an inline row in the bar and the other a
+   * block row in the drawer.
+   */
+  const trackLinks = [
+    ['track-order', 'lg:inline-flex'],
+    ['track-order-mobile', 'block'],
+  ];
+
+  function paintTracking() {
+    const tracking = openOrder() !== null;
+    for (const [id, display] of trackLinks) {
+      const link = document.getElementById(id);
+      if (!link) continue;
+      link.hidden = !tracking;
+      link.classList.toggle(display, tracking);
+    }
+  }
+
+  window.addEventListener(OPEN_ORDER_EVENT, paintTracking);
+  // A receipt read in another tab is the usual way this becomes true.
+  window.addEventListener('storage', paintTracking);
+  paintTracking();
 </script>

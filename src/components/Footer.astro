@@ -60,7 +60,13 @@ const socials = [
     strandHighlight="var(--mint-soft)"
     height="h-8 sm:h-14"
   />
-  <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8 py-20">
+  <!--
+    Less room above the columns than below them. The wave is drawn outside this
+    box and reaches up out of it, so the band already reads as taller than it
+    is at the top and a symmetrical py- left a hole between the crest and the
+    lockup.
+  -->
+  <div class="mx-auto max-w-container px-4 pb-20 pt-12 sm:px-6 lg:px-8">
     <div class="grid grid-cols-1 gap-10 md:grid-cols-4">
       <!-- Brand -->
       <div class="md:col-span-2">

@@ -308,16 +308,41 @@ const awaiting = Boolean(order) && order!.payment_status === 'unpaid';
   </section>
 </Layout>
 
-<script is:inline define:vars={{ settled: order?.payment_status === 'paid' }}>
+<!--
+  What the script below needs, handed over as data rather than as define:vars —
+  a script with define:vars is inline, and inline cannot import lib/cart or
+  lib/openOrder.
+-->
+<div
+  id="receipt-state"
+  hidden
+  data-settled={order?.payment_status === 'paid' ? 'yes' : ''}
+  data-number={order?.order_number ?? ''}
+  data-email={order?.customer_email ?? ''}
+  data-status={order?.status ?? ''}
+>
+</div>
+
+<script>
+  import { clearCart } from '../../lib/cart';
+  import { rememberOrder } from '../../lib/openOrder';
+
+  const state = document.getElementById('receipt-state');
+
   /*
    * The basket is emptied here rather than when the customer left for payOS.
    * Someone who changed their mind at the QR screen comes back to their basket
    * intact; only a confirmed payment clears it.
    */
-  if (settled) {
-    try {
-      localStorage.removeItem('zz_cart_v1');
-    } catch {}
-    window.dispatchEvent(new CustomEvent('cart:changed', { detail: [] }));
-  }
+  if (state?.dataset.settled) clearCart();
+
+  /*
+   * This is the one page that knows both halves of the credential and the
+   * status that goes with them, so it is where the browser is told what it is
+   * waiting on — and, when the parcel has arrived or the order was called off,
+   * where it is told to stop waiting. Coming back to a receipt later refreshes
+   * the record, which is what eventually takes the header link back down.
+   */
+  const { number, email, status } = state?.dataset ?? {};
+  if (number && email && status) rememberOrder({ number, email, status });
 </script>

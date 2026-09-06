@@ -101,7 +101,12 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
   -->
   <div class="relative bg-cream-100">
     <SectionWave fill="var(--cream-100)" variant={2} />
-    <div class="mx-auto max-w-container px-4 py-12 sm:px-6 lg:px-8">
+    <!--
+      Deeper at the bottom than the top: the footer's wave reaches up out of
+      the footer and into the end of this band, and at py-12 its crest landed
+      on the edge of the card below.
+    -->
+    <div class="mx-auto max-w-container px-4 pb-24 pt-12 sm:px-6 lg:px-8">
     <!--
       Search and difficulty filter sit with the browsable list they drive,
       under the featured row rather than under the page title.
