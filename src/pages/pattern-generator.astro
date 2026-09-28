@@ -59,10 +59,11 @@ if (!isAuthed(Astro.cookies)) {
   </section>
 
   <!-- How-to guide (collapsible) -->
-  <section class="relative bg-white">
+  <!-- Bottom padding clears the generator band's wave, which reaches up into this one. -->
+  <section class="relative bg-white pb-12 sm:pb-16">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <details class="group">
-        <summary class="flex items-center justify-between gap-4 py-4 cursor-pointer list-none select-none">
+      <details class="group bg-cream-50 border border-cream-200 rounded-3xl px-6 sm:px-8 shadow-sm">
+        <summary class="flex items-center justify-between gap-4 py-5 cursor-pointer list-none select-none">
           <span class="font-display text-lg font-semibold text-brown-dark">How to use this tool</span>
           <svg
             class="w-4 h-4 text-brown-light shrink-0 transition-transform group-open:rotate-180"
