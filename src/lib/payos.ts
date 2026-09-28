@@ -1,5 +1,5 @@
 import { PayOS } from '@payos/node';
-import { usdToVnd, type PricedCart } from './orders';
+import { lineLabel, usdToVnd, type PricedCart } from './orders';
 
 /*
  * payOS — VietQR bank transfer.
@@ -99,7 +99,7 @@ export async function startPayment(input: StartPaymentInput): Promise<StartedPay
     // Shown on the payOS page so the customer can see what they are paying for.
     // Prices here are the VND equivalents, to match the amount being charged.
     items: input.priced.lines.map((line) => ({
-      name: line.name.slice(0, 100),
+      name: lineLabel(line).slice(0, 100),
       quantity: line.qty,
       price: usdToVnd(line.unitPrice),
     })),

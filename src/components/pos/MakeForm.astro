@@ -1,11 +1,13 @@
 ---
-import type { MakeWithBundle, Product } from '../../lib/database.types';
+import type { MakeKind, MakeWithBundle, Product } from '../../lib/database.types';
 import { DIFFICULTIES } from '../../lib/database.types';
 import { priceBundle } from '../../lib/makes';
 
 /*
- * One form for both create and edit — /api/pos/make-save branches on whether
- * an `id` came through.
+ * One form for both create and edit, and for both kinds of kit —
+ * /api/pos/make-save branches on whether an `id` came through, and on `kind`.
+ * A make is somebody else's design and has to carry its pin and its author; a
+ * bundle is the shop's own kit and has neither, so those fields are not drawn.
  *
  * The bundle rows submit as parallel arrays (item_product_id[], item_quantity[]
  * …). Every row control is an input or a select, never a checkbox: an unticked
@@ -16,17 +18,26 @@ export interface Props {
   make?: MakeWithBundle | null;
   products: Product[];
   next?: string;
+  /** For a new kit: which kind to create. An existing one keeps its own. */
+  kind?: MakeKind;
 }
 
-const { make = null, products, next = '/pos/makes' } = Astro.props;
+const { make = null, products, next = '/pos/makes', kind: newKind = 'make' } = Astro.props;
 const isEdit = Boolean(make);
 const items = make?.items ?? [];
+const kind: MakeKind = make?.kind ?? newKind;
+const isBundle = kind === 'bundle';
+const noun = isBundle ? 'bundle' : 'make';
 
 // Server-side preview so the panel is right on first paint, before the script
 // that keeps it live has run.
-const initial = make
-  ? priceBundle(make, items)
-  : { itemsSubtotal: 0, bundlePrice: 0, savings: 0, savingsPct: 0, optionalSubtotal: 0 };
+const pricing = make ? priceBundle(make, items) : null;
+const initial = {
+  itemsSubtotal: pricing?.itemsSubtotal ?? 0,
+  bundlePrice: pricing?.bundlePrice ?? 0,
+  savings: pricing?.savings ?? 0,
+  skippableSubtotal: pricing ? pricing.skippable.reduce((sum, i) => sum + Number(i.product.price) * Number(i.quantity), 0) : 0,
+};
 
 // Everything the client needs to price a bundle without another round trip.
 const productData = products.map((p) => ({
@@ -56,20 +67,25 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
 <form method="POST" action="/api/pos/make-save" class="grid gap-5 lg:grid-cols-3">
   <input type="hidden" name="next" value={next} />
   {isEdit && <input type="hidden" name="id" value={make!.id} />}
+  <input type="hidden" name="kind" value={kind} />
 
   <!-- Main column -->
   <div class="space-y-5 lg:col-span-2">
     <!-- ── Source ─────────────────────────────────────────────────── -->
     <div class={card}>
-      <h2 class="font-display text-lg font-bold text-ink">The pin</h2>
+      <h2 class="font-display text-lg font-bold text-ink">{isBundle ? 'The picture' : 'The pin'}</h2>
       <p class="mb-4 mt-0.5 text-xs text-ink-muted">
-        Paste the Pinterest link and pull the image and the author across. We link back to the pin
-        rather than reproducing the pattern, and the author travels with the make.
+        {
+          isBundle
+            ? 'A photo of what comes in the box. A bundle is our own kit, so there is nobody to credit.'
+            : 'Paste the Pinterest link and pull the image and the author across. We link back to the pin rather than reproducing the pattern, and the author travels with the make.'
+        }
       </p>
 
       <div class="space-y-4">
+        {!isBundle && (
         <div>
-          <label class={label} for="pinterest_url">Pinterest link *</label>
+          <label class={label} for="pinterest_url">Design link — a pin or pattern page *</label>
           <div class="flex flex-col gap-2 sm:flex-row">
             <input
               id="pinterest_url"
@@ -90,6 +106,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
           </div>
           <p id="pin-status" class="mt-1.5 text-xs font-semibold text-ink-muted"></p>
         </div>
+        )}
 
         <div class="grid gap-4 sm:grid-cols-[160px_1fr]">
           <!-- Pin image preview -->
@@ -137,6 +154,8 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
               value={make?.source_image_url ?? ''}
             />
 
+            {!isBundle && (
+            <>
             <div class="grid gap-4 sm:grid-cols-2">
               <div>
                 <label class={label} for="author_name">Pin author *</label>
@@ -179,6 +198,8 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
                 Printed under the credit line on the public page.
               </p>
             </div>
+            </>
+            )}
           </div>
         </div>
       </div>
@@ -186,7 +207,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
 
     <!-- ── About ──────────────────────────────────────────────────── -->
     <div class={card}>
-      <h2 class="mb-4 font-display text-lg font-bold text-ink">About this make</h2>
+      <h2 class="mb-4 font-display text-lg font-bold text-ink">About this {noun}</h2>
 
       <div class="space-y-4">
         <div>
@@ -198,7 +219,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
             required
             maxlength="140"
             value={make?.title ?? ''}
-            placeholder="Chunky granny square tote"
+            placeholder={isBundle ? 'Bundle for beginners' : 'Chunky granny square tote'}
             class={field}
           />
         </div>
@@ -206,7 +227,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
         <div>
           <label class={label} for="slug">URL slug</label>
           <div class="flex items-center gap-2">
-            <span class="shrink-0 font-mono text-xs text-ink-faint">/makes/</span>
+            <span class="shrink-0 font-mono text-xs text-ink-faint">{isBundle ? '/bundles/' : '/makes/'}</span>
             <input
               id="slug"
               name="slug"
@@ -226,13 +247,13 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
             id="summary"
             name="summary"
             rows="4"
-            placeholder="What it is and why this bundle makes it. Two or three sentences."
+            placeholder={isBundle ? 'Who it is for and what they will be able to make. Two or three sentences.' : 'What it is and why this kit makes it. Two or three sentences.'}
             class={field}>{make?.summary ?? ''}</textarea>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
-            <label class={label} for="difficulty">Difficulty</label>
+            <label class={label} for="difficulty">{isBundle ? 'Level' : 'Difficulty'}</label>
             <select id="difficulty" name="difficulty" class={field}>
               <option value="">Not set</option>
               {
@@ -275,20 +296,22 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
     <!-- ── Bundle ─────────────────────────────────────────────────── -->
     <div class={card}>
       <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 class="font-display text-lg font-bold text-ink">The bundle</h2>
+        <h2 class="font-display text-lg font-bold text-ink">What's in the kit</h2>
         <span class="rounded-pill bg-cream-100 px-3 py-1 text-xs font-bold text-ink-muted">
           What we actually sell
         </span>
       </div>
       <p class="mb-4 text-xs text-ink-muted">
-        The yarn and tools someone needs to make this. Every line is a product from the shop, so its
-        price and stock stay in one place.
+        Every yarn colour, accessory and tool that goes in the box. Each line is a product from the
+        shop, so its price and stock stay in one place. Mark the tools a customer may already own —
+        hooks, scissors, needles — as skippable: they stay in the kit unless the customer unticks
+        them, and everything else is always included.
       </p>
 
       {
         products.length === 0 ? (
           <p class="rounded-field bg-lemon-wash px-3 py-2.5 text-xs font-semibold text-lemon-deep">
-            There are no products to bundle yet —{' '}
+            There are no products to put in a kit yet —{' '}
             <a href="/pos/products/new" class="underline">
               add some yarn and tools first
             </a>
@@ -300,7 +323,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
               <span>Material</span>
               <span>Qty</span>
               <span>Note</span>
-              <span>Required?</span>
+              <span>Customer can skip?</span>
               <span class="text-right">Line</span>
             </div>
 
@@ -335,12 +358,12 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
                     placeholder="Colour A"
                     class={`${smallField} row-note`}
                   />
-                  <select name="item_optional" class={`${smallField} row-optional`}>
-                    <option value="required" selected={!item.is_optional}>
-                      Required
+                  <select name="item_can_skip" class={`${smallField} row-skip`}>
+                    <option value="no" selected={!item.can_opt_out}>
+                      Always in
                     </option>
-                    <option value="optional" selected={item.is_optional}>
-                      Optional
+                    <option value="yes" selected={item.can_opt_out}>
+                      Can skip (tool)
                     </option>
                   </select>
                   <div class="flex items-center justify-between gap-2 sm:justify-end">
@@ -366,7 +389,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
             </button>
 
             <p id="bundle-empty" class="mt-3 hidden text-xs font-semibold text-lemon-deep">
-              An empty bundle means the public page has nothing to sell.
+              An empty kit means the public page has nothing to sell.
             </p>
 
             {/* Inert until cloned — controls inside a template are never submitted. */}
@@ -394,9 +417,9 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
                   class={`${smallField} row-qty`}
                 />
                 <input name="item_note" type="text" placeholder="Colour A" class={`${smallField} row-note`} />
-                <select name="item_optional" class={`${smallField} row-optional`}>
-                  <option value="required">Required</option>
-                  <option value="optional">Optional</option>
+                <select name="item_can_skip" class={`${smallField} row-skip`}>
+                  <option value="no">Always in</option>
+                  <option value="yes">Can skip (tool)</option>
                 </select>
                 <div class="flex items-center justify-between gap-2 sm:justify-end">
                   <span class="row-total font-display text-sm font-extrabold text-ink">—</span>
@@ -446,7 +469,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
           />
           <span>
             <span class="block text-sm font-bold text-ink">Featured</span>
-            <span class="block text-xs text-ink-muted">Sorts first on the makes page.</span>
+            <span class="block text-xs text-ink-muted">Sorts first on the {noun}s page, and can show on the homepage.</span>
           </span>
         </label>
 
@@ -466,9 +489,10 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
 
     <!-- ── Pricing ────────────────────────────────────────────────── -->
     <div class={card}>
-      <h2 class="font-display text-lg font-bold text-ink">Bundle price</h2>
+      <h2 class="font-display text-lg font-bold text-ink">Kit price</h2>
       <p class="mb-4 mt-0.5 text-xs text-ink-muted">
-        Leave the override blank and the bundle is the sum of its required items, less the discount.
+        Leave the override blank and the kit is the sum of everything in it, less the discount. A
+        customer who skips a tool pays that tool's share less, at the same discount.
       </p>
 
       <div class="space-y-4">
@@ -480,7 +504,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
             </span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-ink-muted">Bundle price</span>
+            <span class="text-ink-muted">Kit price</span>
             <span id="pv-bundle" class="font-display text-lg font-extrabold text-ink">
               ${initial.bundlePrice.toFixed(2)}
             </span>
@@ -491,20 +515,20 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
               ${initial.savings.toFixed(2)}
             </span>
           </div>
-          <div id="pv-optional-row" class="flex items-center justify-between text-xs">
-            <span class="text-ink-faint">Optional extras</span>
-            <span id="pv-optional" class="font-bold text-ink-muted">
-              ${initial.optionalSubtotal.toFixed(2)}
+          <div id="pv-skip-row" class="flex items-center justify-between text-xs">
+            <span class="text-ink-faint">Tools they can skip</span>
+            <span id="pv-skip" class="font-bold text-ink-muted">
+              ${initial.skippableSubtotal.toFixed(2)}
             </span>
           </div>
           <div id="pv-margin-row" class="flex items-center justify-between border-t border-cream-300 pt-2 text-xs">
-            <span class="text-ink-faint">Margin on the bundle</span>
+            <span class="text-ink-faint">Margin on the whole kit</span>
             <span id="pv-margin" class="font-bold text-ink-muted">—</span>
           </div>
         </div>
 
         <div>
-          <label class={label} for="bundle_discount_pct">Bundle discount</label>
+          <label class={label} for="bundle_discount_pct">Kit discount</label>
           <div class="relative">
             <input
               id="bundle_discount_pct"
@@ -518,7 +542,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
             />
             <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-faint">%</span>
           </div>
-          <p class="mt-1.5 text-xs text-ink-faint">Off the total when they buy the whole bundle.</p>
+          <p class="mt-1.5 text-xs text-ink-faint">Off the total of everything in the kit.</p>
         </div>
 
         <div>
@@ -550,7 +574,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
         type="submit"
         class="w-full rounded-pill bg-btn-gradient py-3 text-sm font-bold text-ink shadow transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.98]"
       >
-        {isEdit ? 'Save make' : 'Create make'}
+        {isEdit ? `Save ${noun}` : `Create ${noun}`}
       </button>
       <a
         href="/pos/makes"
@@ -756,7 +780,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
     if (!rowsHost) return;
 
     let subtotal = 0;
-    let optionalTotal = 0;
+    let skipTotal = 0;
     let cost = 0;
     let costKnown = true;
     let rowCount = 0;
@@ -764,12 +788,12 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
     rowsHost.querySelectorAll<HTMLDivElement>('.bundle-row').forEach((row) => {
       const select = row.querySelector<HTMLSelectElement>('.row-product');
       const qtyInput = row.querySelector<HTMLInputElement>('.row-qty');
-      const optionalSelect = row.querySelector<HTMLSelectElement>('.row-optional');
+      const skipSelect = row.querySelector<HTMLSelectElement>('.row-skip');
       const totalCell = row.querySelector<HTMLSpanElement>('.row-total');
 
       const product = select?.value ? BY_ID.get(select.value) : undefined;
       const quantity = Number(qtyInput?.value ?? '1');
-      const isOptional = optionalSelect?.value === 'optional';
+      const canSkip = skipSelect?.value === 'yes';
 
       if (!product || !Number.isFinite(quantity) || quantity <= 0) {
         if (totalCell) totalCell.textContent = '—';
@@ -780,13 +804,12 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
       const line = product.price * quantity;
       if (totalCell) totalCell.textContent = money(line);
 
-      if (isOptional) {
-        optionalTotal += line;
-      } else {
-        subtotal += line;
-        if (product.cost === null) costKnown = false;
-        else cost += product.cost * quantity;
-      }
+      // Everything is in the kit; a skippable tool is only left out if the
+      // customer unticks it, so it counts toward the kit's price like the rest.
+      subtotal += line;
+      if (canSkip) skipTotal += line;
+      if (product.cost === null) costKnown = false;
+      else cost += product.cost * quantity;
     });
 
     const discount = Number(discountInput?.value ?? '0') || 0;
@@ -803,11 +826,11 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
     set('pv-subtotal', money(subtotal));
     set('pv-bundle', money(bundle));
     set('pv-savings', savings > 0 ? money(savings) + ' (' + ((savings / subtotal) * 100).toFixed(0) + '%)' : money(0));
-    set('pv-optional', money(optionalTotal));
+    set('pv-skip', money(skipTotal));
     set('pv-margin', costKnown && bundle > 0 ? (((bundle - cost) / bundle) * 100).toFixed(1) + '%' : 'costs missing');
 
-    const optionalRow = $<HTMLDivElement>('pv-optional-row');
-    if (optionalRow) optionalRow.classList.toggle('hidden', optionalTotal === 0);
+    const skipRow = $<HTMLDivElement>('pv-skip-row');
+    if (skipRow) skipRow.classList.toggle('hidden', skipTotal === 0);
 
     overrideNote?.classList.toggle('hidden', !(hasOverride && discount > 0));
     emptyNote?.classList.toggle('hidden', rowCount > 0);
@@ -836,7 +859,7 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
   discountInput?.addEventListener('input', recalc);
   overrideInput?.addEventListener('input', recalc);
 
-  // Start a new make with one empty line rather than a bare "add" button.
+  // Start a new kit with one empty line rather than a bare "add" button.
   if (rowsHost && rowsHost.children.length === 0) addRow();
   recalc();
 </script>

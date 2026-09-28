@@ -3,8 +3,9 @@ import SectionWave from './SectionWave.astro';
 
 const navLinks = [
   { label: 'Home', href: '/' },
-  { label: 'Shop', href: '/store' },
+  { label: 'Bundles', href: '/bundles' },
   { label: 'Makes', href: '/makes' },
+  { label: 'Materials', href: '/store' },
   { label: 'Gallery', href: '/gallery' },
   { label: 'Request Product', href: '/request-product' },
 ];
@@ -13,7 +14,7 @@ const navLinks = [
  * Vercel serves a prerendered route with a trailing slash, so /gallery/ never
  * equalled the '/gallery' in the list and the whole nav went dark on that page.
  * Normalising both sides fixes it, and treating a nested route as its section
- * keeps Shop lit on /store/<slug> and Makes lit on /makes/<slug>.
+ * keeps Bundles lit on /bundles/<slug> and Makes lit on /makes/<slug>.
  */
 const trim = (path: string) => (path.length > 1 ? path.replace(/\/+$/, '') : path);
 const currentPath = trim(Astro.url.pathname);
@@ -181,7 +182,7 @@ const isActive = (href: string) => {
 
           <!-- Primary: light gradient fill, so the label is forest ink. -->
           <a
-            href="/store"
+            href="/bundles"
             class="hidden items-center gap-2 rounded-pill bg-btn-gradient px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97] md:inline-flex"
           >
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -246,7 +247,7 @@ const isActive = (href: string) => {
         Track My Order
       </a>
       <a
-        href="/store"
+        href="/bundles"
         class="mt-2 block rounded-pill bg-btn-gradient px-4 py-2.5 text-center text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:brightness-105"
       >
         Shop Now

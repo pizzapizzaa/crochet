@@ -1,0 +1,412 @@
+---
+/*
+ * One kit — a make or a bundle — and everything in its box.
+ *
+ * Makes and bundles are sold the same way, so they share this page; what
+ * differs is the credit. A make is somebody else's design and carries the
+ * block that says whose, with the link to the pin. A bundle is the shop's own
+ * and has nobody to credit.
+ *
+ * Every item is in the kit. The ones marked can_opt_out — the tools somebody
+ * may already own — carry an Include tick, and unticking one takes its share
+ * of the price off. The figures on the page are worked out here and in the
+ * script below for show only: the basket re-prices the line on the server
+ * from the product ids left out, through the same priceBundle().
+ */
+import Layout from '../layouts/Layout.astro';
+import MakeCard from './MakeCard.astro';
+import { ON_IMG_ERROR, productImage } from '../lib/images';
+import { difficultyBadge, kitHref, lineTotal, money, priceBundle, qty } from '../lib/makes';
+import type { MakeWithBundle } from '../lib/database.types';
+
+interface Props {
+  make: MakeWithBundle;
+  related: MakeWithBundle[];
+}
+
+const { make, related } = Astro.props;
+const isBundle = make.kind === 'bundle';
+const section = isBundle ? { label: 'Bundles', href: '/bundles' } : { label: 'Makes', href: '/makes' };
+
+const pricing = priceBundle(make, make.items);
+const image = productImage(make.image_url);
+
+// An item that cannot be left out and has sold out stops the kit outright. A
+// sold-out tool only does until the customer unticks it.
+const blockingOutOfStock = pricing.items.filter((i) => !i.can_opt_out && i.product.stock === 0);
+const hasItems = pricing.items.length > 0;
+const available = hasItems && blockingOutOfStock.length === 0 && pricing.items.every((i) => i.product.stock > 0);
+
+/*
+ * The three facts about the project, as tags rather than a run of text. Each
+ * carries a glyph so the row reads at a glance without anyone parsing the
+ * labels, and the difficulty tag takes the same fill as the badge on the photo
+ * — one colour per level, wherever the level appears.
+ */
+const facts = [
+  {
+    label: isBundle ? 'Level' : 'Difficulty',
+    value: make.difficulty,
+    // Ascending bars: the level, drawn.
+    icon: 'M4 18v-4m5 4V9m5 9V6m5 12V4',
+    tone: `border-transparent ${difficultyBadge(make.difficulty)}`,
+  },
+  {
+    label: 'Time',
+    value: make.estimated_time,
+    icon: 'M12 7.5V12l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    tone: 'border-cream-300 bg-paper text-ink-body',
+  },
+  {
+    label: 'In the kit',
+    value: `${pricing.items.length} item${pricing.items.length === 1 ? '' : 's'}`,
+    // A stack of layers — what a kit looks like from the side.
+    icon: 'M12 3l8 4-8 4-8-4 8-4zM4 12l8 4 8-4M4 17l8 4 8-4',
+    tone: 'border-cream-300 bg-paper text-ink-body',
+  },
+].filter((f) => f.value);
+---
+
+<Layout
+  title={make.title}
+  description={make.summary ?? `Everything in the ${make.title} kit.`}
+  image={image}
+>
+  <div class="mx-auto max-w-container px-4 py-10 sm:px-6 lg:px-8">
+    <nav class="mb-8 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
+      <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
+      <span>/</span>
+      <a href={section.href} class="transition-colors duration-fast ease-out hover:text-mint-deep">{section.label}</a>
+      <span>/</span>
+      <span class="text-ink-body">{make.title}</span>
+    </nav>
+
+    <div class="grid gap-12 lg:grid-cols-2">
+      <!-- ── The picture, and whose design it is ─────────────────── -->
+      <div class="space-y-4">
+        <div class="relative flex items-center justify-center overflow-hidden rounded-photo bg-cream-200 shadow-xl">
+          <img src={image} onerror={ON_IMG_ERROR} alt={make.title} class="block h-auto max-h-[70vh] w-auto max-w-full" />
+          {
+            make.difficulty && (
+              <span
+                class={`absolute left-5 top-5 rounded-pill px-3 py-1.5 text-xs font-bold uppercase tracking-wide shadow-sm ${difficultyBadge(make.difficulty)}`}
+              >
+                {make.difficulty}
+              </span>
+            )
+          }
+        </div>
+
+        {
+          /*
+           * Credit block, for makes. Sits directly under the photo rather than in
+           * the footer because the photo is the thing being credited, and it is
+           * the first place anyone looks to ask "whose is this?".
+           */
+          !isBundle && make.pinterest_url && (
+            <div class="rounded-card border border-cream-300 bg-paper p-5">
+              <p class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">Original design</p>
+              <p class="mt-1.5 text-sm text-ink-body">
+                This project is by{' '}
+                {make.author_url ? (
+                  <a href={make.author_url} target="_blank" rel="noopener nofollow" class="font-bold text-mint-deep hover:underline">
+                    {make.author_name}
+                  </a>
+                ) : (
+                  <span class="font-bold text-ink">{make.author_name}</span>
+                )}
+                . We did not design it and we do not reproduce the pattern here — follow the link for that.
+              </p>
+
+              <a
+                href={make.pinterest_url}
+                target="_blank"
+                rel="noopener nofollow"
+                class="mt-4 inline-flex items-center gap-2 rounded-pill bg-forest px-5 py-2.5 text-sm font-bold text-paper transition-all duration-fast ease-out hover:-translate-y-0.5 hover:bg-forest-deep"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2C6.48 2 2 6.48 2 12c0 4.24 2.64 7.86 6.36 9.32-.09-.79-.17-2 .03-2.87.18-.78 1.17-4.97 1.17-4.97s-.3-.6-.3-1.48c0-1.39.81-2.43 1.81-2.43.85 0 1.26.64 1.26 1.41 0 .86-.55 2.14-.83 3.33-.24 1 .5 1.81 1.48 1.81 1.78 0 3.14-1.88 3.14-4.58 0-2.39-1.72-4.07-4.18-4.07-2.85 0-4.52 2.14-4.52 4.35 0 .86.33 1.78.75 2.28.08.1.09.19.07.29-.08.32-.25 1-.28 1.14-.04.19-.15.23-.34.14-1.25-.58-2.03-2.4-2.03-3.87 0-3.15 2.29-6.04 6.6-6.04 3.46 0 6.16 2.47 6.16 5.77 0 3.44-2.17 6.21-5.18 6.21-1.01 0-1.96-.53-2.29-1.15l-.62 2.38c-.23.86-.83 1.94-1.24 2.6.94.29 1.92.44 2.95.44 5.52 0 10-4.48 10-10S17.52 2 12 2z" />
+                </svg>
+                See the original
+              </a>
+
+              {make.attribution_note && <p class="mt-3 text-xs text-ink-muted">{make.attribution_note}</p>}
+            </div>
+          )
+        }
+      </div>
+
+      <!-- ── The kit ─────────────────────────────────────────────── -->
+      <div class="flex flex-col">
+        <span class="text-micro font-bold uppercase tracking-eyebrow text-ink-muted">
+          {isBundle ? 'Bundle' : 'Make it yourself'}
+        </span>
+        <h1 class="mt-2 font-display text-4xl font-extrabold leading-tight text-ink">{make.title}</h1>
+
+        {make.summary && <p class="mt-4 leading-relaxed text-ink-body">{make.summary}</p>}
+
+        {
+          facts.length > 0 && (
+            <div class="mt-5 flex flex-wrap gap-2">
+              {facts.map((f) => (
+                <span class={`inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs shadow-xs ${f.tone}`}>
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0 opacity-70"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d={f.icon} />
+                  </svg>
+                  <span class="font-semibold opacity-70">{f.label}</span>
+                  <span class="font-bold">{f.value}</span>
+                </span>
+              ))}
+            </div>
+          )
+        }
+
+        <hr class="my-6 border-cream-300" />
+
+        <h2 class="font-display text-xl font-bold text-ink">What's in the kit</h2>
+        <p class="mt-1 text-sm text-ink-muted">
+          {
+            pricing.skippable.length > 0
+              ? 'Everything below comes in the box. Already have a tool? Untick it and we take it off the price.'
+              : 'Everything below comes in the box.'
+          }
+        </p>
+
+        {
+          !hasItems ? (
+            <p class="mt-4 rounded-card bg-cream-100 px-4 py-3 text-sm text-ink-muted">
+              We are still putting the materials list together for this one.
+            </p>
+          ) : (
+            <ul id="kit-items" class="mt-4 divide-y divide-cream-300 rounded-card border border-cream-300 bg-paper">
+              {pricing.items.map((item) => (
+                <li
+                  class="flex items-center gap-3 p-3.5 transition-opacity duration-fast ease-out data-[left-out]:opacity-50"
+                  data-product={item.product_id}
+                  data-name={item.product.name}
+                  data-line={lineTotal(item)}
+                  data-share={pricing.optOutValue[item.product_id] ?? 0}
+                  data-sold-out={item.product.stock === 0 ? '' : undefined}
+                >
+                  <a href={`/store/${item.product.slug}`} class="shrink-0">
+                    <img
+                      src={productImage(item.product.images?.[0])}
+                      onerror={ON_IMG_ERROR}
+                      alt=""
+                      class="h-14 w-14 rounded-field object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                  <div class="min-w-0 flex-1">
+                    <a
+                      href={`/store/${item.product.slug}`}
+                      class="block font-display text-sm font-bold text-ink transition-colors duration-fast ease-out hover:text-mint-deep"
+                    >
+                      {item.product.name}
+                    </a>
+                    <p class="text-xs text-ink-muted">
+                      {qty(item.quantity)} × {money(Number(item.product.price))}
+                      {item.note ? ` · ${item.note}` : ''}
+                    </p>
+                    {item.product.stock === 0 && (
+                      <p class="mt-0.5 text-xs font-bold text-lemon-deep">
+                        {item.can_opt_out ? 'Out of stock — untick it to buy the kit without it' : 'Out of stock'}
+                      </p>
+                    )}
+                  </div>
+                  <div class="flex shrink-0 flex-col items-end gap-1">
+                    <span class="font-display text-sm font-extrabold text-ink">{money(lineTotal(item))}</span>
+                    {item.can_opt_out ? (
+                      <label class="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-ink-body">
+                        <input type="checkbox" checked data-include class="h-4 w-4 rounded border-cream-400 text-mint-deep" />
+                        Include
+                      </label>
+                    ) : (
+                      <span class="text-micro font-bold uppercase tracking-eyebrow text-ink-faint">In the kit</span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+
+        <!-- Price panel -->
+        {
+          hasItems && (
+            <div
+              id="kit-price"
+              class="mt-6 rounded-card border border-cream-300 bg-cream-50 p-5"
+              data-full-price={pricing.fullPrice}
+              data-full-subtotal={pricing.itemsSubtotal}
+            >
+              <div class="flex items-baseline justify-between">
+                <span class="text-sm text-ink-muted">Bought separately</span>
+                <span class="text-sm text-ink-body" data-separately>{money(pricing.itemsSubtotal)}</span>
+              </div>
+              <div class="mt-2 flex items-baseline justify-between">
+                <span class="font-display text-lg font-bold text-ink">Your kit</span>
+                <span class="font-display text-3xl font-extrabold text-ink" data-price>{money(pricing.bundlePrice)}</span>
+              </div>
+              <p
+                class={`mt-2 rounded-field bg-mint-wash px-3 py-2 text-sm font-bold text-mint-deep ${pricing.savings > 0 ? '' : 'hidden'}`}
+                data-savings
+              >
+                Save {money(pricing.savings)} — {pricing.savingsPct.toFixed(0)}% off taking the kit
+              </p>
+              <p class="mt-2 hidden text-xs text-ink-muted" data-left-out></p>
+
+              <button
+                id="add-kit"
+                data-id={make.id}
+                data-name={make.title}
+                data-image={make.image_url ?? ''}
+                data-href={kitHref(make)}
+                class={`mt-4 w-full rounded-pill py-4 text-sm font-bold transition-all duration-fast ease-out ${
+                  available
+                    ? 'bg-btn-gradient text-ink shadow-sm hover:-translate-y-0.5 hover:brightness-105'
+                    : 'cursor-not-allowed bg-cream-200 text-ink-muted'
+                }`}
+                disabled={!available}
+              >
+                {available ? `Add the kit — ${money(pricing.bundlePrice)}` : 'Some materials are out of stock'}
+              </button>
+
+              <p class="mt-3 text-xs text-ink-muted">
+                {isBundle
+                  ? 'You are buying the yarn and tools in the kit, not a finished piece.'
+                  : `You are buying the yarn and tools, not a finished piece — and not the pattern, which stays with ${make.author_name}.`}
+              </p>
+            </div>
+          )
+        }
+
+        {
+          make.tags.length > 0 && (
+            <div class="mt-5 flex flex-wrap gap-2">
+              {make.tags.map((tag) => (
+                <a
+                  href={`${section.href}?q=${encodeURIComponent(tag)}`}
+                  class="rounded-pill bg-cream-200 px-3 py-1.5 text-xs text-ink-muted transition-colors duration-fast ease-out hover:bg-mint-wash hover:text-mint-deep"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </div>
+
+    {
+      related.length > 0 && (
+        <section class="mt-24">
+          <div class="mb-10 flex items-end justify-between">
+            <div>
+              <span class="text-micro font-bold uppercase tracking-eyebrow text-mint-deep">Keep going</span>
+              <h2 class="mt-1 font-display text-3xl font-extrabold text-ink">More {section.label.toLowerCase()}</h2>
+            </div>
+            <a
+              href={section.href}
+              class="hidden text-sm font-semibold text-ink-body transition-colors duration-fast ease-out hover:text-mint-deep sm:block"
+            >
+              View all →
+            </a>
+          </div>
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((m) => (
+              <MakeCard make={m} />
+            ))}
+          </div>
+        </section>
+      )
+    }
+  </div>
+</Layout>
+
+<script>
+  import { addToCart } from '../lib/cart';
+
+  const money = (n: number) =>
+    '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const panel = document.getElementById('kit-price');
+  const button = document.getElementById('add-kit') as HTMLButtonElement | null;
+  const rows = [...document.querySelectorAll<HTMLLIElement>('#kit-items li[data-product]')];
+
+  /** The rows left out, as ticked right now. */
+  const leftOut = () =>
+    rows.filter((row) => {
+      const box = row.querySelector<HTMLInputElement>('input[data-include]');
+      return box ? !box.checked : false;
+    });
+
+  /*
+   * The same sum priceBundle() does on the server: each item left out takes off
+   * its share of the kit's price, worked out there and carried on the row.
+   */
+  function update() {
+    if (!panel || !button) return;
+    const out = leftOut();
+    for (const row of rows) row.toggleAttribute('data-left-out', out.includes(row));
+
+    const price = Math.max(0, Number(panel.dataset.fullPrice) - out.reduce((s, r) => s + Number(r.dataset.share), 0));
+    const separately = Number(panel.dataset.fullSubtotal) - out.reduce((s, r) => s + Number(r.dataset.line), 0);
+    const savings = Math.max(0, separately - price);
+
+    panel.querySelector('[data-price]')!.textContent = money(price);
+    panel.querySelector('[data-separately]')!.textContent = money(separately);
+    const savingsEl = panel.querySelector<HTMLElement>('[data-savings]')!;
+    savingsEl.classList.toggle('hidden', savings < 0.01);
+    savingsEl.textContent = `Save ${money(savings)} — ${separately > 0 ? ((savings / separately) * 100).toFixed(0) : 0}% off taking the kit`;
+    const leftOutEl = panel.querySelector<HTMLElement>('[data-left-out]')!;
+    leftOutEl.classList.toggle('hidden', out.length === 0);
+    leftOutEl.textContent = out.length ? `Without: ${out.map((r) => r.dataset.name).join(', ')}` : '';
+
+    // Sold-out items that are still ticked stop the kit; unticked ones do not.
+    const soldOutKept = rows.some((r) => r.hasAttribute('data-sold-out') && !out.includes(r));
+    const available = rows.length > 0 && !soldOutKept;
+    button.disabled = !available;
+    button.classList.toggle('cursor-not-allowed', !available);
+    button.classList.toggle('bg-cream-200', !available);
+    button.classList.toggle('text-ink-muted', !available);
+    button.classList.toggle('bg-btn-gradient', available);
+    button.classList.toggle('text-ink', available);
+    button.textContent = available ? `Add the kit — ${money(price)}` : 'Some materials are out of stock';
+    button.dataset.price = String(price);
+  }
+
+  for (const row of rows) row.querySelector('input[data-include]')?.addEventListener('change', update);
+  update();
+
+  button?.addEventListener('click', () => {
+    const { id, name, price, image, href } = button.dataset;
+    if (!id || !name || !href) return;
+    const out = leftOut();
+
+    // The kit goes in as one line, with what was left out. Its price here is
+    // for drawing the row; the server prices the line again before it counts.
+    addToCart(
+      id,
+      {
+        name,
+        price: Number(price ?? 0),
+        image: image || null,
+        href,
+        omitted: out.map((r) => r.dataset.name ?? ''),
+      },
+      out.map((r) => r.dataset.product ?? ''),
+    );
+
+    window.dispatchEvent(new Event('cart:open'));
+  });
+</script>

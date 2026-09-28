@@ -88,7 +88,7 @@ import SectionWave from '../components/SectionWave.astro';
 </Layout>
 
 <script>
-  import { CART_EVENT, readCart, removeLine, setQty, type LineKind } from '../lib/cart';
+  import { CART_EVENT, readCart, removeLine, setQty } from '../lib/cart';
   import { fetchPricing, lineRow, money, problemBanner } from '../lib/cartView';
 
   const FREE_SHIPPING_OVER = 80;
@@ -151,19 +151,18 @@ import SectionWave from '../components/SectionWave.astro';
     if (!target) return;
 
     const row = target.closest('li');
-    const kind = row?.dataset.kind as LineKind | undefined;
-    const id = row?.dataset.id;
-    if (!kind || !id) return;
+    const key = row?.dataset.key;
+    if (!key) return;
 
     if (target.hasAttribute('data-remove')) {
-      removeLine(kind, id);
+      removeLine(key);
       return;
     }
 
     const step = Number(target.dataset.step ?? 0);
     if (!step) return;
     const current = Number(row?.querySelector('[data-qty]')?.textContent ?? 1);
-    setQty(kind, id, current + step);
+    setQty(key, current + step);
   });
 
   window.addEventListener(CART_EVENT, render);

@@ -12,7 +12,11 @@ import { ON_IMG_ERROR, productImage } from './images';
 
 export interface PricedLineView {
   kind: 'product' | 'bundle';
+  /** The basket's key for this line: the kit and what was left out of it. */
+  key: string;
   id: string;
+  /** Names of the tools left out. */
+  omitted?: string[];
   name: string;
   href: string;
   image: string | null;
@@ -80,7 +84,7 @@ export function lineRow(line: PricedLineView, compact: boolean): string {
   const size = compact ? 'h-16 w-16' : 'h-20 w-20 sm:h-24 sm:w-24';
 
   return `
-    <li class="flex gap-3 py-4" data-kind="${line.kind}" data-id="${line.id}">
+    <li class="flex gap-3 py-4" data-key="${escapeHtml(line.key)}">
       <a href="${line.href}" class="shrink-0">
         <img src="${escapeHtml(image)}" onerror="${ON_IMG_ERROR}" alt="" class="${size} rounded-field object-cover" loading="lazy" />
       </a>
@@ -88,6 +92,11 @@ export function lineRow(line: PricedLineView, compact: boolean): string {
         <a href="${line.href}" class="block font-display text-sm font-bold leading-snug text-ink transition-colors duration-fast ease-out hover:text-mint-deep">
           ${name}
         </a>
+        ${
+          line.omitted?.length
+            ? `<p class="mt-0.5 text-xs text-ink-muted">Without: ${line.omitted.map(escapeHtml).join(', ')}</p>`
+            : ''
+        }
         <p class="mt-0.5 text-xs text-ink-muted">
           ${money(line.unitPrice)} each
           ${line.compareAt ? `<span class="ml-1 line-through opacity-70">${money(line.compareAt)}</span>` : ''}

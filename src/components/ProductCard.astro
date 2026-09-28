@@ -9,9 +9,6 @@ export interface Props {
 
 const { product, class: className = '' } = Astro.props;
 const primaryImage = productImage(product.images?.[0]);
-const discount = product.compare_at_price
-  ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
-  : null;
 const isSoldOut = product.stock === 0;
 const isLowStock = product.stock > 0 && product.stock <= 3;
 
@@ -40,13 +37,6 @@ const spec = product.yarn_weight
       loading="lazy"
     />
     {
-      discount && (
-        <span class="absolute left-3 top-3 rounded-pill bg-lemon px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-ink">
-          -{discount}%
-        </span>
-      )
-    }
-    {
       isSoldOut ? (
         <span class="absolute right-3 top-3 rounded-pill bg-forest-deep/80 px-2.5 py-1 text-micro font-bold uppercase tracking-wide text-cream">
           Sold out
@@ -74,18 +64,8 @@ const spec = product.yarn_weight
     {spec && <p class="text-xs text-ink-muted">{spec}</p>}
 
     <div class="mt-auto flex items-center justify-between gap-3 pt-4">
-      <div class="flex items-baseline gap-2">
-        <span class="font-display text-lg font-extrabold text-ink">
-          ${product.price.toFixed(2)}
-        </span>
-        {
-          product.compare_at_price && (
-            <span class="text-sm text-ink-muted line-through">
-              ${product.compare_at_price.toFixed(2)}
-            </span>
-          )
-        }
-      </div>
+      <!-- Not sold on its own, so no price: it comes in the kits on its page. -->
+      <p class="text-xs font-semibold text-ink-muted">In our kits</p>
       <a
         href={`/store/${product.slug}`}
         class={`shrink-0 rounded-pill px-4 py-2.5 text-xs font-bold transition-all duration-fast ease-out ${

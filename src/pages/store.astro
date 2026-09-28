@@ -49,7 +49,7 @@ else if (urlSort === 'newest')
 else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
 ---
 
-<Layout title="Shop" description="Browse yarn, crochet hooks, project kits, bundles and patterns — everything you need to create.">
+<Layout title="Materials" description="The yarn, hooks and tools that go into our makes and bundles.">
   <!-- Page Header -->
   <section class="relative bg-white py-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,12 +58,15 @@ else products.sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
           <nav class="text-xs text-brown-light mb-1 flex items-center gap-1.5">
             <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
             <span>/</span>
-            <span class="text-brown-warm">Shop</span>
+            <span class="text-brown-warm">Materials</span>
           </nav>
-          <h1 class="font-display text-4xl font-semibold text-brown-dark">Shop</h1>
+          <h1 class="font-display text-4xl font-semibold text-brown-dark">Materials</h1>
           <p class="text-brown-warm text-sm mt-1">
             {products.length} item{products.length !== 1 ? 's' : ''}
             {urlCategory !== 'All' ? ` in ${urlCategory}` : ''}
+            · the yarn and tools in our kits. They come in our{' '}
+            <a href="/bundles" class="font-semibold text-rose-dust hover:underline">bundles</a> and{' '}
+            <a href="/makes" class="font-semibold text-rose-dust hover:underline">makes</a>, not on their own.
           </p>
         </div>
 

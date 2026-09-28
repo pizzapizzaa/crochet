@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Order } from './database.types';
 import { ORDER_STATUSES } from './database.types';
-import { formatAddress, orderItems, shippingAddress } from './orders';
+import { formatAddress, lineLabel, orderItems, shippingAddress } from './orders';
 import { carrierLabel } from './fulfilment';
 
 /*
@@ -219,7 +219,7 @@ export function toCsv(orders: Order[]): string {
   const rows = orders.map((order) => {
     const items = orderItems(order);
     const count = items.lines.reduce((sum, l) => sum + l.qty, 0);
-    const summary = items.lines.map((l) => `${l.qty} x ${l.name}`).join('; ');
+    const summary = items.lines.map((l) => `${l.qty} x ${lineLabel(l)}`).join('; ');
 
     return [
       order.order_number,

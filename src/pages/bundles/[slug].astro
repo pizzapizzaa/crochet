@@ -1,0 +1,18 @@
+---
+// Rendered per request so a bundle published from /pos is live immediately.
+export const prerender = false;
+
+import KitPage from '../../components/KitPage.astro';
+import { getBundles, getMakeBySlug } from '../../lib/makes';
+
+const { slug } = Astro.params;
+
+const make = await getMakeBySlug(slug!, 'bundle');
+if (!make) {
+  return Astro.redirect('/bundles');
+}
+
+const related = (await getBundles()).filter((m) => m.id !== make.id).slice(0, 3);
+---
+
+<KitPage make={make} related={related} />

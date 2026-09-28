@@ -81,6 +81,7 @@ In your Supabase dashboard, open the **SQL Editor** and run each file in
 | 4 | `shop-schema.sql` | Checkout columns and `commit_order()` |
 | 5 | `fulfilment-schema.sql` | Delivery tracking, `order_events`, refunds, `restock_order()` |
 | 6 | `import-schema.sql` | Indexes the bulk importers use to spot what is already imported |
+| 7 | `bundles-schema.sql` | Bundles beside makes (`makes.kind`), and items a customer can skip (`make_items.can_opt_out`) |
 
 Step 5 is required for the orders screens to work — without it the POS cannot
 read `needs_attention`, `tracking_number` or the order history.

@@ -17,10 +17,14 @@ import {
   withFlash,
 } from '../../../lib/posForms';
 import { canonicalPinUrl, isPinterestUrl, pinIdFrom } from '../../../lib/pinterest';
-import type { Difficulty, MakeInsert, MakeItemInsert } from '../../../lib/database.types';
+import type { Difficulty, MakeInsert, MakeItemInsert, MakeKind } from '../../../lib/database.types';
 
 /*
- * Create or update a make and its bundle in one submit.
+ * Create or update a kit — a make or a bundle — and its items in one submit.
+ *
+ * A make is somebody else's design, so it cannot be saved without the link to
+ * it and the name of whoever made it. A bundle is the shop's own and has
+ * neither. Everything else is the same.
  *
  * The bundle arrives as parallel arrays — item_product_id[], item_quantity[]
  * and so on, one entry per row of the editor. Every field is an <input> or a
@@ -34,7 +38,7 @@ interface ParsedItem {
   product_id: string;
   quantity: number;
   note: string | null;
-  is_optional: boolean;
+  can_opt_out: boolean;
   display_order: number;
 }
 
@@ -43,7 +47,7 @@ function parseItems(form: FormData): { items: ParsedItem[]; duplicate: boolean }
   const ids = all(form, 'item_product_id');
   const quantities = all(form, 'item_quantity');
   const notes = all(form, 'item_note');
-  const optionals = all(form, 'item_optional');
+  const skippable = all(form, 'item_can_skip');
 
   const items: ParsedItem[] = [];
   const seen = new Set<string>();
@@ -63,7 +67,7 @@ function parseItems(form: FormData): { items: ParsedItem[]; duplicate: boolean }
       // Quantity is a multiplier on price, so a bad value must not become 0.
       quantity: Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * 100) / 100 : 1,
       note: (notes[i] ?? '').trim() || null,
-      is_optional: optionals[i] === 'optional',
+      can_opt_out: skippable[i] === 'yes',
       display_order: items.length + 1,
     });
   });
@@ -93,7 +97,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const form = await request.formData();
   const id = str(form, 'id');
   const isEdit = id !== '';
-  const back = safeNext(form, isEdit ? `/pos/makes/${id}` : '/pos/makes/new');
+  const kind: MakeKind = str(form, 'kind') === 'bundle' ? 'bundle' : 'make';
+  const noun = kind === 'bundle' ? 'bundle' : 'make';
+  const back = safeNext(form, isEdit ? `/pos/makes/${id}` : `/pos/makes/new${kind === 'bundle' ? '?kind=bundle' : ''}`);
 
   const admin = getSupabaseAdmin();
   if (!admin) {
@@ -106,22 +112,28 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const pinterestUrlRaw = str(form, 'pinterest_url');
   const authorName = str(form, 'author_name');
 
-  if (!title) return redirect(withFlash(back, 'error', 'Give the make a title.'));
-  if (!pinterestUrlRaw) {
-    return redirect(withFlash(back, 'error', 'A make needs the Pinterest link it came from.'));
-  }
-  if (!isPinterestUrl(pinterestUrlRaw)) {
-    return redirect(
-      withFlash(back, 'error', 'That does not look like a Pinterest link — paste the pin URL.'),
-    );
-  }
-  // Attribution is the whole point of storing the source, so it is required
-  // here and not just encouraged. If the scrape found no name, the shop owner
-  // types one in — "unknown" is a choice they make deliberately.
-  if (!authorName) {
-    return redirect(
-      withFlash(back, 'error', 'Credit the pin author — that is what the source field is for.'),
-    );
+  if (!title) return redirect(withFlash(back, 'error', `Give the ${noun} a title.`));
+
+  let pinterestUrl: string | null = null;
+  if (kind === 'make') {
+    if (!pinterestUrlRaw) {
+      return redirect(withFlash(back, 'error', 'A make needs the link to the design it came from.'));
+    }
+    // A pin is tidied to its canonical address; any other design page is kept
+    // as given, as long as it is a web address someone can follow.
+    if (isPinterestUrl(pinterestUrlRaw)) {
+      pinterestUrl = canonicalPinUrl(pinterestUrlRaw);
+    } else if (/^https?:\/\/[^\s]+\.[^\s]+/i.test(pinterestUrlRaw)) {
+      pinterestUrl = pinterestUrlRaw;
+    } else {
+      return redirect(withFlash(back, 'error', 'That link is not a web address — paste the pin or pattern page.'));
+    }
+    // Attribution is the whole point of storing the source, so it is required
+    // here and not just encouraged. If the scrape found no name, the shop owner
+    // types one in — "unknown" is a choice they make deliberately.
+    if (!authorName) {
+      return redirect(withFlash(back, 'error', 'Credit whoever made the design — that is what the source field is for.'));
+    }
   }
 
   const slug = slugify(str(form, 'slug') || title);
@@ -133,28 +145,28 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const bundlePrice = nullableNum(form, 'bundle_price');
   if (bundlePrice !== null && bundlePrice < 0) {
-    return redirect(withFlash(back, 'error', 'Bundle price cannot be negative.'));
+    return redirect(withFlash(back, 'error', 'The kit price cannot be negative.'));
   }
 
   const discount = num(form, 'bundle_discount_pct', 0);
   if (discount < 0 || discount >= 100) {
-    return redirect(withFlash(back, 'error', 'Bundle discount must be between 0 and 99.9%.'));
+    return redirect(withFlash(back, 'error', 'The kit discount must be between 0 and 99.9%.'));
   }
 
   const difficultyRaw = str(form, 'difficulty');
   const difficulty = DIFFICULTIES.includes(difficultyRaw) ? (difficultyRaw as Difficulty) : null;
 
-  const pinterestUrl = canonicalPinUrl(pinterestUrlRaw);
-
+  const isMake = kind === 'make';
   const payload: MakeInsert = {
+    kind,
     title,
     slug,
     summary: nullableStr(form, 'summary'),
     pinterest_url: pinterestUrl,
-    pinterest_pin_id: pinIdFrom(pinterestUrl),
-    author_name: authorName,
-    author_url: nullableStr(form, 'author_url'),
-    attribution_note: nullableStr(form, 'attribution_note'),
+    pinterest_pin_id: pinterestUrl && isPinterestUrl(pinterestUrl) ? pinIdFrom(pinterestUrl) : null,
+    author_name: isMake ? authorName : null,
+    author_url: isMake ? nullableStr(form, 'author_url') : null,
+    attribution_note: isMake ? nullableStr(form, 'attribution_note') : null,
     image_url: nullableStr(form, 'image_url'),
     source_image_url: nullableStr(form, 'source_image_url'),
     difficulty,
@@ -182,7 +194,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
           back,
           'error',
           isUniqueViolation(error)
-            ? `Another make already uses the slug “${slug}”.`
+            ? `Another make or bundle already uses the slug “${slug}”.`
             : `Could not save: ${error.message}`,
         ),
       );
@@ -198,7 +210,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
           back,
           'error',
           isUniqueViolation(error)
-            ? `Another make already uses the slug “${slug}”.`
+            ? `Another make or bundle already uses the slug “${slug}”.`
             : `Could not create: ${error.message}`,
         ),
       );
@@ -212,15 +224,16 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       withFlash(
         `/pos/makes/${targetId}`,
         'error',
-        `Saved “${title}”, but the bundle did not stick: ${itemError}`,
+        `Saved “${title}”, but its items did not stick: ${itemError}`,
       ),
     );
   }
 
   const count = items.length;
+  const skip = items.filter((i) => i.can_opt_out).length;
   const bundleNote = count
-    ? ` Bundle has ${count} item${count === 1 ? '' : 's'}.`
-    : ' No materials in the bundle yet — add some so the shop has something to sell.';
+    ? ` The kit has ${count} item${count === 1 ? '' : 's'}${skip ? `, ${skip} of them skippable` : ''}.`
+    : ' No materials in the kit yet — add some so the shop has something to sell.';
 
   if (isEdit) {
     return redirect(withFlash(back, 'ok', `Saved “${title}”.${bundleNote}${dupeNote}`));

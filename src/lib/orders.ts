@@ -1,12 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, MakeWithBundle, Order, Product } from './database.types';
-import { priceBundle } from './makes';
+import { kitHref, priceBundle, withResolvedItems } from './makes';
 import { flagForAttention, logEvent } from './fulfilment';
 
 /*
  * Where a basket turns into money.
  *
- * The browser sends nothing but { kind, id, qty }. Names, prices, stock and the
+ * The browser sends nothing but { kind, id, qty, omit }. Names, prices, stock and the
  * bundle discount are all read back out of the database here, every time — so a
  * hand-edited localStorage buys nothing it should not. Bundles are priced
  * through priceBundle(), the same function the make page and the POS quote
@@ -35,15 +35,23 @@ export const VND_PER_USD = Number(import.meta.env.VND_PER_USD ?? 26_000);
 export const usdToVnd = (usd: number) => Math.round(usd * VND_PER_USD);
 
 export interface RequestedLine {
+  /** 'product' only arrives from a basket saved before loose products stopped being sold. */
   kind: 'product' | 'bundle';
   id: string;
   qty: number;
+  /** Product ids to leave out of the kit, sorted. */
+  omit: string[];
 }
 
 /** A line as the customer will see it on the order — priced, named, fixed. */
 export interface PricedLine {
+  /** New lines are always kits. 'product' survives only on orders placed before that. */
   kind: 'product' | 'bundle';
+  /** The same key the basket uses: kit and what was left out, together. Absent on older orders. */
+  key?: string;
   id: string;
+  /** What the customer left out of the kit, by name, for the receipt and the packing slip. */
+  omitted?: string[];
   name: string;
   slug: string;
   href: string;
@@ -55,6 +63,10 @@ export interface PricedLine {
   /** For a bundle, what the parts would have cost bought separately. */
   compareAt: number | null;
 }
+
+/** A line's name with what was left out of it, for anywhere a line is written as plain text. */
+export const lineLabel = (line: Pick<PricedLine, 'name' | 'omitted'>) =>
+  line.omitted?.length ? `${line.name} (without ${line.omitted.join(', ')})` : line.name;
 
 /** One product and how many of it this basket draws off the shelf. */
 export interface Unit {
@@ -88,6 +100,9 @@ function cleanQty(raw: unknown): number {
   return Math.min(99, Math.floor(n));
 }
 
+/** Matches lineKey in lib/cart.ts, so a priced line can be found in the basket it came from. */
+const lineKeyOf = (kind: string, id: string, omit: string[]) => `${kind}:${id}:${omit.join(',')}`;
+
 /** Accepts whatever arrived over the wire and keeps only what looks like a line. */
 export function parseLines(input: unknown): RequestedLine[] {
   if (!Array.isArray(input)) return [];
@@ -96,16 +111,20 @@ export function parseLines(input: unknown): RequestedLine[] {
 
   for (const raw of input.slice(0, 50)) {
     if (!raw || typeof raw !== 'object') continue;
-    const { kind, id, qty } = raw as Record<string, unknown>;
+    const { kind, id, qty, omit } = raw as Record<string, unknown>;
     if (kind !== 'product' && kind !== 'bundle') continue;
     if (typeof id !== 'string' || !id) continue;
 
+    const cleanOmit = Array.isArray(omit)
+      ? [...new Set(omit.filter((o): o is string => typeof o === 'string' && o.length > 0))].sort().slice(0, 30)
+      : [];
+
     // A repeated line would otherwise be priced twice.
-    const key = `${kind}:${id}`;
+    const key = lineKeyOf(kind, id, cleanOmit);
     if (seen.has(key)) continue;
     seen.add(key);
 
-    lines.push({ kind, id, qty: cleanQty(qty) });
+    lines.push({ kind, id, qty: cleanQty(qty), omit: cleanOmit });
   }
 
   return lines;
@@ -122,61 +141,39 @@ export const shippingFor = (subtotal: number) =>
  * less than it did a moment ago.
  */
 export async function priceCart(admin: Admin, requested: RequestedLine[]): Promise<PricedCart> {
-  const productIds = requested.filter((l) => l.kind === 'product').map((l) => l.id);
-  const makeIds = requested.filter((l) => l.kind === 'bundle').map((l) => l.id);
+  const makeIds = [...new Set(requested.filter((l) => l.kind === 'bundle').map((l) => l.id))];
 
-  const [productRes, makeRes] = await Promise.all([
-    productIds.length
-      ? admin.from('products').select('*').in('id', productIds).eq('is_active', true)
-      : Promise.resolve({ data: [] as Product[] }),
-    makeIds.length
-      ? admin
-          .from('makes')
-          .select('*, items:make_items(*, product:products(*))')
-          .in('id', makeIds)
-          .eq('is_active', true)
-      : Promise.resolve({ data: [] as unknown[] }),
-  ]);
+  const makeRes = makeIds.length
+    ? await admin
+        .from('makes')
+        .select('*, items:make_items(*, product:products(*))')
+        .in('id', makeIds)
+        .eq('is_active', true)
+    : { data: [] as unknown[] };
 
-  const products = new Map(((productRes.data ?? []) as Product[]).map((p) => [p.id, p]));
   const makes = new Map(
-    ((makeRes.data ?? []) as unknown as MakeWithBundle[]).map((m) => [m.id, m]),
+    ((makeRes.data ?? []) as unknown as Record<string, unknown>[]).map((row) => {
+      const make = withResolvedItems(row);
+      return [make.id, make];
+    }),
   );
 
   const lines: PricedLine[] = [];
   const problems: Problem[] = [];
-  // A product can be both a loose line and part of a bundle, so demand is
-  // totalled per product before it is checked against the shelf.
+  // Two lines can share a product — the same kit with and without its hook —
+  // so demand is totalled per product before it is checked against the shelf.
   const demand = new Map<string, number>();
 
   for (const line of requested) {
+    // The shop sells kits only. A loose product can still arrive from a tab
+    // opened before that changed; it is turned away, not quietly priced.
     if (line.kind === 'product') {
-      const product = products.get(line.id);
-      if (!product) {
-        problems.push({
-          id: line.id,
-          name: 'An item',
-          reason: 'gone',
-          message: 'This item is no longer in the shop, so it has been taken out of your basket.',
-        });
-        continue;
-      }
-
-      const unitPrice = money(Number(product.price));
-      lines.push({
-        kind: 'product',
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        href: `/store/${product.slug}`,
-        image: product.images?.[0] ?? null,
-        unitPrice,
-        qty: line.qty,
-        lineTotal: money(unitPrice * line.qty),
-        compareAt: product.compare_at_price ? money(Number(product.compare_at_price)) : null,
+      problems.push({
+        id: line.id,
+        name: 'An item',
+        reason: 'gone',
+        message: 'Single items are no longer sold on their own — they come in our makes and bundles. It has been taken out of your basket.',
       });
-
-      demand.set(product.id, (demand.get(product.id) ?? 0) + line.qty);
       continue;
     }
 
@@ -184,15 +181,16 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
     if (!make) {
       problems.push({
         id: line.id,
-        name: 'A bundle',
+        name: 'A kit',
         reason: 'gone',
-        message: 'This bundle is no longer available, so it has been taken out of your basket.',
+        message: 'This kit is no longer available, so it has been taken out of your basket.',
       });
       continue;
     }
 
-    const pricing = priceBundle(make, make.items);
-    if (pricing.required.length === 0) {
+    // Only items marked as skippable are ever left out, whatever the basket asks.
+    const pricing = priceBundle(make, make.items, line.omit);
+    if (pricing.included.length === 0) {
       problems.push({
         id: line.id,
         name: make.title,
@@ -202,13 +200,16 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
       continue;
     }
 
+    const omit = pricing.omitted.map((i) => i.product_id).sort();
     const unitPrice = money(pricing.bundlePrice);
     lines.push({
       kind: 'bundle',
+      key: lineKeyOf('bundle', make.id, omit),
       id: make.id,
-      name: `${make.title} — the whole bundle`,
+      omitted: pricing.omitted.map((i) => i.product.name),
+      name: make.title,
       slug: make.slug,
-      href: `/makes/${make.slug}`,
+      href: kitHref(make),
       image: make.image_url,
       unitPrice,
       qty: line.qty,
@@ -216,7 +217,7 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
       compareAt: pricing.savings > 0 ? money(pricing.itemsSubtotal) : null,
     });
 
-    for (const item of pricing.required) {
+    for (const item of pricing.included) {
       const wanted = Number(item.quantity) * line.qty;
       demand.set(item.product_id, (demand.get(item.product_id) ?? 0) + wanted);
     }
@@ -229,7 +230,7 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
     const rounded = Math.ceil(quantity);
     units.push({ product_id: productId, quantity: rounded });
 
-    const product = products.get(productId) ?? findInBundles(makes, productId);
+    const product = findInBundles(makes, productId);
     if (product && product.stock < rounded) {
       problems.push({
         id: productId,

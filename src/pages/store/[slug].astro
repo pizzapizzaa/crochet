@@ -6,7 +6,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import { getProductBySlug, getProducts } from '../../lib/catalog';
-import { getMakesUsingProduct } from '../../lib/makes';
+import { getMakesUsingProduct, kitHref } from '../../lib/makes';
 import { ON_IMG_ERROR, productImage } from '../../lib/images';
 
 const { slug } = Astro.params;
@@ -17,8 +17,11 @@ if (!product) {
   return Astro.redirect('/store');
 }
 
-// Projects this material is part of — the reverse of the bundle on a make
-// page, so someone looking at a skein can see what it is for.
+/*
+ * The shop sells kits, not loose items, so this page is information: what the
+ * thing is, and the makes and bundles it comes in — which is where it can be
+ * bought.
+ */
 const usedIn = await getMakesUsingProduct(product.id);
 
 // Related products (same category, exclude self)
@@ -27,12 +30,6 @@ const related = (await getProducts())
   .slice(0, 3);
 
 const primaryImage = productImage(product.images?.[0]);
-const discount = product.compare_at_price
-  ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
-  : null;
-const isSoldOut = product.stock === 0;
-const isLowStock = product.stock > 0 && product.stock <= 3;
-const inStock = product.stock > 3;
 ---
 
 <Layout
@@ -45,7 +42,7 @@ const inStock = product.stock > 3;
     <nav class="text-xs text-brown-light mb-8 flex items-center gap-1.5 flex-wrap">
       <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
       <span>/</span>
-      <a href="/store" class="hover:text-rose-dust transition-colors">Shop</a>
+      <a href="/store" class="hover:text-rose-dust transition-colors">Materials</a>
       <span>/</span>
       <a
         href={`/store?category=${encodeURIComponent(product.category)}`}
@@ -64,8 +61,8 @@ const inStock = product.stock > 3;
         <!--
           No fixed ratio here: a product photo is evidence, and cropping it to
           a square hides whatever sat at the top and bottom of the frame. It is
-          capped at 70vh so a tall portrait shot cannot push the price and the
-          buy button below the fold. The thumbnails below stay square — a tidy
+          capped at 70vh so a tall portrait shot cannot push the kits it comes in
+          below the fold. The thumbnails below stay square — a tidy
           strip is worth a crop, the photo being examined is not.
         -->
         <div class="relative flex items-center justify-center overflow-hidden rounded-3xl bg-cream-200 shadow-xl">
@@ -76,20 +73,6 @@ const inStock = product.stock > 3;
             alt={product.name}
             class="block h-auto max-h-[70vh] w-auto max-w-full"
           />
-          {
-            discount && (
-              <span class="absolute top-5 left-5 bg-rose-dust text-white text-sm font-semibold px-3 py-1.5 rounded-full">
-                -{discount}% off
-              </span>
-            )
-          }
-          {isSoldOut && (
-            <div class="absolute inset-0 bg-brown-dark/30 flex items-center justify-center rounded-3xl">
-              <span class="bg-white text-brown-dark font-semibold px-6 py-2 rounded-full">
-                Sold Out
-              </span>
-            </div>
-          )}
         </div>
         <!-- Thumbnail strip (if multiple images) -->
         {
@@ -129,44 +112,9 @@ const inStock = product.stock > 3;
           {product.name}
         </h1>
 
-        <!-- Price -->
-        <div class="flex items-baseline gap-3 mt-4">
-          <span class="text-3xl font-bold text-brown-dark">${product.price.toFixed(2)}</span>
-          {
-            product.compare_at_price && (
-              <span class="text-brown-light text-lg line-through">
-                ${product.compare_at_price.toFixed(2)}
-              </span>
-            )
-          }
-          {
-            discount && (
-              <span class="text-rose-dust text-sm font-semibold">Save {discount}%</span>
-            )
-          }
-        </div>
-
-        <!-- Stock badge -->
-        <div class="mt-3 flex items-center gap-2">
-          {isSoldOut && (
-            <span class="inline-flex items-center gap-1.5 text-sm text-red-500 font-medium">
-              <span class="w-2 h-2 rounded-full bg-red-500 inline-block" />
-              Out of Stock
-            </span>
-          )}
-          {isLowStock && (
-            <span class="inline-flex items-center gap-1.5 text-sm text-amber-600 font-medium">
-              <span class="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-              Only {product.stock} left — order soon
-            </span>
-          )}
-          {inStock && (
-            <span class="inline-flex items-center gap-1.5 text-sm text-sage font-medium">
-              <span class="w-2 h-2 rounded-full bg-sage inline-block" />
-              In Stock
-            </span>
-          )}
-        </div>
+        <p class="mt-3 inline-flex items-center gap-2 self-start rounded-full bg-cream-100 px-3 py-1.5 text-xs font-medium text-brown-warm">
+          Comes in our kits — not sold on its own
+        </p>
 
         <hr class="border-cream-300 my-6" />
 
@@ -194,29 +142,34 @@ const inStock = product.stock > 3;
           }
         </div>
 
-        <!-- Makes that use this -->
-        {
-          usedIn.length > 0 && (
-            <div class="mt-6 rounded-2xl border border-cream-300 bg-cream-50 p-4">
-              <p class="text-xs font-bold uppercase tracking-widest text-brown-light">
-                Used in {usedIn.length === 1 ? 'this make' : 'these makes'}
-              </p>
+        <!-- Where it can be bought: the kits it comes in -->
+        <div class="mt-6 rounded-2xl border border-cream-300 bg-cream-50 p-4">
+          <p class="text-xs font-bold uppercase tracking-widest text-brown-light">
+            {usedIn.length === 0 ? 'Not in a kit yet' : usedIn.length === 1 ? 'Comes in this kit' : 'Comes in these kits'}
+          </p>
+          {
+            usedIn.length > 0 ? (
               <ul class="mt-2.5 space-y-1.5">
                 {usedIn.map((m) => (
                   <li>
                     <a
-                      href={`/makes/${m.slug}`}
+                      href={kitHref(m)}
                       class="flex items-center gap-2 text-sm font-semibold text-brown-dark transition-colors hover:text-rose-dust"
                     >
                       <span class="text-rose-dust">→</span>
                       {m.title}
+                      <span class="text-xs font-normal text-brown-light">{m.kind === 'bundle' ? 'Bundle' : 'Make'}</span>
                     </a>
                   </li>
                 ))}
               </ul>
-            </div>
-          )
-        }
+            ) : (
+              <p class="mt-1.5 text-sm text-brown-warm">
+                We sell yarn and tools as kits. Have a look at our bundles, or ask us about this one.
+              </p>
+            )
+          }
+        </div>
 
         <!-- Tags -->
         {
@@ -238,22 +191,12 @@ const inStock = product.stock > 3;
 
         <!-- CTA -->
         <div class="space-y-3">
-          <button
-            id="add-to-cart"
-            data-id={product.id}
-            data-name={product.name}
-            data-price={product.price}
-            data-image={primaryImage}
-            data-href={`/store/${product.slug}`}
-            class={`w-full py-4 rounded-full font-semibold text-sm transition-colors duration-200 ${
-              isSoldOut
-                ? 'bg-cream-200 text-brown-light cursor-not-allowed'
-                : 'bg-btn-gradient text-ink hover:brightness-105'
-            }`}
-            disabled={isSoldOut}
+          <a
+            href="/bundles"
+            class="block w-full rounded-full bg-btn-gradient py-4 text-center text-sm font-semibold text-ink transition-colors duration-200 hover:brightness-105"
           >
-            {isSoldOut ? 'Sold Out' : 'Add to Cart — $' + product.price.toFixed(2)}
-          </button>
+            Browse the bundles
+          </a>
           <a
             href="/contact"
             class="w-full py-4 rounded-full font-medium text-sm text-center border border-brown-light/40 hover:border-rose-dust hover:text-rose-dust text-brown-warm transition-all block"
@@ -319,8 +262,6 @@ const inStock = product.stock > 3;
 </Layout>
 
 <script>
-  import { addToCart } from '../../lib/cart';
-
   /*
    * Thumbnail strip. The markup shipped without this, so clicking a thumbnail
    * did nothing at all — swapping the src is the whole job.
@@ -347,21 +288,4 @@ const inStock = product.stock > 3;
     thumb.addEventListener('click', () => show(thumb));
   }
 
-  // Add to cart. The price in the dataset is only the label the drawer paints
-  // before the server answers — /api/shop/cart-price re-reads the real one.
-  const addButton = document.getElementById('add-to-cart') as HTMLButtonElement | null;
-
-  addButton?.addEventListener('click', () => {
-    const { id, name, price, image, href } = addButton.dataset;
-    if (!id || !name || !href) return;
-
-    addToCart('product', id, {
-      name,
-      price: Number(price ?? 0),
-      image: image ?? null,
-      href,
-    });
-
-    window.dispatchEvent(new Event('cart:open'));
-  });
 </script>

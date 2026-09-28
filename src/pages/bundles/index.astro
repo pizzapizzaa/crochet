@@ -4,10 +4,10 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import MakeCard from '../../components/MakeCard.astro';
 import SectionWave from '../../components/SectionWave.astro';
-import { getMakes } from '../../lib/makes';
+import { getBundles } from '../../lib/makes';
 import { DIFFICULTIES } from '../../lib/database.types';
 
-const allMakes = await getMakes();
+const allMakes = await getBundles();
 
 const urlSearch = Astro.url.searchParams.get('q') ?? '';
 const urlDifficulty = Astro.url.searchParams.get('difficulty') ?? 'All';
@@ -29,9 +29,9 @@ if (urlSearch) {
 }
 
 /*
- * Two bands. Featured makes get lifted out entirely and shown first on the
- * lime row; everything else follows in the same Beginner → Advanced ramp the
- * difficulty tags read as. Makes with no difficulty set sit at the end.
+ * Two bands. Featured bundles get lifted out entirely and shown first on the
+ * lime row; everything else follows Beginner → Advanced, which for a bundle is
+ * the whole point of it. Bundles with no level set sit at the end.
  */
 const rank = (difficulty: string | null | undefined) => {
   const i = DIFFICULTIES.indexOf(difficulty as (typeof DIFFICULTIES)[number]);
@@ -45,8 +45,8 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
 ---
 
 <Layout
-  title="Makes"
-  description="Getting started with crocheting? Or eyeing on a crochet project from Pinterest? We've got you covered."
+  title="Bundles"
+  description="Crochet kits put together for your level — every yarn and tool you need to start, in one box."
 >
   <!-- Header. Its top seam is the wave hanging off the site header. -->
   <section class="relative bg-hero-wash py-12">
@@ -54,11 +54,11 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
       <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
         <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
         <span>/</span>
-        <span class="text-ink-body">Makes</span>
+        <span class="text-ink-body">Bundles</span>
       </nav>
-      <h1 class="font-display text-display-2 font-extrabold text-ink">Makes</h1>
+      <h1 class="font-display text-display-2 font-extrabold text-ink">Bundles</h1>
       <p class="mt-3 max-w-2xl text-ink-body">
-        Getting started with crocheting? Or eyeing on a crochet project from Pinterest? We've got you covered.
+        Kits put together for your level, from your very first chain to your next challenge. Every yarn and tool you need, in one box.
       </p>
 
     </div>
@@ -79,7 +79,7 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
               <span class="inline-flex h-7 w-7 items-center justify-center rounded-pill bg-ink text-sm text-lime">
                 ★
               </span>
-              Featured makes
+              Featured bundles
             </h2>
             <p class="text-sm font-semibold text-ink/80">
               {featured.length} hand-picked to start with
@@ -111,7 +111,7 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
       Search and difficulty filter sit with the browsable list they drive,
       under the featured row rather than under the page title.
     -->
-    <form method="GET" action="/makes" class="flex max-w-md gap-2">
+    <form method="GET" action="/bundles" class="flex max-w-md gap-2">
       <div class="relative flex-1">
         <svg
           class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
@@ -125,7 +125,7 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
           type="search"
           name="q"
           value={urlSearch}
-          placeholder="Search makes…"
+          placeholder="Search bundles…"
           class="w-full rounded-pill border border-cream-300 bg-paper py-2.5 pl-9 pr-4 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
         />
       </div>
@@ -142,7 +142,7 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
         <div class="mt-4 flex flex-wrap gap-1.5">
           {difficulties.map((d) => (
             <a
-              href={`/makes?difficulty=${encodeURIComponent(d as string)}${urlSearch ? `&q=${encodeURIComponent(urlSearch)}` : ''}`}
+              href={`/bundles?difficulty=${encodeURIComponent(d as string)}${urlSearch ? `&q=${encodeURIComponent(urlSearch)}` : ''}`}
               class={`rounded-pill px-3.5 py-1.5 text-xs font-bold transition-colors duration-fast ease-out ${
                 urlDifficulty === d
                   ? 'bg-forest text-paper'
@@ -160,20 +160,20 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
     {
       makes.length === 0 ? (
         <div class="py-20 text-center">
-          <div class="mb-4 text-5xl">📌</div>
+          <div class="mb-4 text-5xl">🧶</div>
           <h2 class="font-display text-2xl font-bold text-ink">
-            {allMakes.length === 0 ? 'No makes up yet' : 'Nothing matches that'}
+            {allMakes.length === 0 ? 'No bundles up yet' : 'Nothing matches that'}
           </h2>
           <p class="mx-auto mt-2 max-w-md text-sm text-ink-muted">
             {allMakes.length === 0
-              ? 'We are still putting these together. In the meantime, our bundles have everything you need to start.'
-              : `No makes for "${urlSearch || urlDifficulty}".`}
+              ? 'We are still putting these together. In the meantime, our makes each come with everything they take.'
+              : `No bundles for "${urlSearch || urlDifficulty}".`}
           </p>
           <a
-            href={allMakes.length === 0 ? '/bundles' : '/makes'}
+            href={allMakes.length === 0 ? '/makes' : '/bundles'}
             class="mt-6 inline-block rounded-pill bg-btn-gradient px-6 py-2.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
           >
-            {allMakes.length === 0 ? 'See the bundles' : 'See all makes'}
+            {allMakes.length === 0 ? 'See the makes' : 'See all bundles'}
           </a>
         </div>
       ) : (
@@ -181,8 +181,8 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
           <>
             <p class="mb-6 text-sm text-ink-muted">
               {featured.length > 0
-                ? `${rest.length} more make${rest.length === 1 ? '' : 's'}, easiest first`
-                : `${rest.length} make${rest.length === 1 ? '' : 's'}, easiest first`}
+                ? `${rest.length} more bundle${rest.length === 1 ? '' : 's'}, easiest first`
+                : `${rest.length} bundle${rest.length === 1 ? '' : 's'}, easiest first`}
             </p>
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {rest.map((make) => (
@@ -197,23 +197,23 @@ const difficulties = ['All', ...DIFFICULTIES.filter((d) => allMakes.some((m) => 
 
     <!-- How this works -->
     <section class="mt-16 rounded-card border border-cream-300 bg-paper p-6 sm:p-8">
-      <h2 class="font-display text-xl font-bold text-ink">How a make works</h2>
+      <h2 class="font-display text-xl font-bold text-ink">How a bundle works</h2>
       <div class="mt-4 grid gap-5 sm:grid-cols-3">
         {
           [
             {
               step: '1',
-              title: 'Find one you like',
-              body: 'Every make points at the original pin. Open it to see more details the author. Request for a pattern.',
+              title: 'Pick your level',
+              body: 'Each bundle is put together for a stage — first stitches, first project, or something more ambitious.',
             },
             {
               step: '2',
-              title: 'Buy the materials',
+              title: 'Get the kit',
               body: 'We put every yarn and tool it takes in one kit, for less than buying them apart. Already own a hook or scissors? Untick them and pay less.',
             },
             {
               step: '3',
-              title: 'Make it',
+              title: 'Start making',
               body: 'We sell supplies, not finished pieces — the making is the fun part. Contact us if you need some tutorials.',
             },
           ].map((s) => (

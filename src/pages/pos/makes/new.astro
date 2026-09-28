@@ -30,24 +30,30 @@ if (!admin) {
 }
 
 const err = Astro.url.searchParams.get('error');
+const kind = Astro.url.searchParams.get('kind') === 'bundle' ? 'bundle' : 'make';
+const noun = kind === 'bundle' ? 'bundle' : 'make';
 ---
 
-<PosLayout title="New make" section="makes">
+<PosLayout title={`New ${noun}`} section="makes">
   <header class="mb-6">
     <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
       <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
       <span>/</span>
-      <a href="/pos/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes</a>
+      <a href="/pos/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes &amp; bundles</a>
       <span>/</span>
       <span class="font-semibold text-ink-body">New</span>
     </nav>
-    <h1 class="font-display text-3xl font-extrabold text-ink sm:text-4xl">New make</h1>
+    <h1 class="font-display text-3xl font-extrabold text-ink sm:text-4xl">New {noun}</h1>
     <p class="mt-1.5 max-w-2xl text-sm text-ink-muted">
-      Paste the Pinterest link, press Fetch, then pick the yarn and tools the project needs.
+      {
+        kind === 'bundle'
+          ? 'Name the kit, set its level, then pick every yarn, accessory and tool that goes in the box. Mark the tools a customer might already own as skippable.'
+          : 'Paste the Pinterest link, press Fetch, then pick every yarn, accessory and tool the project needs. Mark the tools a customer might already own as skippable.'
+      }
     </p>
   </header>
 
   <Flash error={err ?? loadError} />
 
-  <MakeForm products={products} next="/pos/makes" />
+  <MakeForm products={products} next="/pos/makes" kind={kind} />
 </PosLayout>

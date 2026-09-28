@@ -231,6 +231,9 @@ const awaiting = Boolean(order) && order!.payment_status === 'unpaid';
                     >
                       {line.name}
                     </a>
+                    {line.omitted && line.omitted.length > 0 && (
+                      <p class="text-xs text-ink-muted">Without: {line.omitted.join(', ')}</p>
+                    )}
                     <p class="text-xs text-ink-muted">
                       {line.qty} × {money(line.unitPrice)}
                     </p>

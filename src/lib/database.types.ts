@@ -4,6 +4,9 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Difficulty = 'Beginner' | 'Easy' | 'Intermediate' | 'Advanced';
 export const DIFFICULTIES: Difficulty[] = ['Beginner', 'Easy', 'Intermediate', 'Advanced'];
 
+/** Kept in step with the CHECK constraint on makes.kind. */
+export type MakeKind = 'make' | 'bundle';
+
 /** Kept in step with the CHECK constraint on orders.status. */
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 export const ORDER_STATUSES: OrderStatus[] = [
@@ -132,9 +135,12 @@ export interface Database {
           title: string;
           slug: string;
           summary: string | null;
-          pinterest_url: string;
+          /** 'make' is credited to the pin or design it came from; 'bundle' is the shop's own kit. */
+          kind: MakeKind;
+          /** Required for a make, null for a bundle. */
+          pinterest_url: string | null;
           pinterest_pin_id: string | null;
-          author_name: string;
+          author_name: string | null;
           author_url: string | null;
           attribution_note: string | null;
           image_url: string | null;
@@ -155,9 +161,10 @@ export interface Database {
           title: string;
           slug: string;
           summary?: string | null;
-          pinterest_url: string;
+          kind?: MakeKind;
+          pinterest_url?: string | null;
           pinterest_pin_id?: string | null;
-          author_name: string;
+          author_name?: string | null;
           author_url?: string | null;
           attribution_note?: string | null;
           image_url?: string | null;
@@ -182,7 +189,8 @@ export interface Database {
           product_id: string;
           quantity: number;
           note: string | null;
-          is_optional: boolean;
+          /** In the kit, but the customer may leave it out — a tool they already own. */
+          can_opt_out: boolean;
           display_order: number;
         };
         Insert: {
@@ -192,7 +200,7 @@ export interface Database {
           product_id: string;
           quantity?: number;
           note?: string | null;
-          is_optional?: boolean;
+          can_opt_out?: boolean;
           display_order?: number;
         };
         Update: Partial<Database['public']['Tables']['make_items']['Insert']>;
@@ -360,11 +368,12 @@ export interface Database {
       make_bundle_totals: {
         Row: {
           make_id: string;
+          kind: MakeKind;
           items_subtotal: number;
-          optional_subtotal: number;
+          opt_out_subtotal: number;
           items_cost: number;
-          required_count: number;
-          optional_count: number;
+          item_count: number;
+          opt_out_count: number;
         };
         Relationships: [
           {

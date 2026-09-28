@@ -149,7 +149,10 @@ const when = (iso: string | null) =>
                   <td class="py-2 text-ink-body">
                     {line.name}
                     {line.kind === 'bundle' && (
-                      <span class="ml-1 text-xs text-ink-muted">(bundle)</span>
+                      <span class="ml-1 text-xs text-ink-muted">(kit)</span>
+                    )}
+                    {line.omitted && line.omitted.length > 0 && (
+                      <span class="block text-xs font-semibold text-ink">Leave out: {line.omitted.join(', ')}</span>
                     )}
                   </td>
                   <td class="py-2 text-right text-ink-muted">{money(line.unitPrice)}</td>

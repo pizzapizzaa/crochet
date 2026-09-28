@@ -5,55 +5,54 @@ export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
 import SectionWave from '../components/SectionWave.astro';
-import ProductCard from '../components/ProductCard.astro';
-import { getProducts } from '../lib/catalog';
+import MakeCard from '../components/MakeCard.astro';
+import { getBundles, getMakes } from '../lib/makes';
 
-const featuredProducts = (await getProducts()).filter((p) => p.is_featured).slice(0, 3);
+// The shop sells kits, so the featured row is kits: bundles first, then makes.
+const [bundles, makes] = await Promise.all([getBundles(), getMakes()]);
+const allKits = [...bundles, ...makes];
+const featured = allKits.filter((k) => k.is_featured);
+const featuredKits = (featured.length > 0 ? featured : allKits).slice(0, 3);
 
 /*
- * Shop by Type. A photograph per category, not an emoji: the five options are
- * the difference between buying yarn, buying a hook and buying a whole project,
- * and a picture of each settles that faster than a label does.
- *
- * The photos are chosen to show exactly what the category contains and nothing
- * more — yarn alone for Yarn Only, yarn beside scissors for Yarn + Tools, bare
- * hooks for Tools — so the pictures themselves draw the distinction. `alt`
+ * Find your kit. A photograph per way in, not an emoji: a bundle for each
+ * level, and makes for somebody who already has a project in mind. `alt`
  * describes the photograph rather than repeating the name beside it.
  */
 const categories = [
   {
-    name: 'Yarn Only',
-    href: '/store?category=Yarn',
+    name: 'Beginner bundles',
+    href: '/bundles?difficulty=Beginner',
     photo: '/assets/products/yarn-rolls-natural.jpg',
     alt: 'Three balls of wool in oatmeal and olive on a wooden table',
   },
   {
-    name: 'Yarn + Tools',
-    href: '/store?category=Kits',
+    name: 'Easy bundles',
+    href: '/bundles?difficulty=Easy',
     photo: '/assets/products/kit-yarn-tools.jpg',
     alt: 'Cotton yarn in peach, pink and yellow laid out beside gold scissors',
   },
   {
-    name: 'Tools',
-    href: '/store?category=Tools',
+    name: 'Intermediate bundles',
+    href: '/bundles?difficulty=Intermediate',
     photo: '/assets/products/hook-set-arranged.jpg',
     alt: 'A fan of crochet hooks with pastel grips',
   },
   {
-    name: 'Project Bundles',
-    href: '/store?category=Bundles',
+    name: 'Advanced bundles',
+    href: '/bundles?difficulty=Advanced',
     photo: '/assets/products/flatlay-yarn-hooks.jpg',
     alt: 'Red yarn, hooks, buttons and a zip laid out beside a half-finished piece',
   },
   {
-    name: 'Patterns',
-    href: '/store?category=Patterns',
+    name: 'Makes from Pinterest',
+    href: '/makes',
     photo: '/assets/products/amigurumi-bunny-kit.jpg',
     alt: 'An open pattern booklet with the crocheted bunny it makes',
   },
 ];
 
-const trustPoints = ['Project-Ready Bundles', 'Ships Worldwide', 'Quality Yarn & Tools'];
+const trustPoints = ['Project-Ready Kits', 'Ships Worldwide', 'Quality Yarn & Tools'];
 
 const patternTools = [
   { icon: '🧮', label: 'Stitch Calculator' },
@@ -95,13 +94,13 @@ const btnGhost =
           Everything you need to <span class="zz-emph">create</span>
         </h1>
         <p class="mt-5 max-w-md text-[17px] leading-relaxed text-ink-body">
-          Get project-ready yarn kits, quality tools, or shop separately — I bundle exactly what
-          you need for your next crochet masterpiece.
+          Project-ready crochet kits — every yarn and tool for your level or your next project, in
+          one box. Already own a hook? Leave it out and pay less.
         </p>
 
         <div class="mt-8 flex flex-wrap items-center gap-4">
-          <a href="/store" class={btnPrimary}>
-            Browse Yarn Kits
+          <a href="/bundles" class={btnPrimary}>
+            Browse Bundles
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
@@ -177,7 +176,7 @@ const btnGhost =
         </div>
 
         <a
-          href="/store?sort=newest"
+          href="/makes"
           class="group absolute -bottom-5 left-4 flex items-center gap-3 rounded-card bg-paper px-5 py-3.5 shadow-xl transition-all duration-fast ease-out hover:-translate-y-0.5 hover:shadow-2xl"
         >
           <div
@@ -186,10 +185,10 @@ const btnGhost =
             🧶
           </div>
           <div>
-            <p class="text-micro text-ink-muted">New arrivals</p>
-            <p class="text-[13.5px] font-bold text-ink">Autumn Yarn Collection</p>
+            <p class="text-micro text-ink-muted">Seen it on Pinterest?</p>
+            <p class="text-[13.5px] font-bold text-ink">Makes, with everything they take</p>
             <span class="mt-1 flex items-center gap-1 text-micro font-bold text-mint-deep">
-              Shop new arrivals
+              See the makes
               <svg
                 class="h-3 w-3 transition-transform duration-fast ease-out group-hover:translate-x-0.5"
                 fill="none"
@@ -207,14 +206,14 @@ const btnGhost =
   </section>
 
   <!-- ============================================================
-       Shop by Type — paper band
+       Find your kit — paper band
        ============================================================ -->
   <section class="relative bg-paper py-24">
     <SectionWave fill="var(--paper)" variant={1} />
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <div class="mb-9 text-center">
-        <h2 class="font-display text-[28px] font-extrabold text-ink">Shop by Type</h2>
-        <p class="mt-2 text-ink-body">Find the right supplies for your project</p>
+        <h2 class="font-display text-[28px] font-extrabold text-ink">Find your kit</h2>
+        <p class="mt-2 text-ink-body">By your level, or by the project you have in mind</p>
       </div>
       <!--
         Same card grammar as the product and make tiles — paper fill, cream
@@ -255,8 +254,8 @@ const btnGhost =
       </div>
 
       <div class="mt-8 flex justify-center">
-        <a href="/store" class={btnGhost}>
-          View all
+        <a href="/bundles" class={btnGhost}>
+          All bundles
           <svg
             class="h-4 w-4 transition-transform duration-base ease-out group-hover:translate-x-1"
             fill="none"
@@ -279,9 +278,9 @@ const btnGhost =
       <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <span class="zz-eyebrow">Popular Picks</span>
-          <h2 class="mt-2 font-display text-[28px] font-extrabold text-ink">Yarn, hooks &amp; kits</h2>
+          <h2 class="mt-2 font-display text-[28px] font-extrabold text-ink">Kits to start with</h2>
         </div>
-        <a href="/store" class={`${btnGhost} shrink-0`}>
+        <a href="/bundles" class={`${btnGhost} shrink-0`}>
           View all
           <svg
             class="h-4 w-4 transition-transform duration-base ease-out group-hover:translate-x-1"
@@ -299,7 +298,7 @@ const btnGhost =
         </a>
       </div>
       <div class="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        {featuredProducts.map((product) => <ProductCard product={product} />)}
+        {featuredKits.map((kit) => <MakeCard make={kit} />)}
       </div>
     </div>
   </section>
@@ -387,8 +386,8 @@ const btnGhost =
           </p>
           <p>
             Every kit is carefully bundled with exactly what you need for a specific project — from
-            beginner-friendly amigurumi to advanced garments. Buy yarn only, add tools, or grab a
-            complete project bundle.
+            beginner-friendly amigurumi to advanced garments. Every kit comes complete, and you can
+            leave out any tools you already own.
           </p>
           <p>
             Can't find what you're looking for? Request a new product and I'll do my best to source
@@ -396,7 +395,7 @@ const btnGhost =
           </p>
         </div>
         <div class="mt-7 flex flex-wrap gap-4">
-          <a href="/store" class={btnPrimary}>Browse All Products</a>
+          <a href="/bundles" class={btnPrimary}>Browse the Bundles</a>
           <a href="/request-product" class={btnSoft}>Request a Product</a>
         </div>
       </div>

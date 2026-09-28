@@ -6,7 +6,8 @@ import Flash from '../../../components/pos/Flash.astro';
 import MakeForm from '../../../components/pos/MakeForm.astro';
 import { isAuthed, loginUrl } from '../../../lib/auth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
-import type { MakeWithBundle, Product } from '../../../lib/database.types';
+import type { Product } from '../../../lib/database.types';
+import { kitHref, withResolvedItems } from '../../../lib/makes';
 
 if (!isAuthed(Astro.cookies)) {
   return Astro.redirect(loginUrl(Astro.url));
@@ -32,10 +33,11 @@ const [makeRes, productRes] = await Promise.all([
 ]);
 
 if (makeRes.error || !makeRes.data) {
-  return Astro.redirect('/pos/makes?error=' + encodeURIComponent('That make no longer exists.'));
+  return Astro.redirect('/pos/makes?error=' + encodeURIComponent('That kit no longer exists.'));
 }
 
-const make = makeRes.data as unknown as MakeWithBundle;
+const make = withResolvedItems(makeRes.data as unknown as Record<string, unknown>);
+const noun = make.kind === 'bundle' ? 'bundle' : 'make';
 const products = (productRes.data ?? []) as Product[];
 
 const ok = Astro.url.searchParams.get('ok');
@@ -53,25 +55,30 @@ const updated = new Date(make.updated_at ?? make.created_at).toLocaleString('en-
       <nav class="mb-2 flex items-center gap-1.5 text-xs text-ink-muted">
         <a href="/pos" class="transition-colors duration-fast ease-out hover:text-mint-deep">POS</a>
         <span>/</span>
-        <a href="/pos/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes</a>
+        <a href="/pos/makes" class="transition-colors duration-fast ease-out hover:text-mint-deep">Makes &amp; bundles</a>
         <span>/</span>
         <span class="truncate font-semibold text-ink-body">{make.title}</span>
       </nav>
       <h1 class="truncate font-display text-3xl font-extrabold text-ink sm:text-4xl">{make.title}</h1>
       <p class="mt-1.5 text-sm text-ink-muted">
-        Pin by <span class="font-semibold text-ink-body">{make.author_name}</span> · last edited {updated}
+        {make.kind === 'bundle' ? (
+          <>Bundle · our own kit</>
+        ) : (
+          <>Make · design by <span class="font-semibold text-ink-body">{make.author_name}</span></>
+        )}{' '}
+        · last edited {updated}
       </p>
     </div>
 
     <div class="flex shrink-0 flex-wrap items-center gap-2">
       <a
-        href="/pos/makes/new"
+        href={make.kind === 'bundle' ? '/pos/makes/new?kind=bundle' : '/pos/makes/new'}
         class="inline-flex items-center gap-1.5 rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
       >
         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14M5 12h14" />
         </svg>
-        New make
+        New {noun}
       </a>
       <form method="POST" action="/api/pos/make-duplicate">
         <input type="hidden" name="id" value={make.id} />
@@ -92,18 +99,20 @@ const updated = new Date(make.updated_at ?? make.created_at).toLocaleString('en-
           Duplicate
         </button>
       </form>
-      <a
-        href={make.pinterest_url}
-        target="_blank"
-        rel="noopener nofollow"
-        class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
-      >
-        Open the pin ↗
-      </a>
+      {make.pinterest_url && (
+        <a
+          href={make.pinterest_url}
+          target="_blank"
+          rel="noopener nofollow"
+          class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"
+        >
+          Open the design ↗
+        </a>
+      )}
       {
         make.is_active && (
           <a
-            href={`/makes/${make.slug}`}
+            href={kitHref(make)}
             target="_blank"
             rel="noopener"
             class="rounded-pill border border-cream-300 bg-paper px-4 py-2 text-xs font-bold text-ink-body transition-colors duration-fast ease-out hover:bg-cream-100"

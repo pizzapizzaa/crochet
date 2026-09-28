@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     admin.from('makes').select('*').eq('id', id).maybeSingle(),
     admin
       .from('make_items')
-      .select('product_id, quantity, note, is_optional, display_order')
+      .select('*')
       .eq('make_id', id)
       .order('display_order', { ascending: true }),
   ]);
@@ -44,13 +44,25 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   }
 
   const source = makeRes.data as Make;
-  const items = itemRes.data ?? [];
+  // Selected whole so a copy made before the bundles migration still carries
+  // the skippable flag, under whichever name the column has.
+  const items = (itemRes.data ?? []).map((row) => {
+    const item = row as Record<string, unknown>;
+    return {
+      product_id: item.product_id as string,
+      quantity: item.quantity as number,
+      note: (item.note as string | null) ?? null,
+      can_opt_out: Boolean(item.can_opt_out ?? item.is_optional ?? false),
+      display_order: item.display_order as number,
+    };
+  });
 
   const stem = slugify(`${source.slug}-copy`);
   const { data: clashes } = await admin.from('makes').select('slug').like('slug', `${stem}%`);
   const slug = copySlug(stem, (clashes ?? []).map((row) => row.slug));
 
   const payload: MakeInsert = {
+    kind: source.kind ?? 'make',
     title: `${source.title} (copy)`,
     slug,
     summary: source.summary,
