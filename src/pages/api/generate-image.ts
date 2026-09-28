@@ -1,8 +1,19 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
+import { isAuthed } from '../../lib/auth';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  // Every call spends on the paid Gemini key, so it is gated like the page
+  // that makes it. JSON rather than guardApi's plain text: the page reads
+  // `error` off the body.
+  if (!isAuthed(cookies)) {
+    return new Response(JSON.stringify({ error: 'Not signed in. Sign in again to visualise.' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const apiKey = import.meta.env.GEMINI_API_KEY;
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'GEMINI_API_KEY is not configured.' }), {

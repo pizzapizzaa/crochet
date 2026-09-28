@@ -2,6 +2,7 @@
 import { HOOK_SIZES, YARN_WEIGHTS } from '../lib/yarnWeights';
 import type { YarnWeight } from '../lib/yarnWeights';
 import type { YarnOutcome, YarnSpecs } from '../lib/scrape/yarn';
+import { schematicSvg } from '../lib/schematic';
 
 // --- Types ---
 interface GaugeInputs {
@@ -28,6 +29,8 @@ interface PatternResult {
   /** Balls needed at each size — the looked-up yarn's own first, when there is one. */
   rolls: { size: number; count: number; own: boolean }[];
   pattern: string[];
+  /** The panel drawn to scale, as SVG markup, from the same numbers as the pattern. */
+  schematic: string;
 }
 
 /** The fields a yarn lookup can fill, so each can say where its value came from. */
@@ -105,7 +108,10 @@ function generatePattern(
     ...ROLL_SIZES.filter((s) => s !== ownBall).map((size) => ({ size, own: false })),
   ].map((r) => ({ ...r, count: Math.ceil(estimatedYarnGrams / r.size) }));
 
-  const yarnTitle = yarn ? [yarn.name, yarn.brand && !yarn.name?.includes(yarn.brand) ? `by ${yarn.brand}` : null].filter(Boolean).join(' ') : '';
+  // Brand only when the name does not already say it — shops disagree with
+  // themselves about capitals ("I Love This Yarn" by "I Love this Yarn").
+  const brandInName = Boolean(yarn?.brand && yarn.name?.toLowerCase().includes(yarn.brand.toLowerCase()));
+  const yarnTitle = yarn ? [yarn.name, yarn.brand && !brandInName ? `by ${yarn.brand}` : null].filter(Boolean).join(' ') : '';
   const ballLabel = yarn?.ballGrams && yarn.ballMeters ? `${yarn.ballGrams}g / ${yarn.ballMeters}m per ball` : null;
 
   const stAbbr = stitchData.value === 'tunisian' ? 'Tss' : stitchData.value.toUpperCase();
@@ -185,7 +191,22 @@ function generatePattern(
     `===========================================`,
   ];
 
-  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnGrams, rolls, pattern: lines };
+  const schematic = schematicSvg({
+    widthCm: project.widthCm,
+    heightCm: project.heightCm,
+    castOn,
+    totalRows,
+    turningChain: ch,
+    stitchesPer5cm: gauge.stitchesPer5cm,
+    rowsPer5cm: gauge.rowsPer5cm,
+    stitchLabel: stitchData.label + (grannyPatternName ? ` · ${grannyPatternName}` : ''),
+    stitchAbbr: stAbbr,
+    hookSize: project.hookSize,
+    yarnLabel: yarnTitle ? `${yarnTitle} (${yarnData.label})` : yarnData.label,
+    projectType: project.projectType,
+  });
+
+  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnGrams, rolls, pattern: lines, schematic };
 }
 
 function buildImagePrompt(project: ProjectInputs, grannyPatternName?: string): string {
@@ -316,7 +337,7 @@ export default function PatternGenerator() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'visualise' | 'pattern'>('visualise');
+  const [activeTab, setActiveTab] = useState<'visualise' | 'pattern' | 'schematic'>('visualise');
 
   // A looked-up hook the weight's list does not have — a 3.25mm on a DK, say —
   // still has to be selectable, or the select would silently show another.
@@ -491,6 +512,17 @@ export default function PatternGenerator() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `zippyzack-pattern-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [result]);
+
+  const downloadSchematic = useCallback(() => {
+    if (!result) return;
+    const blob = new Blob([result.schematic], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zippyzack-schematic-${Date.now()}.svg`;
     a.click();
     URL.revokeObjectURL(url);
   }, [result]);
@@ -850,6 +882,16 @@ export default function PatternGenerator() {
               >
                 📄 Your Pattern
               </button>
+              <button
+                onClick={() => setActiveTab('schematic')}
+                className={`flex-1 py-3.5 text-xs font-semibold tracking-wide transition-colors ${
+                  activeTab === 'schematic'
+                    ? 'text-brown-dark border-b-2 border-rose-dust bg-white'
+                    : 'text-brown-light hover:text-brown-warm bg-cream-50'
+                }`}
+              >
+                📐 Schematic
+              </button>
             </div>
 
             {/* AI Visualisation Tab */}
@@ -985,6 +1027,41 @@ export default function PatternGenerator() {
                   </h3>
                   <p className="text-brown-light text-sm mt-3 max-w-xs mx-auto leading-relaxed">
                     Fill in your gauge and project details on the left, then click Generate Pattern.
+                  </p>
+                </div>
+              )
+            )}
+
+            {/* Schematic Tab */}
+            {activeTab === 'schematic' && (
+              result ? (
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-display font-semibold text-brown-dark">Schematic</h3>
+                      <p className="text-xs text-brown-light">Drawn to scale from your pattern's own numbers.</p>
+                    </div>
+                    <button
+                      onClick={downloadSchematic}
+                      className="flex items-center gap-1.5 text-xs bg-btn-gradient text-ink hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
+                    >
+                      Download SVG
+                    </button>
+                  </div>
+                  {/* Our own markup, built by schematicSvg with every value escaped. */}
+                  <div
+                    className="rounded-xl overflow-hidden border border-cream-200 [&>svg]:w-full [&>svg]:h-auto"
+                    dangerouslySetInnerHTML={{ __html: result.schematic }}
+                  />
+                </div>
+              ) : (
+                <div className="p-12 text-center">
+                  <div className="text-6xl mb-4">📐</div>
+                  <h3 className="font-display text-2xl font-semibold text-brown-dark">
+                    Your schematic will appear here
+                  </h3>
+                  <p className="text-brown-light text-sm mt-3 max-w-xs mx-auto leading-relaxed">
+                    Generate a pattern and the piece is drawn to scale, with its foundation chain, rows and gauge.
                   </p>
                 </div>
               )
