@@ -2,7 +2,6 @@
 import { HOOK_SIZES, YARN_WEIGHTS } from '../lib/yarnWeights';
 import type { YarnWeight } from '../lib/yarnWeights';
 import type { YarnOutcome, YarnSpecs } from '../lib/scrape/yarn';
-import { schematicSvg } from '../lib/schematic';
 import { planPattern } from '../lib/crochet/stitchPatterns';
 import { stitchDiagramSvg } from '../lib/crochet/sheet';
 
@@ -32,8 +31,6 @@ interface PatternResult {
   pattern: string[];
   /** The stitch diagram — the symbol chart — as SVG markup. */
   chart: string;
-  /** The finished piece drawn to scale, as SVG markup. */
-  schematic: string;
 }
 
 /** The fields a yarn lookup can fill, so each can say where its value came from. */
@@ -204,31 +201,12 @@ function generatePattern(
     `===========================================`,
   ];
 
-  const stitchLabel = stitchData.label + (grannyPatternName ? ` · ${grannyPatternName}` : '');
-  const schematic = schematicSvg({
-    widthCm: plan.finishedWidthCm,
-    heightCm: plan.finishedHeightCm,
-    stitchesAcross: plan.stitchesAcross,
-    totalRows: plan.rows,
-    foundationNote: plan.squares
-      ? `${plan.squares.across} × ${plan.squares.down} squares of ${plan.squares.rounds} rounds, ${plan.squares.sideCm} cm each`
-      : `Foundation: ch ${plan.foundation} · ${plan.stats[2].value} ${plan.stats[2].label.toLowerCase()}`,
-    squares: plan.squares,
-    stitchesPer5cm: gauge.stitchesPer5cm,
-    rowsPer5cm: gauge.rowsPer5cm,
-    stitchLabel,
-    hookSize: project.hookSize,
-    yarnLabel: yarnTitle ? `${yarnTitle} (${yarnData.label})` : yarnData.label,
-    projectType: project.projectType,
-  });
-
   return {
     stats: plan.stats,
     estimatedYarnGrams,
     rolls,
     pattern: lines,
     chart: stitchDiagramSvg(plan, stitchData.label),
-    schematic,
   };
 }
 
@@ -360,7 +338,7 @@ export default function PatternGenerator() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'visualise' | 'pattern' | 'schematic'>('visualise');
+  const [activeTab, setActiveTab] = useState<'visualise' | 'pattern' | 'diagram'>('visualise');
 
   // A looked-up hook the weight's list does not have — a 3.25mm on a DK, say —
   // still has to be selectable, or the select would silently show another.
@@ -539,15 +517,16 @@ export default function PatternGenerator() {
     URL.revokeObjectURL(url);
   }, [result]);
 
-  const downloadSvg = useCallback((svg: string, name: string) => {
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const downloadDiagram = useCallback(() => {
+    if (!result) return;
+    const blob = new Blob([result.chart], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `zippyzack-${name}-${Date.now()}.svg`;
+    a.download = `zippyzack-stitch-diagram-${Date.now()}.svg`;
     a.click();
     URL.revokeObjectURL(url);
-  }, []);
+  }, [result]);
 
   return (
     <>
@@ -905,14 +884,14 @@ export default function PatternGenerator() {
                 📄 Your Pattern
               </button>
               <button
-                onClick={() => setActiveTab('schematic')}
+                onClick={() => setActiveTab('diagram')}
                 className={`flex-1 py-3.5 text-xs font-semibold tracking-wide transition-colors ${
-                  activeTab === 'schematic'
+                  activeTab === 'diagram'
                     ? 'text-brown-dark border-b-2 border-rose-dust bg-white'
                     : 'text-brown-light hover:text-brown-warm bg-cream-50'
                 }`}
               >
-                📐 Diagrams
+                🧶 Stitch Diagram
               </button>
             </div>
 
@@ -1052,55 +1031,38 @@ export default function PatternGenerator() {
               )
             )}
 
-            {/* Schematic Tab */}
-            {activeTab === 'schematic' && (
+            {/* Stitch Diagram Tab */}
+            {activeTab === 'diagram' && (
               result ? (
-                <div className="p-6 space-y-8">
-                  {[
-                    {
-                      key: 'chart',
-                      title: 'Stitch diagram',
-                      blurb: 'The pattern in standard crochet symbols, the same rows as the written instructions.',
-                      svg: result.chart,
-                      file: 'stitch-diagram',
-                    },
-                    {
-                      key: 'schematic',
-                      title: 'Schematic',
-                      blurb: 'The finished piece drawn to scale, with its measurements.',
-                      svg: result.schematic,
-                      file: 'schematic',
-                    },
-                  ].map((d) => (
-                    <section key={d.key}>
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div>
-                          <h3 className="font-display font-semibold text-brown-dark">{d.title}</h3>
-                          <p className="text-xs text-brown-light">{d.blurb}</p>
-                        </div>
-                        <button
-                          onClick={() => downloadSvg(d.svg, d.file)}
-                          className="shrink-0 flex items-center gap-1.5 text-xs bg-btn-gradient text-ink hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
-                        >
-                          Download SVG
-                        </button>
-                      </div>
-                      {/* Our own markup, built in lib/ with every value escaped. */}
-                      <div
-                        className="rounded-xl overflow-hidden border border-cream-200 [&>svg]:w-full [&>svg]:h-auto"
-                        dangerouslySetInnerHTML={{ __html: d.svg }}
-                      />
-                    </section>
-                  ))}
+                <div className="p-6">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <h3 className="font-display font-semibold text-brown-dark">Stitch diagram</h3>
+                      <p className="text-xs text-brown-light">
+                        The pattern in standard crochet symbols, the same rows as the written instructions.
+                      </p>
+                    </div>
+                    <button
+                      onClick={downloadDiagram}
+                      className="shrink-0 flex items-center gap-1.5 text-xs bg-btn-gradient text-ink hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
+                    >
+                      Download SVG
+                    </button>
+                  </div>
+                  {/* Our own markup, built in lib/crochet with every value escaped. */}
+                  <div
+                    className="rounded-xl overflow-hidden border border-cream-200 [&>svg]:w-full [&>svg]:h-auto"
+                    dangerouslySetInnerHTML={{ __html: result.chart }}
+                  />
                 </div>
               ) : (
                 <div className="p-12 text-center">
-                  <div className="text-6xl mb-4">📐</div>
+                  <div className="text-6xl mb-4">🧶</div>
                   <h3 className="font-display text-2xl font-semibold text-brown-dark">
-                    Your schematic will appear here
+                    Your stitch diagram will appear here
                   </h3>
                   <p className="text-brown-light text-sm mt-3 max-w-xs mx-auto leading-relaxed">
-                    Generate a pattern and the piece is drawn to scale, with its foundation chain, rows and gauge.
+                    Generate a pattern and it is charted in standard crochet symbols, row by row.
                   </p>
                 </div>
               )

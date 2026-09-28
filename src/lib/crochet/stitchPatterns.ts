@@ -31,9 +31,9 @@ export interface PlanInput {
 export interface Plan {
   /** Numbers shown above the pattern: label and value. */
   stats: { label: string; value: string }[];
-  /** The foundation, for the schematic. Null for a piece started in a ring. */
+  /** The foundation chain. Null for a piece started in a ring. */
   foundation: number | null;
-  /** Stitches across a row, for the schematic's legend. */
+  /** Stitches across a row, counting a repeat's skipped chains as stitches. */
   stitchesAcross: number;
   rows: number;
   /** Stitches worked in the whole piece, for the yarn estimate. */
