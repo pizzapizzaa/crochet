@@ -3,6 +3,8 @@ import { HOOK_SIZES, YARN_WEIGHTS } from '../lib/yarnWeights';
 import type { YarnWeight } from '../lib/yarnWeights';
 import type { YarnOutcome, YarnSpecs } from '../lib/scrape/yarn';
 import { schematicSvg } from '../lib/schematic';
+import { planPattern } from '../lib/crochet/stitchPatterns';
+import { stitchDiagramSvg } from '../lib/crochet/sheet';
 
 // --- Types ---
 interface GaugeInputs {
@@ -22,14 +24,15 @@ interface ProjectInputs {
 }
 
 interface PatternResult {
-  castOnStitches: number;
-  totalRows: number;
-  totalStitches: number;
+  /** The pattern's own headline numbers — foundation, rows, stitches per row, or squares. */
+  stats: { label: string; value: string }[];
   estimatedYarnGrams: number;
   /** Balls needed at each size — the looked-up yarn's own first, when there is one. */
   rolls: { size: number; count: number; own: boolean }[];
   pattern: string[];
-  /** The panel drawn to scale, as SVG markup, from the same numbers as the pattern. */
+  /** The stitch diagram — the symbol chart — as SVG markup. */
+  chart: string;
+  /** The finished piece drawn to scale, as SVG markup. */
   schematic: string;
 }
 
@@ -81,6 +84,23 @@ const GRANNY_PATTERNS = [
 ];
 
 // --- Helpers ---
+
+/** Wrap a line of pattern text to the width of the .txt file, under a hanging indent. */
+function wrapText(text: string, indent: string, width = 64): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(/\s+/)) {
+    if ((line + ' ' + word).trim().length > width - indent.length) {
+      lines.push(indent + line);
+      line = word;
+    } else {
+      line = (line + ' ' + word).trim();
+    }
+  }
+  if (line) lines.push(indent + line);
+  return lines;
+}
+
 function generatePattern(
   gauge: GaugeInputs,
   project: ProjectInputs,
@@ -94,13 +114,17 @@ function generatePattern(
   const metersPerGram = yarn?.metersPerGram ?? yarnData.metersPerGram;
 
   const adjustedRowsPerCm = (gauge.rowsPer5cm / 5) / stitchData.heightFactor;
-  const castOn = Math.round((gauge.stitchesPer5cm / 5) * project.widthCm);
-  const totalRows = Math.round(adjustedRowsPerCm * project.heightCm);
-  const totalStitches = castOn * totalRows;
+  const plan = planPattern({
+    stitch: stitchData.value,
+    stitchesPerCm: gauge.stitchesPer5cm / 5,
+    rows: Math.round(adjustedRowsPerCm * project.heightCm),
+    widthCm: project.widthCm,
+    heightCm: project.heightCm,
+  });
 
   // Yarn estimate: base 3cm per stitch for sc with worsted, scaled by yarn weight multiplier and stitch yarn factor.
   const yarnPerStitchCm = 3.0 * yarnData.multiplier * stitchData.yarnFactor;
-  const estimatedYarnMeters = (totalStitches * yarnPerStitchCm) / 100;
+  const estimatedYarnMeters = (plan.totalStitches * yarnPerStitchCm) / 100;
   const estimatedYarnGrams = Math.ceil(estimatedYarnMeters / metersPerGram);
   const ownBall = yarn?.ballGrams ?? null;
   const rolls = [
@@ -114,10 +138,12 @@ function generatePattern(
   const yarnTitle = yarn ? [yarn.name, yarn.brand && !brandInName ? `by ${yarn.brand}` : null].filter(Boolean).join(' ') : '';
   const ballLabel = yarn?.ballGrams && yarn.ballMeters ? `${yarn.ballGrams}g / ${yarn.ballMeters}m per ball` : null;
 
-  const stAbbr = stitchData.value === 'tunisian' ? 'Tss' : stitchData.value.toUpperCase();
-  const ch = project.stitchPattern === 'dc' ? 3 : project.stitchPattern === 'hdc' ? 2 : 1;
-
   const grannyNote = grannyPatternName ? `\nSelected Granny Pattern: ${grannyPatternName}` : '';
+
+  // Rounding to the stitch pattern's multiple moves the width a little; say
+  // so rather than leaving someone to find out at the end of the first row.
+  const widthMoved = Math.abs(plan.finishedWidthCm - project.widthCm) >= 0.5;
+  const heightMoved = Math.abs(plan.finishedHeightCm - project.heightCm) >= 0.5;
 
   const lines: string[] = [
     `===========================================`,
@@ -131,7 +157,10 @@ function generatePattern(
     `Yarn Weight: ${yarnData.label}`,
     `Hook Size: ${project.hookSize}`,
     ...(project.yarnColor ? [`Yarn Colour: ${project.yarnColor}`] : []),
-    `Dimensions: ${project.widthCm}cm wide x ${project.heightCm}cm tall`,
+    `Finished size: ${plan.finishedWidthCm}cm wide x ${plan.finishedHeightCm}cm tall`,
+    ...(widthMoved || heightMoved
+      ? [`  (you asked for ${project.widthCm} x ${project.heightCm}cm; rounded to fit the stitch pattern)`]
+      : []),
     ``,
     `-------------------------------------------`,
     `GAUGE (per 5cm)`,
@@ -147,38 +176,22 @@ function generatePattern(
     yarnTitle
       ? `  . ${yarnTitle} (${yarnData.label} weight${ballLabel ? `, ${ballLabel}` : ''})`
       : `  . ${yarnData.label} weight yarn`,
-    `  . ${project.hookSize} crochet hook`,
+    `  . ${project.hookSize} ${stitchData.value === 'tunisian' ? 'Tunisian (afghan) hook' : 'crochet hook'}`,
     `  . Stitch markers, yarn needle`,
     `  . ~${estimatedYarnGrams}g of yarn (estimate)`,
     `     Rolls needed: ${rolls.map((r) => `${r.count}x ${r.size}g${r.own ? ' (this yarn)' : ''}`).join('  |  ')}`,
     ``,
     `ABBREVIATIONS`,
-    `  ch = chain`,
-    `  ${stAbbr} = ${stitchData.label}`,
-    `  st(s) = stitch(es)`,
-    `  rep = repeat`,
+    ...plan.abbreviations.map(([abbr, meaning]) => `  ${abbr} = ${meaning}`),
     ``,
+    ...(plan.notes.length ? [`NOTES ON THE STITCH`, ...plan.notes.flatMap((n) => wrapText(n, '  ')), ``] : []),
     `PATTERN INSTRUCTIONS`,
     ``,
-    `Foundation Chain:`,
-    `  Ch ${castOn + ch}.`,
-    ``,
-    `Row 1:`,
-    `  ${stAbbr} in ${ch + 1}th ch from hook, ${stAbbr} in each`,
-    `  ch across. -- ${castOn} ${stAbbr} made.`,
-    ``,
-    `Rows 2-${totalRows}:`,
-    `  Ch ${ch}, turn. ${stAbbr} in each ${stAbbr} across.`,
-    `  -- ${castOn} sts per row.`,
-    ``,
-    `Fasten off and weave in all ends.`,
-    ``,
+    ...plan.steps.flatMap((step) => [`${step.heading}:`, ...wrapText(step.text, '  '), ``]),
     `-------------------------------------------`,
     `SUMMARY`,
     `-------------------------------------------`,
-    `  Cast-on stitches: ${castOn}`,
-    `  Total rows: ${totalRows}`,
-    `  Total stitches worked: ${totalStitches.toLocaleString()}`,
+    ...plan.stats.map((s) => `  ${s.label}: ${s.value}`),
     `  Yarn estimate: ~${estimatedYarnGrams}g`,
     ``,
     ...(project.notes
@@ -191,22 +204,32 @@ function generatePattern(
     `===========================================`,
   ];
 
+  const stitchLabel = stitchData.label + (grannyPatternName ? ` · ${grannyPatternName}` : '');
   const schematic = schematicSvg({
-    widthCm: project.widthCm,
-    heightCm: project.heightCm,
-    castOn,
-    totalRows,
-    turningChain: ch,
+    widthCm: plan.finishedWidthCm,
+    heightCm: plan.finishedHeightCm,
+    stitchesAcross: plan.stitchesAcross,
+    totalRows: plan.rows,
+    foundationNote: plan.squares
+      ? `${plan.squares.across} × ${plan.squares.down} squares of ${plan.squares.rounds} rounds, ${plan.squares.sideCm} cm each`
+      : `Foundation: ch ${plan.foundation} · ${plan.stats[2].value} ${plan.stats[2].label.toLowerCase()}`,
+    squares: plan.squares,
     stitchesPer5cm: gauge.stitchesPer5cm,
     rowsPer5cm: gauge.rowsPer5cm,
-    stitchLabel: stitchData.label + (grannyPatternName ? ` · ${grannyPatternName}` : ''),
-    stitchAbbr: stAbbr,
+    stitchLabel,
     hookSize: project.hookSize,
     yarnLabel: yarnTitle ? `${yarnTitle} (${yarnData.label})` : yarnData.label,
     projectType: project.projectType,
   });
 
-  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnGrams, rolls, pattern: lines, schematic };
+  return {
+    stats: plan.stats,
+    estimatedYarnGrams,
+    rolls,
+    pattern: lines,
+    chart: stitchDiagramSvg(plan, stitchData.label),
+    schematic,
+  };
 }
 
 function buildImagePrompt(project: ProjectInputs, grannyPatternName?: string): string {
@@ -516,16 +539,15 @@ export default function PatternGenerator() {
     URL.revokeObjectURL(url);
   }, [result]);
 
-  const downloadSchematic = useCallback(() => {
-    if (!result) return;
-    const blob = new Blob([result.schematic], { type: 'image/svg+xml' });
+  const downloadSvg = useCallback((svg: string, name: string) => {
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `zippyzack-schematic-${Date.now()}.svg`;
+    a.download = `zippyzack-${name}-${Date.now()}.svg`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [result]);
+  }, []);
 
   return (
     <>
@@ -890,7 +912,7 @@ export default function PatternGenerator() {
                     : 'text-brown-light hover:text-brown-warm bg-cream-50'
                 }`}
               >
-                📐 Schematic
+                📐 Diagrams
               </button>
             </div>
 
@@ -972,9 +994,7 @@ export default function PatternGenerator() {
                 <>
                   <div className="grid grid-cols-4 gap-px bg-cream-300">
                     {[
-                      { label: 'Cast-On Stitches', value: result.castOnStitches.toString() },
-                      { label: 'Total Rows', value: result.totalRows.toString() },
-                      { label: 'Total Stitches', value: result.totalStitches.toLocaleString() },
+                      ...result.stats,
                       { label: 'Yarn Estimate', value: `~${result.estimatedYarnGrams}g` },
                     ].map((stat) => (
                       <div key={stat.label} className="bg-cream-50 p-5 text-center">
@@ -1035,24 +1055,43 @@ export default function PatternGenerator() {
             {/* Schematic Tab */}
             {activeTab === 'schematic' && (
               result ? (
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="font-display font-semibold text-brown-dark">Schematic</h3>
-                      <p className="text-xs text-brown-light">Drawn to scale from your pattern's own numbers.</p>
-                    </div>
-                    <button
-                      onClick={downloadSchematic}
-                      className="flex items-center gap-1.5 text-xs bg-btn-gradient text-ink hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
-                    >
-                      Download SVG
-                    </button>
-                  </div>
-                  {/* Our own markup, built by schematicSvg with every value escaped. */}
-                  <div
-                    className="rounded-xl overflow-hidden border border-cream-200 [&>svg]:w-full [&>svg]:h-auto"
-                    dangerouslySetInnerHTML={{ __html: result.schematic }}
-                  />
+                <div className="p-6 space-y-8">
+                  {[
+                    {
+                      key: 'chart',
+                      title: 'Stitch diagram',
+                      blurb: 'The pattern in standard crochet symbols, the same rows as the written instructions.',
+                      svg: result.chart,
+                      file: 'stitch-diagram',
+                    },
+                    {
+                      key: 'schematic',
+                      title: 'Schematic',
+                      blurb: 'The finished piece drawn to scale, with its measurements.',
+                      svg: result.schematic,
+                      file: 'schematic',
+                    },
+                  ].map((d) => (
+                    <section key={d.key}>
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                          <h3 className="font-display font-semibold text-brown-dark">{d.title}</h3>
+                          <p className="text-xs text-brown-light">{d.blurb}</p>
+                        </div>
+                        <button
+                          onClick={() => downloadSvg(d.svg, d.file)}
+                          className="shrink-0 flex items-center gap-1.5 text-xs bg-btn-gradient text-ink hover:brightness-105 px-3 py-1.5 rounded-full transition-all"
+                        >
+                          Download SVG
+                        </button>
+                      </div>
+                      {/* Our own markup, built in lib/ with every value escaped. */}
+                      <div
+                        className="rounded-xl overflow-hidden border border-cream-200 [&>svg]:w-full [&>svg]:h-auto"
+                        dangerouslySetInnerHTML={{ __html: d.svg }}
+                      />
+                    </section>
+                  ))}
                 </div>
               ) : (
                 <div className="p-12 text-center">

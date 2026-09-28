@@ -15,14 +15,16 @@
 export interface SchematicInput {
   widthCm: number;
   heightCm: number;
-  castOn: number;
+  /** Stitches across a row, for the ticks along the foundation. */
+  stitchesAcross: number;
   totalRows: number;
-  /** The turning chain the pattern adds to the foundation. */
-  turningChain: number;
+  /** What the foundation line says: "Foundation: ch 49 · 48 sc per row". */
+  foundationNote: string;
+  /** A piece joined from motifs, drawn as its grid of squares instead of rows. */
+  squares?: { across: number; down: number; sideCm: number; rounds: number };
   stitchesPer5cm: number;
   rowsPer5cm: number;
   stitchLabel: string;
-  stitchAbbr: string;
   hookSize: string;
   yarnLabel: string;
   projectType: string;
@@ -83,7 +85,7 @@ export function schematicSvg(input: SchematicInput): string {
   const width = Math.max(input.widthCm, 1);
   const height = Math.max(input.heightCm, 1);
   const rows = Math.max(input.totalRows, 1);
-  const stitches = Math.max(input.castOn, 1);
+  const stitches = Math.max(input.stitchesAcross, 1);
 
   // One scale for both axes, so the drawing has the finished piece's shape.
   const scale = Math.min(MAX_PANEL_W / width, MAX_PANEL_H / height);
@@ -103,6 +105,21 @@ export function schematicSvg(input: SchematicInput): string {
   parts.push(
     `<rect x="${fmt(left)}" y="${fmt(top)}" width="${fmt(panelW)}" height="${fmt(panelH)}" rx="6" fill="${PANEL}" stroke="${PANEL_EDGE}" stroke-width="1.5" />`,
   );
+  if (input.squares) {
+    // The squares themselves, joined edge to edge.
+    const { across, down } = input.squares;
+    const grid: string[] = [];
+    for (let i = 1; i < across; i += 1) {
+      const x = left + (panelW * i) / across;
+      grid.push(`<line x1="${fmt(x)}" y1="${fmt(top)}" x2="${fmt(x)}" y2="${fmt(bottom)}" stroke="${PANEL_EDGE}" stroke-width="1.2" />`);
+    }
+    for (let j = 1; j < down; j += 1) {
+      const y = top + (panelH * j) / down;
+      grid.push(`<line x1="${fmt(left)}" y1="${fmt(y)}" x2="${fmt(right)}" y2="${fmt(y)}" stroke="${PANEL_EDGE}" stroke-width="1.2" />`);
+    }
+    parts.push(`<g>${grid.join('')}</g>`);
+    parts.push(text((left + right) / 2, bottom + 22, input.foundationNote, `font-size="12" fill="${BODY}" text-anchor="middle"`));
+  } else {
   const rowStep = niceStep(rows, 10);
   const lineEvery = rowPx >= 4 ? 1 : rowStep;
   const rowLines: string[] = [];
@@ -160,16 +177,17 @@ export function schematicSvg(input: SchematicInput): string {
     text(
       (left + right) / 2,
       bottom + 22,
-      `Foundation: ch ${input.castOn + input.turningChain} · ${input.castOn} ${input.stitchAbbr} per row`,
+      input.foundationNote,
       `font-size="12" fill="${BODY}" text-anchor="middle"`,
     ),
   );
+  }
 
   /* Finished size. */
   parts.push(dimension(left, top - 22, right, top - 22, `${fmt(input.widthCm)} cm`));
   parts.push(dimension(right + 56, top, right + 56, bottom, `${fmt(input.heightCm)} cm`));
   parts.push(
-    text(right + 68, (top + bottom) / 2 + 18, `${input.totalRows} rows`, `font-size="11" fill="${MUTED}" dominant-baseline="middle"`),
+    text(right + 68, (top + bottom) / 2 + 18, input.squares ? `${input.squares.down} squares` : `${input.totalRows} rows`, `font-size="11" fill="${MUTED}" dominant-baseline="middle"`),
   );
 
   /* The gauge square at the drawing's own scale, so the swatch you make can
@@ -209,7 +227,7 @@ export function schematicSvg(input: SchematicInput): string {
   const title = `${input.projectType} schematic`;
 
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_W} ${fmt(viewH)}" width="${VIEW_W}" height="${fmt(viewH)}" role="img" aria-label="${esc(`${title}: ${fmt(input.widthCm)} by ${fmt(input.heightCm)} cm, ${input.castOn} stitches by ${input.totalRows} rows`)}" font-family="${esc(FONT)}">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW_W} ${fmt(viewH)}" width="${VIEW_W}" height="${fmt(viewH)}" role="img" aria-label="${esc(`${title}: ${fmt(input.widthCm)} by ${fmt(input.heightCm)} cm, ${input.squares ? `${input.squares.across} by ${input.squares.down} squares` : `${input.stitchesAcross} stitches by ${input.totalRows} rows`}`)}" font-family="${esc(FONT)}">` +
     `<rect width="100%" height="100%" fill="${PAPER}" />` +
     text(24, 30, title.toUpperCase(), `font-size="11" font-weight="700" letter-spacing="1.6" fill="${ACCENT}"`) +
     parts.join('') +

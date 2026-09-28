@@ -5,13 +5,12 @@ import type { SchematicInput } from '../src/lib/schematic';
 const base: SchematicInput = {
   widthCm: 30,
   heightCm: 30,
-  castOn: 48,
+  stitchesAcross: 48,
   totalRows: 60,
-  turningChain: 1,
+  foundationNote: 'Foundation: ch 49 · 48 stitches per row',
   stitchesPer5cm: 8,
   rowsPer5cm: 10,
   stitchLabel: 'Single Crochet (sc)',
-  stitchAbbr: 'SC',
   hookSize: '5.0mm',
   yarnLabel: 'Medium / Worsted (4)',
   projectType: 'Blanket',
@@ -21,7 +20,7 @@ describe('schematicSvg', () => {
   it("carries the pattern's own numbers", () => {
     const svg = schematicSvg(base);
     expect(svg).toContain('ch 49');
-    expect(svg).toContain('48 SC per row');
+    expect(svg).toContain('48 stitches per row');
     expect(svg).toContain('60 rows');
     expect(svg).toContain('30 cm');
     expect(svg).toContain('8 sts × 10 rows per 5 cm');
