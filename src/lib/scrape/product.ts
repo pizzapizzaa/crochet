@@ -10,6 +10,7 @@ import {
   siteNameFrom,
   stripTags,
 } from './html';
+import type { FetchedPage } from './html';
 
 /*
  * Reading a product off somebody else's shop page.
@@ -404,8 +405,11 @@ export function tidySourceUrl(raw: string): string {
  * back as an empty draft with a note explaining what to do instead, which for
  * the shops that block servers outright means "open it in Chrome and use the
  * extension".
+ *
+ * `prefetched` is for a caller that has already fetched the page for reasons
+ * of its own — the yarn scraper reads its text — so it is not fetched twice.
  */
-export async function scrapeProduct(rawUrl: string): Promise<ScrapeOutcome> {
+export async function scrapeProduct(rawUrl: string, prefetched?: FetchedPage): Promise<ScrapeOutcome> {
   const url = tidySourceUrl(rawUrl);
 
   if (!isFetchableUrl(url)) {
@@ -418,7 +422,7 @@ export async function scrapeProduct(rawUrl: string): Promise<ScrapeOutcome> {
 
   let page: { html: string; finalUrl: string; status: number };
   try {
-    page = await fetchPage(url);
+    page = prefetched ?? (await fetchPage(url));
   } catch {
     return {
       draft: emptyDraft(url, hostLabel(url)),

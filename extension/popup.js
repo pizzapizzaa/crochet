@@ -8,7 +8,7 @@ import {
   normaliseCode,
   normaliseShopUrl,
 } from './shared.js';
-import { collectPins, readProduct } from './readers.js';
+import { collectPins, readProduct, readYarnPage } from './readers.js';
 
 /*
  * One popup, three situations: nothing configured yet, a Pinterest board, or
@@ -294,6 +294,42 @@ $('import').addEventListener('click', async () => {
   }
 });
 
+/* ── Yarn ───────────────────────────────────────────────────────── */
+
+/*
+ * The half of the yarn lookup a server cannot do: Taobao only shows a listing
+ * to a signed-in browser. The page is read here, parsed by the shop — so the
+ * extension never needs updating when the parser does — and the result is
+ * handed to the pattern generator in the URL fragment, which never leaves the
+ * browser.
+ */
+$('send-yarn').addEventListener('click', async () => {
+  const button = $('send-yarn');
+  button.disabled = true;
+  button.textContent = 'Reading specs…';
+  try {
+    const page = await readPage(readYarnPage);
+    if (!page?.text) throw new Error('Nothing could be read off this page.');
+
+    const outcome = await callShop(settings, '/api/pos/yarn-lookup', { browser: page });
+    if (!outcome.found) {
+      say('yarn-note', outcome.note ?? 'No yarn specs were found on this page.', 'warn');
+      button.disabled = false;
+      button.textContent = 'Send yarn to pattern generator';
+      return;
+    }
+
+    const shop = normaliseShopUrl(settings.shopUrl);
+    const handoff = encodeURIComponent(JSON.stringify({ specs: outcome.specs, found: true, note: outcome.note }));
+    chrome.tabs.create({ url: `${shop}/pattern-generator#yarn=${handoff}` });
+    window.close();
+  } catch (error) {
+    say('yarn-note', error.message, 'warn');
+    button.disabled = false;
+    button.textContent = 'Send yarn to pattern generator';
+  }
+});
+
 /* ── Pinterest ──────────────────────────────────────────────────── */
 
 let pins = [];
@@ -364,8 +400,14 @@ $('shop-link').addEventListener('click', (event) => {
   }
 
   try {
-    if (isPinterest(tab.url)) await setUpPinterest();
-    else await setUpProduct();
+    if (isPinterest(tab.url)) {
+      await setUpPinterest();
+    } else {
+      // Shown whether or not a product was found: a yarn's spec panel can be
+      // readable on a page whose price is not.
+      show('yarn', true);
+      await setUpProduct();
+    }
   } catch (error) {
     $('subtitle').textContent = 'Could not read this page.';
     show('idle', true);

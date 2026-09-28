@@ -1,5 +1,5 @@
 /*
- * The two things this extension reads out of a page.
+ * The three things this extension reads out of a page.
  *
  * Both functions are injected into the page with chrome.scripting, which
  * serialises them to source and runs them there. That has one hard
@@ -338,5 +338,57 @@ export function collectPins() {
   return {
     urls: ids.map((id) => `https://www.pinterest.com/pin/${id}/`),
     title: document.title.replace(/\s*\|\s*Pinterest\s*$/i, '').trim(),
+  };
+}
+
+/**
+ * A yarn page as "Label: value" lines, for the pattern generator.
+ *
+ * The shop parses these, so all this has to do is keep a spec's label and
+ * value on one line. Pages rarely do that for us: Taobao's parameter panel is
+ * a grid of label/value element pairs, other shops use tables or definition
+ * lists, and innerText puts each half on a line of its own. So pairs are
+ * rebuilt from the structure first, and the visible text goes after them for
+ * anything written out as prose.
+ *
+ * innerText, not textContent: a collapsed tab's text is left out, which is why
+ * the popup tells you to open the spec section before sending.
+ */
+export function readYarnPage() {
+  const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
+  const lines = [];
+  const add = (label, value) => {
+    const l = clean(label).replace(/[:：]\s*$/, '');
+    const v = clean(value);
+    if (l && v && l.length <= 40 && v.length <= 160 && l !== v) lines.push(`${l}: ${v}`);
+  };
+
+  for (const row of document.querySelectorAll('tr')) {
+    const cells = [...row.children].filter((c) => /^(TH|TD)$/.test(c.tagName));
+    // Parameter tables often pack two pairs to a row: label, value, label, value.
+    for (let i = 0; i + 1 < cells.length; i += 2) add(cells[i].innerText, cells[i + 1].innerText);
+  }
+
+  for (const term of document.querySelectorAll('dt')) {
+    const detail = term.nextElementSibling;
+    if (detail && detail.tagName === 'DD') add(term.innerText, detail.innerText);
+  }
+
+  // Any element holding exactly a short label and a value, and nothing else.
+  for (const el of document.querySelectorAll('div, li, p, span')) {
+    const kids = el.children;
+    if (kids.length !== 2) continue;
+    const [a, b] = kids;
+    if (a.children.length > 1 || b.children.length > 1) continue;
+    const label = clean(a.innerText);
+    if (!label || label.length > 20 || /\d{3,}/.test(label)) continue;
+    add(label, b.innerText);
+  }
+
+  const text = [...new Set(lines)].join('\n') + '\n\n' + (document.body ? document.body.innerText : '');
+  return {
+    url: location.href,
+    title: clean(document.title),
+    text: text.slice(0, 60000),
   };
 }

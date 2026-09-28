@@ -1,4 +1,7 @@
-﻿import { useState, useCallback } from 'react';
+﻿import { useState, useCallback, useEffect } from 'react';
+import { HOOK_SIZES, YARN_WEIGHTS } from '../lib/yarnWeights';
+import type { YarnWeight } from '../lib/yarnWeights';
+import type { YarnOutcome, YarnSpecs } from '../lib/scrape/yarn';
 
 // --- Types ---
 interface GaugeInputs {
@@ -22,28 +25,20 @@ interface PatternResult {
   totalRows: number;
   totalStitches: number;
   estimatedYarnGrams: number;
+  /** Balls needed at each size — the looked-up yarn's own first, when there is one. */
+  rolls: { size: number; count: number; own: boolean }[];
   pattern: string[];
 }
 
-// --- Data tables ---
-const YARN_WEIGHTS = [
-  { label: 'Lace (0)', value: 'lace', multiplier: 0.7, metersPerGram: 9.0 },
-  { label: 'Super Fine / Fingering (1)', value: 'fingering', multiplier: 0.9, metersPerGram: 4.0 },
-  { label: 'Fine / Sport (2)', value: 'sport', multiplier: 1.0, metersPerGram: 3.2 },
-  { label: 'Light / DK (3)', value: 'dk', multiplier: 1.2, metersPerGram: 2.3 },
-  { label: 'Medium / Worsted (4)', value: 'worsted', multiplier: 1.5, metersPerGram: 2.0 },
-  { label: 'Bulky (5)', value: 'bulky', multiplier: 1.9, metersPerGram: 1.1 },
-  { label: 'Super Bulky (6)', value: 'super-bulky', multiplier: 2.5, metersPerGram: 0.6 },
-];
+/** The fields a yarn lookup can fill, so each can say where its value came from. */
+type FillableField = 'yarnWeight' | 'hookSize' | 'yarnColor' | 'gauge';
 
-const HOOK_SIZES: Record<string, string[]> = {
-  lace: ['0.75mm', '1.0mm', '1.5mm', '1.75mm'],
-  fingering: ['1.75mm', '2.0mm', '2.25mm', '2.75mm'],
-  sport: ['2.75mm', '3.0mm', '3.25mm', '3.5mm'],
-  dk: ['3.5mm', '3.75mm', '4.0mm', '4.25mm', '4.5mm'],
-  worsted: ['4.0mm', '4.5mm', '5.0mm', '5.5mm', '6.0mm'],
-  bulky: ['6.0mm', '6.5mm', '7.0mm', '8.0mm', '9.0mm'],
-  'super-bulky': ['9.0mm', '10.0mm', '12.0mm', '15.0mm'],
+const ROLL_SIZES = [50, 100, 125, 150];
+
+const hooksFor = (weight: string): string[] => HOOK_SIZES[weight as YarnWeight] ?? HOOK_SIZES.worsted;
+const middleHook = (weight: string): string => {
+  const hooks = hooksFor(weight);
+  return hooks[Math.floor(hooks.length / 2)] ?? '';
 };
 
 const PROJECT_TYPES = [
@@ -83,9 +78,17 @@ const GRANNY_PATTERNS = [
 ];
 
 // --- Helpers ---
-function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatternName?: string): PatternResult {
+function generatePattern(
+  gauge: GaugeInputs,
+  project: ProjectInputs,
+  grannyPatternName?: string,
+  yarn?: YarnSpecs | null,
+): PatternResult {
   const stitchData = STITCH_PATTERNS.find((s) => s.value === project.stitchPattern) ?? STITCH_PATTERNS[0];
   const yarnData = YARN_WEIGHTS.find((y) => y.value === project.yarnWeight) ?? YARN_WEIGHTS[4];
+  // The real yarn's length for its weight beats the category's typical one —
+  // for a braided or roving yarn it can be four times out.
+  const metersPerGram = yarn?.metersPerGram ?? yarnData.metersPerGram;
 
   const adjustedRowsPerCm = (gauge.rowsPer5cm / 5) / stitchData.heightFactor;
   const castOn = Math.round((gauge.stitchesPer5cm / 5) * project.widthCm);
@@ -95,9 +98,15 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
   // Yarn estimate: base 3cm per stitch for sc with worsted, scaled by yarn weight multiplier and stitch yarn factor.
   const yarnPerStitchCm = 3.0 * yarnData.multiplier * stitchData.yarnFactor;
   const estimatedYarnMeters = (totalStitches * yarnPerStitchCm) / 100;
-  const estimatedYarnGrams = Math.ceil(estimatedYarnMeters / yarnData.metersPerGram);
-  const rollSizes = [50, 100, 125, 150] as const;
-  const rollsNeeded = Object.fromEntries(rollSizes.map((s) => [s, Math.ceil(estimatedYarnGrams / s)])) as Record<50|100|125|150, number>;
+  const estimatedYarnGrams = Math.ceil(estimatedYarnMeters / metersPerGram);
+  const ownBall = yarn?.ballGrams ?? null;
+  const rolls = [
+    ...(ownBall ? [{ size: ownBall, own: true }] : []),
+    ...ROLL_SIZES.filter((s) => s !== ownBall).map((size) => ({ size, own: false })),
+  ].map((r) => ({ ...r, count: Math.ceil(estimatedYarnGrams / r.size) }));
+
+  const yarnTitle = yarn ? [yarn.name, yarn.brand && !yarn.name?.includes(yarn.brand) ? `by ${yarn.brand}` : null].filter(Boolean).join(' ') : '';
+  const ballLabel = yarn?.ballGrams && yarn.ballMeters ? `${yarn.ballGrams}g / ${yarn.ballMeters}m per ball` : null;
 
   const stAbbr = stitchData.value === 'tunisian' ? 'Tss' : stitchData.value.toUpperCase();
   const ch = project.stitchPattern === 'dc' ? 3 : project.stitchPattern === 'hdc' ? 2 : 1;
@@ -111,6 +120,8 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     ``,
     `Project: ${project.projectType}`,
     `Stitch: ${stitchData.label}${grannyNote}`,
+    ...(yarnTitle ? [`Yarn: ${yarnTitle}`] : []),
+    ...(yarn?.fibre ? [`Fibre: ${yarn.fibre}`] : []),
     `Yarn Weight: ${yarnData.label}`,
     `Hook Size: ${project.hookSize}`,
     ...(project.yarnColor ? [`Yarn Colour: ${project.yarnColor}`] : []),
@@ -127,11 +138,13 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     `-------------------------------------------`,
     ``,
     `MATERIALS`,
-    `  . ${yarnData.label} weight yarn`,
+    yarnTitle
+      ? `  . ${yarnTitle} (${yarnData.label} weight${ballLabel ? `, ${ballLabel}` : ''})`
+      : `  . ${yarnData.label} weight yarn`,
     `  . ${project.hookSize} crochet hook`,
     `  . Stitch markers, yarn needle`,
     `  . ~${estimatedYarnGrams}g of yarn (estimate)`,
-    `     Rolls needed: ${rollsNeeded[50]}x 50g  |  ${rollsNeeded[100]}x 100g  |  ${rollsNeeded[125]}x 125g  |  ${rollsNeeded[150]}x 150g`,
+    `     Rolls needed: ${rolls.map((r) => `${r.count}x ${r.size}g${r.own ? ' (this yarn)' : ''}`).join('  |  ')}`,
     ``,
     `ABBREVIATIONS`,
     `  ch = chain`,
@@ -165,13 +178,14 @@ function generatePattern(gauge: GaugeInputs, project: ProjectInputs, grannyPatte
     ...(project.notes
       ? [`-------------------------------------------`, `NOTES`, `  ${project.notes}`, ``]
       : []),
+    ...(yarn?.sourceUrl ? [`Yarn specs from: ${yarn.sourceUrl}`, ``] : []),
     `===========================================`,
     `  Made with ZippyZack.com Pattern Generator`,
     `  zippyzack.com/pattern-generator`,
     `===========================================`,
   ];
 
-  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnGrams, pattern: lines };
+  return { castOnStitches: castOn, totalRows, totalStitches, estimatedYarnGrams, rolls, pattern: lines };
 }
 
 function buildImagePrompt(project: ProjectInputs, grannyPatternName?: string): string {
@@ -269,6 +283,16 @@ function GrannyModal({
   );
 }
 
+/** Marks a field whose value came from the yarn lookup rather than from the user. */
+function FromYarn({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <span className="ml-1.5 inline-flex items-center rounded-full bg-sage/15 px-2 py-0.5 text-[10px] font-semibold text-sage align-middle">
+      from yarn
+    </span>
+  );
+}
+
 // --- Main Component ---
 export default function PatternGenerator() {
   const [gauge, setGauge] = useState<GaugeInputs>({ stitchesPer5cm: 8, rowsPer5cm: 10 });
@@ -294,12 +318,124 @@ export default function PatternGenerator() {
   const [imageError, setImageError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'visualise' | 'pattern'>('visualise');
 
-  const hookOptions = HOOK_SIZES[project.yarnWeight] ?? HOOK_SIZES['worsted'];
+  // A looked-up hook the weight's list does not have — a 3.25mm on a DK, say —
+  // still has to be selectable, or the select would silently show another.
+  const hookOptions = (() => {
+    const hooks = hooksFor(project.yarnWeight);
+    return project.hookSize && !hooks.includes(project.hookSize)
+      ? [...hooks, project.hookSize].sort((a, b) => parseFloat(a) - parseFloat(b))
+      : hooks;
+  })();
+
+  // --- Yarn lookup ---
+  const [yarnMode, setYarnMode] = useState<'link' | 'paste'>('link');
+  const [yarnUrl, setYarnUrl] = useState('');
+  const [yarnText, setYarnText] = useState('');
+  const [yarnLoading, setYarnLoading] = useState(false);
+  const [yarnError, setYarnError] = useState<string | null>(null);
+  const [yarnNote, setYarnNote] = useState<string | null>(null);
+  const [yarn, setYarn] = useState<YarnSpecs | null>(null);
+  const [autoFilled, setAutoFilled] = useState<Set<FillableField>>(new Set());
+
+  /** A field the user has changed by hand no longer came from the link. */
+  const touch = useCallback((field: FillableField) => {
+    setAutoFilled((current) => {
+      if (!current.has(field)) return current;
+      const next = new Set(current);
+      next.delete(field);
+      return next;
+    });
+  }, []);
 
   const handleYarnChange = useCallback((val: string) => {
-    const hooks = HOOK_SIZES[val] ?? [];
-    setProject((p) => ({ ...p, yarnWeight: val, hookSize: hooks[Math.floor(hooks.length / 2)] ?? '' }));
+    setProject((p) => ({ ...p, yarnWeight: val, hookSize: middleHook(val) }));
+    touch('yarnWeight');
+    touch('hookSize');
+  }, [touch]);
+
+  /*
+   * One setProject for everything, deliberately: going through
+   * handleYarnChange would reset the hook to the weight's middle size right
+   * after the looked-up one was put in.
+   */
+  const applyYarn = useCallback((outcome: YarnOutcome) => {
+    const { specs } = outcome;
+    setYarnNote(outcome.note);
+    if (!outcome.found) {
+      setYarn(null);
+      return;
+    }
+
+    setProject((p) => {
+      const weight = specs.weight ?? p.yarnWeight;
+      const hookSize = specs.hook ?? (weight !== p.yarnWeight ? middleHook(weight) : p.hookSize);
+      return { ...p, yarnWeight: weight, hookSize, yarnColor: specs.colour ?? p.yarnColor };
+    });
+    if (specs.crochetGauge) {
+      setGauge({
+        stitchesPer5cm: specs.crochetGauge.stitchesPer5cm,
+        rowsPer5cm: specs.crochetGauge.rowsPer5cm,
+      });
+    }
+    setAutoFilled(
+      new Set<FillableField>([
+        ...(specs.weight ? (['yarnWeight'] as const) : []),
+        ...(specs.hook ? (['hookSize'] as const) : []),
+        ...(specs.colour ? (['yarnColor'] as const) : []),
+        ...(specs.crochetGauge ? (['gauge'] as const) : []),
+      ]),
+    );
+    setYarn(specs);
   }, []);
+
+  const lookUpYarn = useCallback(async () => {
+    const payload = yarnMode === 'link' ? { url: yarnUrl.trim() } : { text: yarnText };
+    if (yarnMode === 'link' ? !payload.url : !yarnText.trim()) return;
+    setYarnLoading(true);
+    setYarnError(null);
+    setYarnNote(null);
+    try {
+      const res = await fetch('/api/pos/yarn-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) setYarnError(data.error ?? 'Could not read that yarn.');
+      else applyYarn(data as YarnOutcome);
+    } catch {
+      setYarnError('Network error. Please try again.');
+    } finally {
+      setYarnLoading(false);
+    }
+  }, [yarnMode, yarnUrl, yarnText, applyYarn]);
+
+  const clearYarn = useCallback(() => {
+    setYarn(null);
+    setYarnNote(null);
+    setYarnError(null);
+    setAutoFilled(new Set());
+  }, []);
+
+  /*
+   * The extension's hand-off: it reads a page this server cannot (Taobao,
+   * behind its login), has the specs parsed, and opens this page with them in
+   * the fragment. The fragment never reaches a server, and is cleared once
+   * read so a reload does not apply it twice.
+   */
+  useEffect(() => {
+    const match = window.location.hash.match(/^#yarn=(.+)$/);
+    if (!match) return;
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    try {
+      const outcome = JSON.parse(decodeURIComponent(match[1])) as YarnOutcome;
+      if (!outcome?.specs || typeof outcome.specs !== 'object') return;
+      if (outcome.specs.sourceUrl) setYarnUrl(outcome.specs.sourceUrl);
+      applyYarn(outcome);
+    } catch {
+      setYarnError('The extension sent specs this page could not read. Try sending them again.');
+    }
+  }, [applyYarn]);
 
   const handleStitchChange = useCallback((val: string) => {
     setProject((p) => ({ ...p, stitchPattern: val }));
@@ -308,11 +444,11 @@ export default function PatternGenerator() {
 
   const generate = useCallback(() => {
     const grannyName = project.stitchPattern === 'granny' ? selectedGrannyPattern?.name : undefined;
-    setResult(generatePattern(gauge, project, grannyName));
+    setResult(generatePattern(gauge, project, grannyName, yarn));
     setGeneratedImage(null);
     setImageError(null);
     setActiveTab('pattern');
-  }, [gauge, project, selectedGrannyPattern]);
+  }, [gauge, project, selectedGrannyPattern, yarn]);
 
   const visualise = useCallback(async () => {
     const grannyName = project.stitchPattern === 'granny' ? selectedGrannyPattern?.name : undefined;
@@ -373,9 +509,140 @@ export default function PatternGenerator() {
         {/* Input Panel */}
         <div className="space-y-6">
           <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="font-display text-xl font-semibold text-brown-dark mb-1">Your Gauge</h2>
+            <div className="flex items-start justify-between gap-4 mb-1">
+              <h2 className="font-display text-xl font-semibold text-brown-dark">Your Yarn</h2>
+              <div className="flex shrink-0 rounded-full bg-cream-100 p-0.5 text-xs font-medium">
+                {(['link', 'paste'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setYarnMode(mode)}
+                    className={`px-3 py-1 rounded-full transition-colors ${
+                      yarnMode === mode ? 'bg-white text-brown-dark shadow-sm' : 'text-brown-light hover:text-brown-warm'
+                    }`}
+                  >
+                    {mode === 'link' ? 'Link' : 'Paste specs'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <p className="text-brown-light text-xs mb-5">
-              Crochet a 5cm x 5cm swatch and count your stitches and rows.
+              {yarnMode === 'link'
+                ? 'Paste the shop link for your yarn and its specs fill in below.'
+                : 'For shops that only show a listing when you are signed in, like Taobao: copy the spec table off the page and paste it here.'}
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                lookUpYarn();
+              }}
+              className={yarnMode === 'link' ? 'flex gap-2' : 'space-y-2'}
+            >
+              {yarnMode === 'link' ? (
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={yarnUrl}
+                  onChange={(e) => setYarnUrl(e.target.value)}
+                  placeholder="https://www.hobbylobby.com/…"
+                  className="min-w-0 flex-1 px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
+                />
+              ) : (
+                <textarea
+                  value={yarnText}
+                  onChange={(e) => setYarnText(e.target.value)}
+                  rows={5}
+                  placeholder={'Yarn Weight: 4 - Medium\nRecommended Crochet Hook: 5.5mm\nSkein Weight: 7 Ounces\nSkein Yardage: 355 Yards'}
+                  className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40 resize-y"
+                />
+              )}
+              <button
+                type="submit"
+                disabled={yarnLoading || (yarnMode === 'link' ? !yarnUrl.trim() : !yarnText.trim())}
+                className={`shrink-0 bg-sage/10 hover:bg-sage/20 text-brown-dark font-medium px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  yarnMode === 'paste' ? 'w-full' : ''
+                }`}
+              >
+                {yarnLoading ? 'Reading…' : yarnMode === 'link' ? 'Fetch specs' : 'Read specs'}
+              </button>
+            </form>
+
+            {yarnError && <p className="mt-3 text-xs text-rose-dust">{yarnError}</p>}
+
+            {yarn && (
+              <div className="mt-4 rounded-xl border border-cream-200 bg-cream-50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-brown-dark truncate">{yarn.name ?? 'Your yarn'}</p>
+                    <p className="text-xs text-brown-light truncate">
+                      {[yarn.brand, yarn.siteName].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearYarn}
+                    className="shrink-0 text-xs text-brown-light hover:text-rose-dust transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    yarn.weight && {
+                      key: 'weight',
+                      text:
+                        (YARN_WEIGHTS.find((w) => w.value === yarn.weight)?.label ?? yarn.weight) +
+                        (yarn.weightStated ? '' : ' (worked out)'),
+                      title: yarn.evidence.weight,
+                    },
+                    yarn.ballGrams && yarn.ballMeters && {
+                      key: 'ball',
+                      text: `${yarn.ballGrams}g / ${yarn.ballMeters}m · ${yarn.metersPerGram} m/g`,
+                      title: yarn.evidence.ball,
+                    },
+                    yarn.hook && { key: 'hook', text: `${yarn.hook} hook`, title: yarn.evidence.hook },
+                    yarn.crochetGauge && {
+                      key: 'gauge',
+                      text: `${yarn.crochetGauge.stitchesPer5cm} sts × ${yarn.crochetGauge.rowsPer5cm} rows / 5cm`,
+                      title: yarn.evidence.crochetGauge,
+                    },
+                    yarn.fibre && { key: 'fibre', text: yarn.fibre, title: yarn.evidence.fibre },
+                  ]
+                    .filter((chip): chip is { key: string; text: string; title: string | undefined } => Boolean(chip))
+                    .map((chip) => (
+                      <li
+                        key={chip.key}
+                        title={chip.title}
+                        className="rounded-full bg-white border border-cream-200 px-3 py-1 text-xs text-brown-warm"
+                      >
+                        {chip.text}
+                      </li>
+                    ))}
+                </ul>
+                {!yarn.crochetGauge && yarn.referenceGauge && (
+                  <p className="mt-3 text-xs text-brown-light leading-relaxed">
+                    The label gives a {yarn.referenceGauge.kind === 'knit' ? 'knitting gauge' : 'gauge'} of{' '}
+                    {yarn.referenceGauge.stitchesPer5cm} sts × {yarn.referenceGauge.rowsPer5cm} rows per 5cm. Crochet
+                    a swatch for yours.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {yarnNote && (
+              <p className="mt-3 text-xs text-brown-light leading-relaxed bg-cream-50 rounded-xl px-3 py-2">{yarnNote}</p>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <h2 className="font-display text-xl font-semibold text-brown-dark mb-1">
+              Your Gauge <FromYarn show={autoFilled.has('gauge')} />
+            </h2>
+            <p className="text-brown-light text-xs mb-5">
+              {autoFilled.has('gauge')
+                ? "Filled from the yarn label's crochet gauge. Your own swatch is more accurate."
+                : 'Crochet a 5cm x 5cm swatch and count your stitches and rows.'}
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -387,7 +654,11 @@ export default function PatternGenerator() {
                   min={1}
                   max={30}
                   value={gauge.stitchesPer5cm}
-                  onChange={(e) => setGauge((g) => ({ ...g, stitchesPer5cm: Number(e.target.value) }))}
+                  step="any"
+                  onChange={(e) => {
+                    setGauge((g) => ({ ...g, stitchesPer5cm: Number(e.target.value) }));
+                    touch('gauge');
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
                 />
               </div>
@@ -400,7 +671,11 @@ export default function PatternGenerator() {
                   min={1}
                   max={40}
                   value={gauge.rowsPer5cm}
-                  onChange={(e) => setGauge((g) => ({ ...g, rowsPer5cm: Number(e.target.value) }))}
+                  step="any"
+                  onChange={(e) => {
+                    setGauge((g) => ({ ...g, rowsPer5cm: Number(e.target.value) }));
+                    touch('gauge');
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
                 />
               </div>
@@ -475,7 +750,9 @@ export default function PatternGenerator() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-brown-warm mb-1.5">Yarn Weight</label>
+                <label className="block text-xs font-medium text-brown-warm mb-1.5">
+                  Yarn Weight <FromYarn show={autoFilled.has('yarnWeight')} />
+                </label>
                 <select
                   value={project.yarnWeight}
                   onChange={(e) => handleYarnChange(e.target.value)}
@@ -488,10 +765,15 @@ export default function PatternGenerator() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-brown-warm mb-1.5">Hook Size</label>
+                <label className="block text-xs font-medium text-brown-warm mb-1.5">
+                  Hook Size <FromYarn show={autoFilled.has('hookSize')} />
+                </label>
                 <select
                   value={project.hookSize}
-                  onChange={(e) => setProject((p) => ({ ...p, hookSize: e.target.value }))}
+                  onChange={(e) => {
+                    setProject((p) => ({ ...p, hookSize: e.target.value }));
+                    touch('hookSize');
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
                 >
                   {hookOptions.map((h) => (
@@ -503,11 +785,15 @@ export default function PatternGenerator() {
               <div>
                 <label className="block text-xs font-medium text-brown-warm mb-1.5">
                   Yarn Colour <span className="text-brown-light font-normal">(for AI visualisation)</span>
+                  <FromYarn show={autoFilled.has('yarnColor')} />
                 </label>
                 <input
                   type="text"
                   value={project.yarnColor}
-                  onChange={(e) => setProject((p) => ({ ...p, yarnColor: e.target.value }))}
+                  onChange={(e) => {
+                    setProject((p) => ({ ...p, yarnColor: e.target.value }));
+                    touch('yarnColor');
+                  }}
                   placeholder="e.g. sage green, dusty rose, cream..."
                   className="w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-cream-50 text-brown-dark text-sm focus:outline-none focus:ring-2 focus:ring-rose-dust/40"
                 />
@@ -658,10 +944,12 @@ export default function PatternGenerator() {
                   <div className="bg-cream-50 border-b border-cream-200 px-5 py-3">
                     <p className="text-xs text-brown-light text-center mb-2">Rolls needed</p>
                     <div className="flex justify-center gap-6">
-                      {([50, 100, 125, 150] as const).map((size) => (
-                        <div key={size} className="text-center">
-                          <p className="text-lg font-bold text-rose-dust font-display">{Math.ceil(result.estimatedYarnGrams / size)}</p>
-                          <p className="text-xs text-brown-light">{size}g roll</p>
+                      {result.rolls.map((roll) => (
+                        <div key={roll.size} className="text-center">
+                          <p className="text-lg font-bold text-rose-dust font-display">{roll.count}</p>
+                          <p className={`text-xs ${roll.own ? 'text-sage font-semibold' : 'text-brown-light'}`}>
+                            {roll.size}g {roll.own ? 'ball (this yarn)' : 'roll'}
+                          </p>
                         </div>
                       ))}
                     </div>

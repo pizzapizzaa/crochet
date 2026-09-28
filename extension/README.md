@@ -1,10 +1,13 @@
 # ZippyZack Importer — Chrome extension
 
-Two buttons, both of which save a lot of copying and pasting:
+Three buttons, all of which save a lot of copying and pasting:
 
 - **On a shop's product page** — reads the product and puts it in your catalogue
   as a draft, with the photographs copied into your own storage and the source
   link kept on the row.
+- **On a yarn's page** — reads its specs (weight, hook, ball size, gauge,
+  colour) and opens `/pattern-generator` with them filled in. This is the way
+  in for Taobao, which only shows a listing to a signed-in browser.
 - **On a Pinterest board** — collects every pin you have scrolled past and hands
   them to `/pos/makes/import`, ready to review.
 
@@ -50,6 +53,16 @@ A markup of, say, 60% means the shop's price is recorded as what the item costs
 you and your price is set 60% above it. With no markup the price comes across
 as-is and no cost is recorded. Both figures are in dollars: a foreign price is
 converted first, and the markup is taken on the converted number.
+
+**A yarn.** Open the yarn's page, sign in if the shop wants you to, and open
+its spec section (on Taobao, 参数信息) so the specs are on the page. Click the
+ZippyZack button, then **Send yarn to pattern generator**. The pattern generator
+opens with the weight, hook, gauge and colour filled in and each marked
+"from yarn". Sign in to your shop first: if the generator sends you to the
+login page, the specs are lost and you have to send them again.
+
+The page is read as text and parsed by your shop, not by the extension, so a
+fix to the parser reaches the extension without reloading it.
 
 **A board of pins.** Open the board, scroll until you can see everything you
 want (Pinterest only loads a board as you scroll — the extension can only

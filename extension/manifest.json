@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ZippyZack Importer",
-  "version": "1.0.0",
-  "description": "Import a product from any shop page, or a board of pins from Pinterest, straight into your ZippyZack POS.",
+  "version": "1.1.0",
+  "description": "Import a product from any shop page or a board of pins from Pinterest into your ZippyZack POS, or send a yarn's specs to the pattern generator.",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {
     "default_popup": "popup.html",
