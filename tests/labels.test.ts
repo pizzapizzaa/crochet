@@ -90,6 +90,18 @@ describe('square bundle label', () => {
     expect(panels(square({ material: ' ', totalWeight: '' }).svg)).toBe(0);
   });
 
+  it('wraps a long material in full, growing the panels instead of cutting it', () => {
+    const panelHeight = (svg: string) => Number(svg.match(/height="([\d.]+)" rx="2\.6"/)?.[1]);
+    const long = square({
+      material:
+        '60% cotton, 40% acrylic yarn; aluminium hooks; polyester stuffing; glass safety eyes; ' +
+        'wooden buttons; recycled paper pattern card; averyveryveryveryveryveryverylongunbrokenword',
+    });
+    expect(long.warnings).toEqual([]);
+    expect(panelHeight(square().svg)).toBe(17);
+    expect(panelHeight(long.svg)).toBeGreaterThan(25);
+  });
+
   it('ignores blank lines in the item list', () => {
     expect(square({ items: ['One', '', '  ', 'Two'] }).svg).toBe(square({ items: ['One', 'Two'] }).svg);
   });

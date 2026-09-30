@@ -178,11 +178,31 @@ function textPath(text: string, x: number, y: number, style: TextStyle, fill: st
   return d ? `<path fill="${fill}" d="${d}"/>` : '';
 }
 
-/** Greedy word wrap. A single word wider than the line is left to overhang. */
+/** Split a word that is wider than a whole line into pieces that fit. */
+function breakWord(word: string, style: TextStyle, maxWidth: number): string[] {
+  const pieces: string[] = [];
+  let piece = '';
+  for (const char of word) {
+    if (piece && textWidth(piece + char, style) > maxWidth) {
+      pieces.push(piece);
+      piece = char;
+    } else {
+      piece += char;
+    }
+  }
+  if (piece) pieces.push(piece);
+  return pieces;
+}
+
+/** Greedy word wrap. A word wider than the line is broken across lines. */
 function wrap(text: string, style: TextStyle, maxWidth: number): string[] {
   const lines: string[] = [];
   let line = '';
-  for (const word of text.split(' ').filter(Boolean)) {
+  const words = text
+    .split(' ')
+    .filter(Boolean)
+    .flatMap((word) => (textWidth(word, style) > maxWidth ? breakWord(word, style, maxWidth) : [word]));
+  for (const word of words) {
     const candidate = line ? `${line} ${word}` : word;
     if (line && textWidth(candidate, style) > maxWidth) {
       lines.push(line);
@@ -479,82 +499,99 @@ export function buildSquareLabel(input: SquareLabelInput, fonts: LabelFonts): La
   body += `<path d="M${n(left)} 29.5H${n(right)}" stroke="${palette.stitch}" stroke-width="0.3" opacity="0.45"/>`;
 
   // Bundle name: on one line if it can be without getting small — that
-  // leaves the list the most room — and otherwise as large as two allow.
-  let y = 36.2;
-  body += eyebrow('BUNDLE', left, y);
-  const nameStyle: TextStyle = { font: fonts.display, size: 11 };
+  // leaves the list the most room — and otherwise on two.
+  const dividerY = 29.5;
+  const nameStyle: TextStyle = { font: fonts.display, size: 8 };
   let nameLines = wrap(bundleName, nameStyle, width);
-  const nameFits = (maxLines: number) =>
-    nameLines.length <= maxLines && nameLines.every((line) => textWidth(line, nameStyle) <= width);
   const shrinkName = (from: number, to: number, maxLines: number) => {
     for (let s = from; s >= to; s -= 0.25) {
       nameStyle.size = s;
       nameLines = wrap(bundleName, nameStyle, width);
-      if (nameFits(maxLines)) return true;
+      if (nameLines.length <= maxLines) return true;
     }
     return false;
   };
-  if (!shrinkName(11, 8.5, 1) && !shrinkName(10, 6, 2)) {
+  if (!shrinkName(8, 6.5, 1) && !shrinkName(7.5, 5, 2)) {
     warnings.push('The bundle name is too long for two lines, so it has been cut short.');
     nameLines = clamp(nameLines, 2, nameStyle, width);
   }
-  y += 2.2;
-  for (const line of nameLines) {
-    y += nameStyle.size * 0.98;
-    body += textPath(line, left, y, nameStyle, palette.text);
+  let y = dividerY;
+  if (nameLines.length) {
+    y += 5.4 + capHeight(nameStyle.font, nameStyle.size);
+    nameLines.forEach((line, i) => {
+      if (i) y += nameStyle.size * 0.98;
+      body += textPath(line, left, y, nameStyle, palette.text);
+    });
+    // Baloo's descender is deep; leave it room before the next block.
+    y += nameStyle.size * 0.42;
   }
-  // Baloo's descender is deep; leave it room before the next block.
-  y += nameLines.length ? nameStyle.size * 0.42 : 0;
 
   // Footer: weight and material, in panels along the bottom. Either can be
-  // left out, and with neither the list runs to the bottom.
+  // left out, and with neither the list runs to the bottom. Nothing in a
+  // panel is cut short: a long material wraps, and the panels grow upwards
+  // to hold it, taking the room from the item list.
   const footerBottom = size - 10.5;
-  const footerHeight = 17;
-  const footerTop = footerBottom - footerHeight;
-  const cells: { label: string; value: string; share: number }[] = [];
-  if (totalWeight) cells.push({ label: 'TOTAL WEIGHT', value: totalWeight, share: material ? 0.36 : 1 });
-  if (material) cells.push({ label: 'MATERIAL', value: material, share: totalWeight ? 0.64 : 1 });
-
   const cellGap = 3;
+  const cellPad = 3.4;
+  const valueTop = 8.75; // from the top of the panel to the top of the value
+  const valueLine = 1.25;
+  const cap = (style: TextStyle) => capHeight(style.font, style.size);
+  // The tallest the panels may get: up to the name, less a gap.
+  const footerMax = footerBottom - y - 4;
+
+  const specs: { label: string; value: string; share: number }[] = [];
+  if (totalWeight) specs.push({ label: 'TOTAL WEIGHT', value: totalWeight, share: material ? 0.36 : 1 });
+  if (material) specs.push({ label: 'MATERIAL', value: material, share: totalWeight ? 0.64 : 1 });
+
+  const cells = specs.map((spec) => {
+    const cellWidth = (width - cellGap * (specs.length - 1)) * spec.share;
+    const inner = cellWidth - cellPad * 2;
+    const style: TextStyle = { font: fonts.sansBold, size: 5 };
+    const heightOf = (lineCount: number) =>
+      valueTop + cap(style) + style.size * valueLine * (lineCount - 1) + cellPad;
+
+    // One line if it fits at a readable size; otherwise wrapped, getting
+    // smaller only once the panel would outgrow the label.
+    while (style.size > 3.8 && textWidth(spec.value, style) > inner) style.size = +(style.size - 0.2).toFixed(1);
+    let lines = [spec.value];
+    if (textWidth(spec.value, style) > inner) {
+      style.size = 3.5;
+      lines = wrap(spec.value, style, inner);
+      while (style.size > 2.4 && heightOf(lines.length) > footerMax) {
+        style.size = +(style.size - 0.1).toFixed(1);
+        lines = wrap(spec.value, style, inner);
+      }
+      if (heightOf(lines.length) > footerMax) {
+        // Only reachable with several hundred characters.
+        warnings.push(
+          `${spec.label === 'MATERIAL' ? 'The material' : 'The total weight'} is too long for the label even at the smallest size, so it has been cut short.`,
+        );
+        let keep = lines.length;
+        while (keep > 1 && heightOf(keep) > footerMax) keep--;
+        lines = clamp(lines, keep, style, inner);
+      }
+    }
+    return { ...spec, cellWidth, style, lines, height: heightOf(lines.length) };
+  });
+
+  const footerHeight = Math.max(17, ...cells.map((cell) => cell.height));
+  const footerTop = footerBottom - footerHeight;
   let cellX = left;
   for (const cell of cells) {
-    const cellWidth = (width - cellGap * (cells.length - 1)) * cell.share;
-    const pad = 3.4;
-    const inner = cellWidth - pad * 2;
-    body += `<rect x="${n(cellX)}" y="${n(footerTop)}" width="${n(cellWidth)}" height="${n(footerHeight)}" rx="2.6" fill="${palette.panel}"/>`;
-    body += eyebrow(cell.label, cellX + pad, footerTop + 5.4);
-
-    // One line if it fits at a readable size, otherwise two smaller ones.
-    const valueStyle: TextStyle = { font: fonts.sansBold, size: 5 };
-    while (valueStyle.size > 3.8 && textWidth(cell.value, valueStyle) > inner) valueStyle.size -= 0.2;
-    let lines = [cell.value];
-    if (textWidth(cell.value, valueStyle) > inner) {
-      valueStyle.size = 3.5;
-      lines = wrap(cell.value, valueStyle, inner);
-      while (valueStyle.size > 2.7 && lines.length > 2) {
-        valueStyle.size -= 0.2;
-        lines = wrap(cell.value, valueStyle, inner);
-      }
-      if (lines.length > 2 || lines.some((line) => textWidth(line, valueStyle) > inner)) {
-        warnings.push(`${cell.label === 'MATERIAL' ? 'The material' : 'The total weight'} is too long, so it has been cut short.`);
-        lines = clamp(lines, 2, valueStyle, inner);
-      }
+    body += `<rect x="${n(cellX)}" y="${n(footerTop)}" width="${n(cell.cellWidth)}" height="${n(footerHeight)}" rx="2.6" fill="${palette.panel}"/>`;
+    body += eyebrow(cell.label, cellX + cellPad, footerTop + 5.4);
+    let valueY = footerTop + valueTop + cap(cell.style);
+    for (const line of cell.lines) {
+      body += textPath(line, cellX + cellPad, valueY, cell.style, palette.text);
+      valueY += cell.style.size * valueLine;
     }
-    const lineHeight = valueStyle.size * 1.2;
-    // Centre the value in the space under the eyebrow.
-    const block = capHeight(valueStyle.font, valueStyle.size) + lineHeight * (lines.length - 1);
-    let valueY = footerTop + 6.6 + (footerHeight - 6.6 - 2.6 - block) / 2 + capHeight(valueStyle.font, valueStyle.size);
-    for (const line of lines) {
-      body += textPath(line, cellX + pad, valueY, valueStyle, palette.text);
-      valueY += lineHeight;
-    }
-    cellX += cellWidth + cellGap;
+    cellX += cell.cellWidth + cellGap;
   }
 
   // The item list takes whatever is left between the name and the footer.
   if (items.length) {
     y += 3.6;
-    body += eyebrow("WHAT'S INSIDE", left, y);
+    const listLabelY = y;
     const listTop = y + 3.2;
     const listBottom = cells.length ? footerTop - 4.5 : footerBottom;
     const available = listBottom - listTop;
@@ -588,9 +625,10 @@ export function buildSquareLabel(input: SquareLabelInput, fonts: LabelFonts): La
     }
 
     if (layout) {
+      body += eyebrow("WHAT'S INSIDE", left, listLabelY);
       const { size: itemSize, columns, columnWidth } = layout;
       const style: TextStyle = { font: fonts.sans, size: itemSize };
-      const cap = capHeight(fonts.sans, itemSize);
+      const itemCap = capHeight(fonts.sans, itemSize);
       columns.forEach((column, columnIndex) => {
         const x = left + columnIndex * (columnWidth + LIST_COLUMN_GAP);
         let lineY = listTop;
@@ -601,7 +639,7 @@ export function buildSquareLabel(input: SquareLabelInput, fonts: LabelFonts): La
           const bx = x + h;
           body += `<path fill="${palette.stitch}" d="M${n(bx)} ${n(by - h)}L${n(bx + h)} ${n(by)}L${n(bx)} ${n(by + h)}L${n(bx - h)} ${n(by)}Z"/>`;
           for (const line of lines) {
-            const baseline = lineY + itemSize * LIST_LINE * 0.5 + cap / 2;
+            const baseline = lineY + itemSize * LIST_LINE * 0.5 + itemCap / 2;
             body += textPath(line, x + listIndent(itemSize), baseline, style, palette.text);
             lineY += itemSize * LIST_LINE;
           }
