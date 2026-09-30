@@ -1,6 +1,14 @@
 ---
+// Rendered per request so the redirect below is a real one while the form is off.
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
 import SectionWave from '../components/SectionWave.astro';
+import { SHOW_REQUEST_PRODUCT } from '../lib/shop';
+
+if (!SHOW_REQUEST_PRODUCT) {
+  return Astro.redirect('/');
+}
 ---
 
 <Layout

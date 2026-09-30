@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import SectionWave from '../components/SectionWave.astro';
-import { SHOP_ADDRESS, SHOP_EMAIL, SHOP_PHONE } from '../lib/shop';
+import { SHOP_ADDRESS, SHOP_EMAIL, SHOP_PHONE, SHOW_REQUEST_PRODUCT } from '../lib/shop';
 
 /*
  * Contact. Three facts and nothing else: where the parcels come from, the
@@ -133,6 +133,7 @@ const email = SHOP_EMAIL;
       </div>
     </section>
 
+    {SHOW_REQUEST_PRODUCT && (
     <p class="mt-10 text-sm text-ink-muted">
       {/* The compiler eats the newline either side of the link, so the spaces
           have to be asked for or the sentence runs together. */}
@@ -145,6 +146,7 @@ const email = SHOP_EMAIL;
       </a>.
       It lands in the same inbox, with the details already filled in.
     </p>
+    )}
     </div>
   </div>
 </Layout>

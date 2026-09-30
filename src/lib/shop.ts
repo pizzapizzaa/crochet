@@ -23,6 +23,14 @@ export const SHOP_EMAIL = 'zippyzack@proton.me';
  */
 export const SHOW_MATERIALS_PAGE = false;
 
+/*
+ * The Request a product form. It depends on the email integration, which is
+ * not finished, so it is off: every link to it is dropped, /request-product
+ * sends people home, and the endpoint behind the form answers 404. Set this
+ * to true once the emails are going out.
+ */
+export const SHOW_REQUEST_PRODUCT = false;
+
 /** Where "browse the shop" links go: the catalogue a shopper can buy from. */
 export const SHOP_HOME = '/bundles';
 

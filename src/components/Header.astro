@@ -1,6 +1,6 @@
 ---
 import SectionWave from './SectionWave.astro';
-import { SHOW_MATERIALS_PAGE } from '../lib/shop';
+import { SHOW_MATERIALS_PAGE, SHOW_REQUEST_PRODUCT } from '../lib/shop';
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -8,7 +8,7 @@ const navLinks = [
   { label: 'Makes', href: '/makes' },
   ...(SHOW_MATERIALS_PAGE ? [{ label: 'Materials', href: '/store' }] : []),
   { label: 'Gallery', href: '/gallery' },
-  { label: 'Request Product', href: '/request-product' },
+  ...(SHOW_REQUEST_PRODUCT ? [{ label: 'Request Product', href: '/request-product' }] : []),
 ];
 
 /*

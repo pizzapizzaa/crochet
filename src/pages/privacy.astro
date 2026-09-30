@@ -12,7 +12,7 @@
  * reads as boilerplate and stops being believed.
  */
 import PolicyPage from '../components/PolicyPage.astro';
-import { RETURNS_WINDOW_DAYS, SHOP_ADDRESS, SHOP_EMAIL } from '../lib/shop';
+import { RETURNS_WINDOW_DAYS, SHOP_ADDRESS, SHOP_EMAIL, SHOW_REQUEST_PRODUCT } from '../lib/shop';
 
 const processors = [
   {
@@ -30,11 +30,16 @@ const processors = [
     role: 'Hosts and serves this site, and keeps short-lived request logs.',
     where: 'Global CDN',
   },
-  {
-    name: 'Resend',
-    role: 'Delivers the email from the product-request form.',
-    where: 'Email delivery',
-  },
+  // Only a processor while the product-request form is switched on.
+  ...(SHOW_REQUEST_PRODUCT
+    ? [
+        {
+          name: 'Resend',
+          role: 'Delivers the email from the product-request form.',
+          where: 'Email delivery',
+        },
+      ]
+    : []),
   {
     name: 'Google Fonts',
     role: 'Serves the typefaces. Your browser fetches these directly.',

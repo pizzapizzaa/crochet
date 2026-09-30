@@ -7,6 +7,7 @@ import Layout from '../layouts/Layout.astro';
 import SectionWave from '../components/SectionWave.astro';
 import MakeCard from '../components/MakeCard.astro';
 import { getBundles, getMakes } from '../lib/makes';
+import { SHOW_REQUEST_PRODUCT } from '../lib/shop';
 
 // The shop sells kits, so the featured row is kits: bundles first, then makes.
 const [bundles, makes] = await Promise.all([getBundles(), getMakes()]);
@@ -389,14 +390,16 @@ const btnGhost =
             beginner-friendly amigurumi to advanced garments. Every kit comes complete, and you can
             leave out any tools you already own.
           </p>
-          <p>
-            Can't find what you're looking for? Request a new product and I'll do my best to source
-            it for you!
-          </p>
+          {SHOW_REQUEST_PRODUCT && (
+            <p>
+              Can't find what you're looking for? Request a new product and I'll do my best to source
+              it for you!
+            </p>
+          )}
         </div>
         <div class="mt-7 flex flex-wrap gap-4">
           <a href="/bundles" class={btnPrimary}>Browse the Bundles</a>
-          <a href="/request-product" class={btnSoft}>Request a Product</a>
+          {SHOW_REQUEST_PRODUCT && <a href="/request-product" class={btnSoft}>Request a Product</a>}
         </div>
       </div>
     </div>

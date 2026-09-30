@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { Resend } from 'resend';
+import { SHOW_REQUEST_PRODUCT } from '../../lib/shop';
 
 const CATEGORY_LABELS: Record<string, string> = {
   crochet_design: 'New crochet design / pattern',
@@ -9,6 +10,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+  if (!SHOW_REQUEST_PRODUCT) {
+    return new Response(JSON.stringify({ error: 'Product requests are not open yet.' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const apiKey = import.meta.env.RESEND_API_KEY;
   const ownerEmail = import.meta.env.OWNER_EMAIL;
   if (!apiKey || !ownerEmail) {
