@@ -5,6 +5,11 @@ import Layout from '../layouts/Layout.astro';
 import SectionWave from '../components/SectionWave.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { getCategories, getProducts } from '../lib/catalog';
+import { SHOP_HOME, SHOW_MATERIALS_PAGE } from '../lib/shop';
+
+if (!SHOW_MATERIALS_PAGE) {
+  return Astro.redirect(SHOP_HOME);
+}
 
 // Both come from Supabase once supabase/pos-schema.sql has been run, and are
 // edited from /pos. Until then the mock catalogue stands in.

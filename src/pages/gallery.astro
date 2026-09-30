@@ -37,7 +37,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
         {
           items.map((item) => {
             const productSlug = item.product_id ? productSlugMap[item.product_id] : null;
-            const href = productSlug ? `/store/${productSlug}` : '#';
+            const href = productSlug ? '/bundles' : '#';
             return (
               <article class="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:shadow-xl">
                 <a href={href} class="flex h-full flex-col">
@@ -103,7 +103,7 @@ const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]
         <p class="text-brown-warm text-sm mb-4">Want something custom? I love special orders.</p>
         <div class="flex flex-wrap items-center justify-center gap-4">
           <a
-            href="/store"
+            href="/bundles"
             class="bg-btn-gradient text-ink hover:brightness-105 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
           >
             Shop All Items

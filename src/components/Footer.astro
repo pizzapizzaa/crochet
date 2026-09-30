@@ -1,10 +1,11 @@
 ---
 import SectionWave from './SectionWave.astro';
+import { SHOW_MATERIALS_PAGE } from '../lib/shop';
 
 const exploreLinks = [
   { label: 'Bundles', href: '/bundles' },
   { label: 'Makes', href: '/makes' },
-  { label: 'Materials', href: '/store' },
+  ...(SHOW_MATERIALS_PAGE ? [{ label: 'Materials', href: '/store' }] : []),
   { label: 'Gallery', href: '/gallery' },
   { label: 'Pattern Generator', href: '/pattern-generator' },
 ];

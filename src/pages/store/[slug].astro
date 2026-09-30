@@ -8,13 +8,14 @@ import ProductCard from '../../components/ProductCard.astro';
 import { getProductBySlug, getProducts } from '../../lib/catalog';
 import { getMakesUsingProduct, kitHref } from '../../lib/makes';
 import { ON_IMG_ERROR, productImage } from '../../lib/images';
+import { SHOP_HOME, SHOW_MATERIALS_PAGE } from '../../lib/shop';
 
 const { slug } = Astro.params;
 
 const product = await getProductBySlug(slug!);
 
 if (!product) {
-  return Astro.redirect('/store');
+  return Astro.redirect(SHOW_MATERIALS_PAGE ? '/store' : SHOP_HOME);
 }
 
 /*
@@ -23,6 +24,12 @@ if (!product) {
  * bought.
  */
 const usedIn = await getMakesUsingProduct(product.id);
+
+// With the Materials pages hidden, an old link to a product lands on a kit
+// that contains it, which is the page where it can actually be bought.
+if (!SHOW_MATERIALS_PAGE) {
+  return Astro.redirect(usedIn[0] ? kitHref(usedIn[0]) : SHOP_HOME);
+}
 
 // Related products (same category, exclude self)
 const related = (await getProducts())

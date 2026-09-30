@@ -14,6 +14,18 @@ export const SHOP_ADDRESS = ['96/114 Dang Thuy Tram', 'Binh Loi Trung', 'Vietnam
 export const SHOP_PHONE = '+84 902 672 192';
 export const SHOP_EMAIL = 'zippyzack@proton.me';
 
+/*
+ * The Materials catalogue (/store and its product pages) lists the loose yarn
+ * and tools that kits are built from. Nothing there can be bought on its own,
+ * which shoppers found confusing, so it is switched off: the nav drops the
+ * link, and both routes send people on to the kits instead. The pages are
+ * still in the codebase. Set this to true to bring them back.
+ */
+export const SHOW_MATERIALS_PAGE = false;
+
+/** Where "browse the shop" links go: the catalogue a shopper can buy from. */
+export const SHOP_HOME = '/bundles';
+
 /** Dial-able form of the number — spaces are for reading, not for phones. */
 export const SHOP_PHONE_HREF = `tel:${SHOP_PHONE.replace(/\s/g, '')}`;
 
