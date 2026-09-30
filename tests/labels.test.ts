@@ -5,6 +5,7 @@ import {
   buildRoundLabel,
   buildSquareLabel,
   DEFAULT_ROUND_MESSAGE,
+  DEFAULT_TAGLINE,
   LABEL_FONT_FILES,
   labelSlug,
   mmToPx,
@@ -41,7 +42,7 @@ const square = (overrides: Partial<Parameters<typeof buildSquareLabel>[0]> = {})
   );
 
 describe('round thank-you sticker', () => {
-  const label = buildRoundLabel({ message: DEFAULT_ROUND_MESSAGE, tagline: 'YARN KITS & TOOLS' }, fonts);
+  const label = buildRoundLabel({ message: DEFAULT_ROUND_MESSAGE, tagline: DEFAULT_TAGLINE }, fonts);
 
   it('is 7 cm across', () => {
     expect(label.sizeMm).toBe(70);

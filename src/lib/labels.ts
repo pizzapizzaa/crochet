@@ -141,7 +141,7 @@ export interface Label {
 }
 
 export const DEFAULT_ROUND_MESSAGE = 'Thank you for your purchase!';
-export const DEFAULT_TAGLINE = 'YARN KITS & TOOLS';
+export const DEFAULT_TAGLINE = 'CROCHET BUNDLES & TOOLS';
 
 // ── drawing primitives ─────────────────────────────────────────────────────
 
