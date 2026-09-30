@@ -73,7 +73,7 @@ create index if not exists products_featured_idx    on public.products (is_featu
 -- made in the POS, whether the clash is on the name or the slug.
 insert into public.categories (name, slug, description, display_order) values
   ('Yarn',     'yarn',     'Merino, cotton, macrame cord and everything else that comes on a ball.', 1),
-  ('Kits',     'kits',     'A whole project in one box — yarn, hook, notions and the pattern.',      2),
+  ('Kits',     'kits',     'A whole project in one box: yarn, hook, notions and the pattern.',      2),
   ('Tools',    'tools',    'Hooks, stitch markers, blocking mats and the small stuff that helps.',   3),
   ('Bundles',  'bundles',  'Curated yarn groupings picked so the colours sit together.',             4),
   ('Patterns', 'patterns', 'Printable and digital patterns, written and charted.',                   5)

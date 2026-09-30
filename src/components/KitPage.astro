@@ -115,7 +115,7 @@ const facts = [
                 ) : (
                   <span class="font-bold text-ink">{make.author_name}</span>
                 )}
-                . We did not design it and we do not reproduce the pattern here — follow the link for that.
+                . We did not design it and we do not reproduce the pattern here. Follow the link for that.
               </p>
 
               <a
@@ -219,7 +219,7 @@ const facts = [
                     </p>
                     {item.product.stock === 0 && (
                       <p class="mt-0.5 text-xs font-bold text-lemon-deep">
-                        {item.can_opt_out ? 'Out of stock — untick it to buy the kit without it' : 'Out of stock'}
+                        {item.can_opt_out ? 'Out of stock. Untick it to buy the kit without it' : 'Out of stock'}
                       </p>
                     )}
                   </div>
@@ -261,7 +261,7 @@ const facts = [
                 class={`mt-2 rounded-field bg-mint-wash px-3 py-2 text-sm font-bold text-mint-deep ${pricing.savings > 0 ? '' : 'hidden'}`}
                 data-savings
               >
-                Save {money(pricing.savings)} — {pricing.savingsPct.toFixed(0)}% off taking the kit
+                Save {money(pricing.savings)}, {pricing.savingsPct.toFixed(0)}% off taking the kit
               </p>
               <p class="mt-2 hidden text-xs text-ink-muted" data-left-out></p>
 
@@ -278,13 +278,13 @@ const facts = [
                 }`}
                 disabled={!available}
               >
-                {available ? `Add the kit — ${money(pricing.bundlePrice)}` : 'Some materials are out of stock'}
+                {available ? `Add the kit · ${money(pricing.bundlePrice)}` : 'Some materials are out of stock'}
               </button>
 
               <p class="mt-3 text-xs text-ink-muted">
                 {isBundle
                   ? 'You are buying the yarn and tools in the kit, not a finished piece.'
-                  : `You are buying the yarn and tools, not a finished piece — and not the pattern, which stays with ${make.author_name}.`}
+                  : `You are buying the yarn and tools, not a finished piece, and not the pattern, which stays with ${make.author_name}.`}
               </p>
             </div>
           )
@@ -367,7 +367,7 @@ const facts = [
     panel.querySelector('[data-separately]')!.textContent = money(separately);
     const savingsEl = panel.querySelector<HTMLElement>('[data-savings]')!;
     savingsEl.classList.toggle('hidden', savings < 0.01);
-    savingsEl.textContent = `Save ${money(savings)} — ${separately > 0 ? ((savings / separately) * 100).toFixed(0) : 0}% off taking the kit`;
+    savingsEl.textContent = `Save ${money(savings)}, ${separately > 0 ? ((savings / separately) * 100).toFixed(0) : 0}% off taking the kit`;
     const leftOutEl = panel.querySelector<HTMLElement>('[data-left-out]')!;
     leftOutEl.classList.toggle('hidden', out.length === 0);
     leftOutEl.textContent = out.length ? `Without: ${out.map((r) => r.dataset.name).join(', ')}` : '';
@@ -381,7 +381,7 @@ const facts = [
     button.classList.toggle('text-ink-muted', !available);
     button.classList.toggle('bg-btn-gradient', available);
     button.classList.toggle('text-ink', available);
-    button.textContent = available ? `Add the kit — ${money(price)}` : 'Some materials are out of stock';
+    button.textContent = available ? `Add the kit · ${money(price)}` : 'Some materials are out of stock';
     button.dataset.price = String(price);
   }
 

@@ -55,7 +55,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
   <h2>How long it takes</h2>
 
   <p>
-    Two separate waits, and it helps to think of them separately — the time it takes me to make and
+    Two separate waits, and it helps to think of them separately: the time it takes me to make and
     pack your order, and the time the courier then has it.
   </p>
 
@@ -72,11 +72,11 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
         <td>{DISPATCH_DAYS.min}–{DISPATCH_DAYS.max} working days</td>
       </tr>
       <tr>
-        <td>In transit — within Vietnam</td>
+        <td>In transit, within Vietnam</td>
         <td>{DELIVERY_DAYS.vietnam.min}–{DELIVERY_DAYS.vietnam.max} working days</td>
       </tr>
       <tr>
-        <td>In transit — everywhere else</td>
+        <td>In transit, everywhere else</td>
         <td>{DELIVERY_DAYS.international.min}–{DELIVERY_DAYS.international.max} working days</td>
       </tr>
     </tbody>
@@ -85,7 +85,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
   <p>
     These are the honest usual, not a guarantee. Tết, a bad storm and the fortnight before Christmas
     all stretch them, and a customs desk can hold an international parcel for as long as it likes.
-    If yours is drifting past the top of that range, <a href={`mailto:${SHOP_EMAIL}`}>tell me</a> —
+    If yours is drifting past the top of that range, <a href={`mailto:${SHOP_EMAIL}`}>tell me</a>.
     I would far rather chase it than have you wondering.
   </p>
 
@@ -101,7 +101,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
   <p>
     Every order gets a number that looks like <strong>ZZ-7K3P9M</strong>. Pair it with the email
     address you ordered under at <a href="/orders/track">order tracking</a> and you will see where
-    it has got to — including the courier's own consignment number and a link into their tracking,
+    it has got to, including the courier's own consignment number and a link into their tracking,
     once it has one.
   </p>
 
@@ -118,7 +118,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
 
   <p>
     Orders inside Ho Chi Minh City are sometimes brought round in person instead. Those have no
-    tracking number because there is no courier — the status page will say delivered when it is.
+    tracking number because there is no courier. The status page will say delivered when it is.
   </p>
 
   <h2>Paying</h2>
@@ -131,7 +131,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
   <p>
     The catalogue is priced in US dollars and the transfer settles in Vietnamese dong, so the
     checkout shows you both figures before you commit. The rate used is a fixed one I set, not a
-    live market feed — you are never quoted one number and charged another because a rate moved
+    live market feed, so you are never quoted one number and charged another because a rate moved
     while you were deciding.
   </p>
 
@@ -139,7 +139,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
     <p>
       <strong>A payment link lasts {payWindowHours} hours.</strong> Nothing is reserved until the
       transfer lands, so an unpaid order does not hold stock. If the window closes, the order is
-      cancelled and you are free to start again — nothing was taken.
+      cancelled and you are free to start again. Nothing was taken.
     </p>
   </div>
 
@@ -171,7 +171,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
   <p>
     Unused items in their original condition can come back within the same{' '}
     {RETURNS_WINDOW_DAYS} days for a refund of what you paid for the goods. Return postage is yours
-    in that case, and the original shipping is not refunded — it was genuinely spent getting the
+    in that case, and the original shipping is not refunded, because it was genuinely spent getting the
     parcel to you.
   </p>
 
@@ -192,7 +192,7 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
 
   <p>
     By bank transfer, back to you, by hand. payOS does not reverse a VietQR payment, so there is no
-    button either of us can press — I send the money back the same way it came. Expect it within a
+    button either of us can press. I send the money back the same way it came. Expect it within a
     few working days of us agreeing the refund, and I will give you the transfer reference so you
     can find it on your statement.
   </p>
@@ -201,13 +201,13 @@ const couriers = CARRIERS.filter((c) => c.track).map((c) => c.label);
 
   <p>
     If your order has not been packed yet, email me and I will cancel it and refund you in full.
-    Once it has been handed to a courier it has to run its course — at that point it becomes a
+    Once it has been handed to a courier it has to run its course. At that point it becomes a
     return rather than a cancellation.
   </p>
 
   <p>
     Handmade things vary a little: colours shift between dye lots and between screens, and no two
-    pieces come out identical. That is the nature of the thing rather than a fault — but if what
+    pieces come out identical. That is the nature of the thing rather than a fault, but if what
     arrived is not what you thought you were buying, say so and we will sort it out.
   </p>
 </PolicyPage>

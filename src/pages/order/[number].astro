@@ -119,7 +119,7 @@ const awaiting = Boolean(order) && order!.payment_status === 'unpaid';
             {awaiting ? (
               <p class="mt-4 rounded-field bg-lemon-wash px-4 py-3 text-sm text-ink-body">
                 <span class="font-bold text-lemon-deep">We have not seen the transfer yet.</span> If
-                you have just paid, give it a minute and refresh — bank transfers take a moment to
+                you have just paid, give it a minute and refresh. Bank transfers take a moment to
                 land. Nothing is reserved until it does.
               </p>
             ) : cancelled ? (
@@ -293,13 +293,13 @@ const awaiting = Boolean(order) && order!.payment_status === 'unpaid';
                 class="font-bold text-mint-deep hover:underline"
               >
                 Email me
-              </a>{' '}
-              — if it has not been packed yet I can still change it.
+              </a>.
+              If it has not been packed yet I can still change it.
             </p>
           </div>
 
           <p class="mt-6 text-center text-sm text-ink-muted">
-            Keep this number safe — you can come back to it any time at{' '}
+            Keep this number safe. You can come back to it any time at{' '}
             <a href="/orders/track" class="font-bold text-mint-deep hover:underline">
               order tracking
             </a>

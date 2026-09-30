@@ -34,10 +34,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '1',
     created_at: '2026-06-02T00:00:00Z',
-    name: 'Merino Wool Yarn — Oatmeal',
+    name: 'Merino Wool Yarn, Oatmeal',
     slug: 'merino-wool-yarn-oatmeal',
     description:
-      'A soft, lofty merino in an undyed oatmeal that goes with everything. Spun in small batches, so each skein has a little character — expect gentle variation between dye lots. My go-to for jumpers, blankets and anything that sits against skin.',
+      'A soft, lofty merino in an undyed oatmeal that goes with everything. Spun in small batches, so each skein has a little character, so expect gentle variation between dye lots. My go-to for jumpers, blankets and anything that sits against skin.',
     price: 14,
     compare_at_price: 18,
     category: 'Yarn',
@@ -54,10 +54,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '2',
     created_at: '2026-05-18T00:00:00Z',
-    name: 'Pastel Cotton Yarn Set — 6 Balls',
+    name: 'Pastel Cotton Yarn Set, 6 Balls',
     slug: 'pastel-cotton-yarn-set',
     description:
-      'Six 50g balls of mercerised cotton in a soft pastel run — blush, butter, mint, sky, lilac and cream. Enough for a baby blanket or a whole run of granny squares, and the colours were picked to sit together without clashing.',
+      'Six 50g balls of mercerised cotton in a soft pastel run: blush, butter, mint, sky, lilac and cream. Enough for a baby blanket or a whole run of granny squares, and the colours were picked to sit together without clashing.',
     price: 32,
     compare_at_price: null,
     category: 'Yarn',
@@ -74,10 +74,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '3',
     created_at: '2026-04-27T00:00:00Z',
-    name: 'Undyed Cotton Yarn — 100g',
+    name: 'Undyed Cotton Yarn, 100g',
     slug: 'undyed-cotton-yarn',
     description:
-      'Plain, honest cotton with no dye in it at all. Takes hand-dyeing beautifully if that is your thing, and holds a crisp stitch definition if it is not — this is the one I reach for when the pattern is the point.',
+      'Plain, honest cotton with no dye in it at all. Takes hand-dyeing beautifully if that is your thing, and holds a crisp stitch definition if it is not. This is the one I reach for when the pattern is the point.',
     price: 9,
     compare_at_price: null,
     category: 'Yarn',
@@ -94,7 +94,7 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '4',
     created_at: '2026-04-09T00:00:00Z',
-    name: 'Sage Macramé Cord — 3mm',
+    name: 'Sage Macramé Cord, 3mm',
     slug: 'sage-macrame-cord',
     description:
       'A single-twist cotton cord in a muted sage, 3mm through. Heavy enough for plant hangers and wall pieces, soft enough that it will not fight your hands halfway through a row.',
@@ -114,10 +114,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '5',
     created_at: '2026-03-21T00:00:00Z',
-    name: 'Alpaca Blend Trio — Earth',
+    name: 'Alpaca Blend Trio, Earth',
     slug: 'alpaca-blend-trio-earth',
     description:
-      'Three balls of alpaca-wool blend in bark, clay and sand. Warmer than it looks and lighter than it has any right to be — a scarf in this weighs almost nothing.',
+      'Three balls of alpaca-wool blend in bark, clay and sand. Warmer than it looks and lighter than it has any right to be. A scarf in this weighs almost nothing.',
     price: 27,
     compare_at_price: null,
     category: 'Yarn',
@@ -134,10 +134,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '6',
     created_at: '2026-03-05T00:00:00Z',
-    name: 'Chunky T-Shirt Yarn — Stone',
+    name: 'Chunky T-Shirt Yarn, Stone',
     slug: 'chunky-tshirt-yarn-stone',
     description:
-      'Recycled jersey cut and wound into a fat, stretchy yarn. Works up fast — a basket is an afternoon, a rug is a weekend. Go up a hook size or two from whatever you think you need.',
+      'Recycled jersey cut and wound into a fat, stretchy yarn. Works up fast: a basket is an afternoon, a rug is a weekend. Go up a hook size or two from whatever you think you need.',
     price: 12,
     compare_at_price: null,
     category: 'Yarn',
@@ -156,10 +156,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '7',
     created_at: '2026-06-11T00:00:00Z',
-    name: 'Ergonomic Crochet Hook Set — 9 Sizes',
+    name: 'Ergonomic Crochet Hook Set, 9 Sizes',
     slug: 'ergonomic-crochet-hook-set',
     description:
-      'Nine aluminium hooks, 2.0mm through 6.0mm, each on a soft moulded grip with the size stamped where you can actually read it. If your hands ache after an hour, this is the fix — I switched to these years ago and never went back.',
+      'Nine aluminium hooks, 2.0mm through 6.0mm, each on a soft moulded grip with the size stamped where you can actually read it. If your hands ache after an hour, this is the fix. I switched to these years ago and never went back.',
     price: 24,
     compare_at_price: 30,
     category: 'Tools',
@@ -176,10 +176,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '8',
     created_at: '2026-05-30T00:00:00Z',
-    name: 'Soft-Grip Hook Set — 12 Pieces',
+    name: 'Soft-Grip Hook Set, 12 Pieces',
     slug: 'soft-grip-hook-set',
     description:
-      'The wider range — twelve hooks from 0.9mm lace up to 8.0mm chunky, colour-coded by size so you can grab the right one without squinting. Comes in a zip case with room for scissors and markers.',
+      'The wider range: twelve hooks from 0.9mm lace up to 8.0mm chunky, colour-coded by size so you can grab the right one without squinting. Comes in a zip case with room for scissors and markers.',
     price: 29,
     compare_at_price: null,
     category: 'Tools',
@@ -196,10 +196,10 @@ const mockProductSeeds: ProductSeed[] = [
   {
     id: '9',
     created_at: '2026-02-14T00:00:00Z',
-    name: 'Aluminium Hook Set — 2.0 to 6.0mm',
+    name: 'Aluminium Hook Set, 2.0 to 6.0mm',
     slug: 'aluminium-hook-set',
     description:
-      'Plain aluminium, no grip, no fuss. Slick enough that the yarn slides rather than catches — if you crochet fast and tight, these will suit you better than anything moulded.',
+      'Plain aluminium, no grip, no fuss. Slick enough that the yarn slides rather than catches. If you crochet fast and tight, these will suit you better than anything moulded.',
     price: 15,
     compare_at_price: null,
     category: 'Tools',
@@ -219,7 +219,7 @@ const mockProductSeeds: ProductSeed[] = [
     name: 'Notions Starter Tin',
     slug: 'notions-starter-tin',
     description:
-      'Everything that is not yarn and not a hook, in one tin — stitch markers, tapestry needles, a row counter, snips, a soft tape measure and a set of buttons. The things you only notice you are missing at row forty.',
+      'Everything that is not yarn and not a hook, in one tin: stitch markers, tapestry needles, a row counter, snips, a soft tape measure and a set of buttons. The things you only notice you are missing at row forty.',
     price: 21,
     compare_at_price: null,
     category: 'Tools',
@@ -241,7 +241,7 @@ const mockProductSeeds: ProductSeed[] = [
     name: 'Granny Square Starter Kit',
     slug: 'granny-square-starter-kit',
     description:
-      'Yarn, hook and pattern for a run of twelve granny squares, plus enough left over to join them into a cushion cover. If you have never made a square before, start here — the pattern walks the first round stitch by stitch.',
+      'Yarn, hook and pattern for a run of twelve granny squares, plus enough left over to join them into a cushion cover. If you have never made a square before, start here. The pattern walks the first round stitch by stitch.',
     price: 38,
     compare_at_price: 46,
     category: 'Kits',
@@ -261,7 +261,7 @@ const mockProductSeeds: ProductSeed[] = [
     name: 'Amigurumi Beginner Kit',
     slug: 'amigurumi-beginner-kit',
     description:
-      'One bunny, start to finish — cotton in three colours, a 3.0mm hook, safety eyes, stuffing, a needle and the printed pattern. Sized so a first attempt actually looks like a bunny.',
+      'One bunny, start to finish: cotton in three colours, a 3.0mm hook, safety eyes, stuffing, a needle and the printed pattern. Sized so a first attempt actually looks like a bunny.',
     price: 34,
     compare_at_price: null,
     category: 'Kits',
@@ -281,7 +281,7 @@ const mockProductSeeds: ProductSeed[] = [
     name: 'Learn to Crochet Kit',
     slug: 'learn-to-crochet-kit',
     description:
-      'The absolute beginning — two balls of smooth cotton, a 4.5mm hook, scissors, markers and a set of practice cards that take you from a slip knot to a finished dishcloth. No experience needed, and nothing in the box you will outgrow.',
+      'The absolute beginning: two balls of smooth cotton, a 4.5mm hook, scissors, markers and a set of practice cards that take you from a slip knot to a finished dishcloth. No experience needed, and nothing in the box you will outgrow.',
     price: 26,
     compare_at_price: null,
     category: 'Kits',
@@ -323,7 +323,7 @@ const mockProductSeeds: ProductSeed[] = [
     name: 'Scarf & Beanie Bundle',
     slug: 'scarf-and-beanie-bundle',
     description:
-      'A matching pair in rust and dove grey — four balls, a 5.5mm hook and both patterns. Worked in the same stitch throughout, so once you have the scarf the beanie is the same thing in the round.',
+      'A matching pair in rust and dove grey: four balls, a 5.5mm hook and both patterns. Worked in the same stitch throughout, so once you have the scarf the beanie is the same thing in the round.',
     price: 44,
     compare_at_price: null,
     category: 'Bundles',
@@ -365,7 +365,7 @@ const mockProductSeeds: ProductSeed[] = [
     name: 'Granny Square Pattern Pack',
     slug: 'granny-square-pattern-pack',
     description:
-      'Twelve granny square charts as a printable PDF — the classic, the solid, the flower centre and nine more, each drawn as a stitch diagram with a written round-by-round alongside it. Instant download, no shipping to wait for.',
+      'Twelve granny square charts as a printable PDF: the classic, the solid, the flower centre and nine more, each drawn as a stitch diagram with a written round-by-round alongside it. Instant download, no shipping to wait for.',
     price: 8,
     compare_at_price: null,
     category: 'Patterns',
@@ -377,7 +377,7 @@ const mockProductSeeds: ProductSeed[] = [
     yarn_weight: 'DK',
     hook_size: '4.0mm',
     dimensions: '12 charts · 18-page PDF',
-    care_instructions: 'Digital download — nothing ships',
+    care_instructions: 'Digital download, nothing ships',
   },
   {
     id: '18',
@@ -385,7 +385,7 @@ const mockProductSeeds: ProductSeed[] = [
     name: 'Motif & Medallion Pattern Collection',
     slug: 'motif-and-medallion-pattern-collection',
     description:
-      'Twenty round and hexagonal motifs, charted and written. Useful on their own as coasters and useful joined as almost anything — a blanket, a shawl, a table runner. Instant download.',
+      'Twenty round and hexagonal motifs, charted and written. Useful on their own as coasters and useful joined as almost anything: a blanket, a shawl, a table runner. Instant download.',
     price: 11,
     compare_at_price: null,
     category: 'Patterns',
@@ -397,7 +397,7 @@ const mockProductSeeds: ProductSeed[] = [
     yarn_weight: 'Sport',
     hook_size: '3.5mm',
     dimensions: '20 motifs · 26-page PDF',
-    care_instructions: 'Digital download — nothing ships',
+    care_instructions: 'Digital download, nothing ships',
   },
 ];
 
@@ -467,7 +467,7 @@ export const mockGalleryItems: GalleryItem[] = [
     id: 'g5',
     created_at: '2026-03-18T00:00:00Z',
     title: 'Chunky Stripe Throw',
-    description: 'Two weekends in t-shirt yarn — worth every metre.',
+    description: 'Two weekends in t-shirt yarn, worth every metre.',
     image_url: '/assets/gallery/blanket-stool.jpg',
     alt_text: 'Chunky crochet blanket in lilac and cream stripes folded over a stool',
     product_id: '14',
@@ -478,7 +478,7 @@ export const mockGalleryItems: GalleryItem[] = [
     id: 'g6',
     created_at: '2026-02-25T00:00:00Z',
     title: 'Shell Stitch, In Progress',
-    description: 'Merino oatmeal on a 5.0mm hook — halfway there.',
+    description: 'Merino oatmeal on a 5.0mm hook, halfway there.',
     image_url: '/assets/gallery/project-wool-hooks.jpg',
     alt_text: 'Cream shell-stitch crochet piece in progress with a wooden hook',
     product_id: '1',

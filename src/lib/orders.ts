@@ -172,7 +172,7 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
         id: line.id,
         name: 'An item',
         reason: 'gone',
-        message: 'Single items are no longer sold on their own — they come in our makes and bundles. It has been taken out of your basket.',
+        message: 'Single items are no longer sold on their own. They come in our makes and bundles. It has been taken out of your basket.',
       });
       continue;
     }
@@ -239,7 +239,7 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
         message:
           product.stock === 0
             ? `“${product.name}” has sold out.`
-            : `Only ${product.stock} of “${product.name}” left — your basket needs ${rounded}.`,
+            : `Only ${product.stock} of “${product.name}” left, but your basket needs ${rounded}.`,
       });
     }
   }

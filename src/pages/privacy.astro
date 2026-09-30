@@ -17,7 +17,7 @@ import { RETURNS_WINDOW_DAYS, SHOP_ADDRESS, SHOP_EMAIL } from '../lib/shop';
 const processors = [
   {
     name: 'Supabase',
-    role: 'Stores the shop database — the catalogue and your order.',
+    role: 'Stores the shop database: the catalogue and your order.',
     where: 'Hosted database',
   },
   {
@@ -138,7 +138,7 @@ const processors = [
 
   <p>
     One, and only for me: signing in to the back office sets a session cookie so the admin pages stay
-    unlocked for a day. Shoppers are never issued a cookie. That is why there is no cookie banner —
+    unlocked for a day. Shoppers are never issued a cookie. That is why there is no cookie banner:
     there is nothing to consent to.
   </p>
 
@@ -189,15 +189,15 @@ const processors = [
 
   <ul>
     <li>
-      <strong>Orders</strong> — kept while they are useful for accounting and for handling a return
+      <strong>Orders:</strong> kept while they are useful for accounting and for handling a return
       or a query, which is well beyond the {RETURNS_WINDOW_DAYS}-day returns window.
     </li>
     <li>
-      <strong>Abandoned checkouts</strong> — an order that is never paid for is cancelled
+      <strong>Abandoned checkouts:</strong> an order that is never paid for is cancelled
       automatically once its payment window closes.
     </li>
     <li>
-      <strong>Emails you send me</strong> — kept as long as the conversation is useful, then deleted.
+      <strong>Emails you send me:</strong> kept as long as the conversation is useful, then deleted.
     </li>
   </ul>
 
@@ -209,7 +209,7 @@ const processors = [
 
   <ul>
     <li>Tell you everything held about you, and send you a copy.</li>
-    <li>Correct anything wrong — a mistyped address, a changed name.</li>
+    <li>Correct anything wrong: a mistyped address, a changed name.</li>
     <li>
       Delete it, once nothing outstanding depends on it. Records tied to a completed sale may need to
       be kept for accounting.

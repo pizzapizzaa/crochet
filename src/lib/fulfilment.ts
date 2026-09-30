@@ -356,7 +356,7 @@ const STEPS: { status: OrderStatus; label: string; copy: string }[] = [
   { status: 'pending', label: 'Ordered', copy: 'We have your order and are getting to it.' },
   { status: 'processing', label: 'Being made', copy: 'It is being made and packed right now.' },
   { status: 'shipped', label: 'On its way', copy: 'It is on its way to you.' },
-  { status: 'delivered', label: 'Delivered', copy: 'Delivered — we hope you love it.' },
+  { status: 'delivered', label: 'Delivered', copy: 'Delivered. We hope you love it.' },
 ];
 
 /**
