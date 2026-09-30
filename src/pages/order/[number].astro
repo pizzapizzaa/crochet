@@ -231,6 +231,7 @@ const awaiting = Boolean(order) && order!.payment_status === 'unpaid';
                     >
                       {line.name}
                     </a>
+                    {line.kind === 'made' && <p class="text-xs font-bold text-mint-deep">Completed product</p>}
                     {line.omitted && line.omitted.length > 0 && (
                       <p class="text-xs text-ink-muted">Without: {line.omitted.join(', ')}</p>
                     )}

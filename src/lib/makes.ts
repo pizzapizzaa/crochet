@@ -13,15 +13,18 @@ import type {
  * held in the same table and sold the same way:
  *
  *   make    a kit inspired by somebody else's Pinterest pin or design. We never
- *           sell the finished object and never rehost the pattern — the pin
- *           stays the destination, which is why the author fields travel with
- *           every make we read.
+ *           rehost the pattern — the pin stays the destination, which is why
+ *           the author fields travel with every make we read.
  *   bundle  a kit the shop put together itself, around a skill level —
  *           "Bundle for beginners". Nobody to credit.
  *
  * Every item in a kit is in the box. The ones marked can_opt_out — a hook,
  * scissors, a needle — are the tools somebody may already own, and the
  * customer can leave them out, which takes their share off the price.
+ *
+ * Either kind can also be offered completed: the shop crochets the piece and
+ * sells it finished, at its own price. That is a tick per kit in the POS, and
+ * the kits that have it are what the Gallery shows.
  *
  * There is no mock fallback. Products degrade to a mock catalogue so the shop
  * still lays out before Supabase is wired up, but a make is a real citation of
@@ -150,6 +153,16 @@ export function withResolvedItems(row: Record<string, unknown>): MakeWithBundle 
   return { ...(normaliseMake(row) as unknown as Make), items };
 }
 
+/**
+ * What the finished piece sells for, or null when this kit is not offered
+ * completed. Rows read before supabase/completed-schema.sql has been run have
+ * neither column, which reads as not offered.
+ */
+export function completedPrice(make: Pick<Make, 'completed_available' | 'completed_price'>): number | null {
+  const price = Number(make.completed_price);
+  return make.completed_available && Number.isFinite(price) && price > 0 ? price : null;
+}
+
 /** Where a make or bundle lives on the site. */
 export const kitHref = (make: Pick<Make, 'kind' | 'slug'>) =>
   `${make.kind === 'bundle' ? '/bundles' : '/makes'}/${make.slug}`;
@@ -158,7 +171,7 @@ export const kitHref = (make: Pick<Make, 'kind' | 'slug'>) =>
  * Kind is filtered here rather than in the query so these keep working before
  * the column exists; the catalogue is small enough that it costs nothing.
  */
-async function getKits(kind: MakeKind): Promise<MakeWithBundle[]> {
+async function getAllKits(): Promise<MakeWithBundle[]> {
   if (!isSupabaseConfigured || !supabase) return [];
 
   const { data, error } = await supabase
@@ -169,8 +182,16 @@ async function getKits(kind: MakeKind): Promise<MakeWithBundle[]> {
     .order('created_at', { ascending: false });
 
   if (error || !data) return [];
-  return (data as unknown as Record<string, unknown>[]).map(withResolvedItems).filter((m) => m.kind === kind);
+  return (data as unknown as Record<string, unknown>[]).map(withResolvedItems);
 }
+
+const getKits = async (kind: MakeKind) => (await getAllKits()).filter((m) => m.kind === kind);
+
+/** Live makes and bundles that can be bought finished: what the Gallery shows. Featured first. */
+export const getCompletedKits = async () =>
+  (await getAllKits())
+    .filter((m) => completedPrice(m) !== null)
+    .sort((a, b) => Number(b.is_featured) - Number(a.is_featured));
 
 /** Live makes with their kits, in display order. */
 export const getMakes = () => getKits('make');

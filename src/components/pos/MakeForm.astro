@@ -569,6 +569,53 @@ const grouped = [...new Set(products.map((p) => p.category))].sort().map((catego
       </div>
     </div>
 
+    <!-- ── Completed product ──────────────────────────────────────── -->
+    <div class={card}>
+      <h2 class="font-display text-lg font-bold text-ink">Completed product</h2>
+      <p class="mb-4 mt-0.5 text-xs text-ink-muted">
+        For a customer who would rather buy the finished piece than make it. A ticked {noun} shows in the
+        Gallery and gets a second buy button on its page.
+      </p>
+
+      <div class="space-y-4">
+        <label class="flex cursor-pointer items-start gap-3 rounded-field bg-cream-50 p-3">
+          <input
+            type="checkbox"
+            name="completed_available"
+            value="true"
+            checked={make?.completed_available ?? false}
+            class="mt-0.5 h-4 w-4 shrink-0 accent-[#00695C]"
+          />
+          <span>
+            <span class="block text-sm font-bold text-ink">Available as complete product</span>
+            <span class="block text-xs text-ink-muted">Needs the price below.</span>
+          </span>
+        </label>
+
+        <div>
+          <label class={label} for="completed_price">Completed price</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-faint">$</span>
+            <input
+              id="completed_price"
+              name="completed_price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={make?.completed_price !== null && make?.completed_price !== undefined
+                ? Number(make.completed_price).toFixed(2)
+                : ''}
+              placeholder="0.00"
+              class={`${field} pl-7`}
+            />
+          </div>
+          <p class="mt-1.5 text-xs text-ink-faint">
+            What the finished piece sells for. Selling one does not change the stock of its materials.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <div class="sticky bottom-4 space-y-2">
       <button
         type="submit"

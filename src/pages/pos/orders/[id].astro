@@ -207,6 +207,9 @@ const EVENT_ICON: Record<string, string> = {
                     {line.qty} × {money(line.unitPrice)}
                     {line.kind === 'bundle' && ' · kit'}
                   </p>
+                  {line.kind === 'made' && (
+                    <p class="text-xs font-bold text-lemon-deep">Completed product: make it and send the finished piece</p>
+                  )}
                   {line.omitted && line.omitted.length > 0 && (
                     <p class="text-xs font-semibold text-lemon-deep">Customer left out: {line.omitted.join(', ')}</p>
                   )}

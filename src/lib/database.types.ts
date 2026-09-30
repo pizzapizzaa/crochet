@@ -153,6 +153,10 @@ export interface Database {
           display_order: number;
           is_active: boolean;
           is_featured: boolean;
+          /** True when the finished piece can be bought instead of the kit. Absent before completed-schema.sql. */
+          completed_available?: boolean;
+          /** What the finished piece sells for. Required while completed_available is true. */
+          completed_price?: number | null;
         };
         Insert: {
           id?: string;
@@ -177,6 +181,8 @@ export interface Database {
           display_order?: number;
           is_active?: boolean;
           is_featured?: boolean;
+          completed_available?: boolean;
+          completed_price?: number | null;
         };
         Update: Partial<Database['public']['Tables']['makes']['Insert']>;
         Relationships: [];

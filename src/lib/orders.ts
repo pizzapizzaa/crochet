@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, MakeWithBundle, Order, Product } from './database.types';
-import { kitHref, priceBundle, withResolvedItems } from './makes';
+import { completedPrice, kitHref, priceBundle, withResolvedItems } from './makes';
 import { flagForAttention, logEvent } from './fulfilment';
 
 /*
@@ -8,7 +8,8 @@ import { flagForAttention, logEvent } from './fulfilment';
  *
  * The browser sends nothing but { kind, id, qty, omit }. Names, prices, stock and the
  * bundle discount are all read back out of the database here, every time — so a
- * hand-edited localStorage buys nothing it should not. Bundles are priced
+ * hand-edited localStorage buys nothing it should not. A kit bought completed
+ * ('made') is priced from the kit's own completed price. Bundles are priced
  * through priceBundle(), the same function the make page and the POS quote
  * from, which is the only way those three can agree.
  */
@@ -35,8 +36,12 @@ export const VND_PER_USD = Number(import.meta.env.VND_PER_USD ?? 26_000);
 export const usdToVnd = (usd: number) => Math.round(usd * VND_PER_USD);
 
 export interface RequestedLine {
-  /** 'product' only arrives from a basket saved before loose products stopped being sold. */
-  kind: 'product' | 'bundle';
+  /**
+   * 'bundle' is a kit to make; 'made' is the same kit bought as the completed
+   * product. 'product' only arrives from a basket saved before loose products
+   * stopped being sold.
+   */
+  kind: 'product' | 'bundle' | 'made';
   id: string;
   qty: number;
   /** Product ids to leave out of the kit, sorted. */
@@ -45,8 +50,8 @@ export interface RequestedLine {
 
 /** A line as the customer will see it on the order — priced, named, fixed. */
 export interface PricedLine {
-  /** New lines are always kits. 'product' survives only on orders placed before that. */
-  kind: 'product' | 'bundle';
+  /** A kit, or a kit bought completed ('made'). 'product' survives only on older orders. */
+  kind: 'product' | 'bundle' | 'made';
   /** The same key the basket uses: kit and what was left out, together. Absent on older orders. */
   key?: string;
   id: string;
@@ -65,8 +70,12 @@ export interface PricedLine {
 }
 
 /** A line's name with what was left out of it, for anywhere a line is written as plain text. */
-export const lineLabel = (line: Pick<PricedLine, 'name' | 'omitted'>) =>
-  line.omitted?.length ? `${line.name} (without ${line.omitted.join(', ')})` : line.name;
+export const lineLabel = (line: Pick<PricedLine, 'name' | 'omitted'> & Partial<Pick<PricedLine, 'kind'>>) =>
+  line.kind === 'made'
+    ? `${line.name} (completed product)`
+    : line.omitted?.length
+      ? `${line.name} (without ${line.omitted.join(', ')})`
+      : line.name;
 
 /** One product and how many of it this basket draws off the shelf. */
 export interface Unit {
@@ -112,10 +121,11 @@ export function parseLines(input: unknown): RequestedLine[] {
   for (const raw of input.slice(0, 50)) {
     if (!raw || typeof raw !== 'object') continue;
     const { kind, id, qty, omit } = raw as Record<string, unknown>;
-    if (kind !== 'product' && kind !== 'bundle') continue;
+    if (kind !== 'product' && kind !== 'bundle' && kind !== 'made') continue;
     if (typeof id !== 'string' || !id) continue;
 
-    const cleanOmit = Array.isArray(omit)
+    // Nothing can be left out of a finished piece.
+    const cleanOmit = Array.isArray(omit) && kind !== 'made'
       ? [...new Set(omit.filter((o): o is string => typeof o === 'string' && o.length > 0))].sort().slice(0, 30)
       : [];
 
@@ -141,7 +151,7 @@ export const shippingFor = (subtotal: number) =>
  * less than it did a moment ago.
  */
 export async function priceCart(admin: Admin, requested: RequestedLine[]): Promise<PricedCart> {
-  const makeIds = [...new Set(requested.filter((l) => l.kind === 'bundle').map((l) => l.id))];
+  const makeIds = [...new Set(requested.filter((l) => l.kind !== 'product').map((l) => l.id))];
 
   const makeRes = makeIds.length
     ? await admin
@@ -185,6 +195,39 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
         reason: 'gone',
         message: 'This kit is no longer available, so it has been taken out of your basket.',
       });
+      continue;
+    }
+
+    if (line.kind === 'made') {
+      const price = completedPrice(make);
+      if (price === null) {
+        problems.push({
+          id: line.id,
+          name: make.title,
+          reason: 'gone',
+          message: `“${make.title}” is no longer offered as a completed product, so it has been taken out of your basket.`,
+        });
+        continue;
+      }
+
+      const unitPrice = money(price);
+      lines.push({
+        kind: 'made',
+        key: lineKeyOf('made', make.id, []),
+        id: make.id,
+        name: make.title,
+        slug: make.slug,
+        href: kitHref(make),
+        image: make.image_url,
+        unitPrice,
+        qty: line.qty,
+        lineTotal: money(unitPrice * line.qty),
+        compareAt: null,
+      });
+
+      // A finished piece is made to order, so it neither waits on the shelf
+      // count of its materials nor draws them down. Someone buying a bag
+      // should never be told that a yarn has run out.
       continue;
     }
 

@@ -16,7 +16,7 @@
 import Layout from '../layouts/Layout.astro';
 import MakeCard from './MakeCard.astro';
 import { ON_IMG_ERROR, productImage } from '../lib/images';
-import { difficultyBadge, kitHref, lineTotal, money, priceBundle, qty } from '../lib/makes';
+import { completedPrice, difficultyBadge, kitHref, lineTotal, money, priceBundle, qty } from '../lib/makes';
 import type { MakeWithBundle } from '../lib/database.types';
 import { SHOW_MATERIALS_PAGE } from '../lib/shop';
 
@@ -41,6 +41,10 @@ const image = productImage(make.image_url);
 const blockingOutOfStock = pricing.items.filter((i) => !i.can_opt_out && i.product.stock === 0);
 const hasItems = pricing.items.length > 0;
 const available = hasItems && blockingOutOfStock.length === 0 && pricing.items.every((i) => i.product.stock > 0);
+
+// Some kits can be bought finished instead. That is made to order, so it
+// does not depend on what is on the shelf the way the kit does.
+const madePrice = completedPrice(make);
 
 /*
  * The three facts about the project, as tags rather than a run of text. Each
@@ -298,6 +302,34 @@ const facts = [
           )
         }
 
+        <!-- The other way to buy it: finished -->
+        {
+          madePrice !== null && (
+            <div id="completed" class="mt-4 scroll-mt-28 rounded-card border border-mint-soft bg-mint-wash p-5">
+              <p class="text-micro font-bold uppercase tracking-eyebrow text-mint-deep">Rather not make it yourself?</p>
+              <div class="mt-2 flex items-baseline justify-between">
+                <span class="font-display text-lg font-bold text-ink">Completed product</span>
+                <span class="font-display text-3xl font-extrabold text-ink">{money(madePrice)}</span>
+              </div>
+              <p class="mt-2 text-sm text-ink-body">
+                We crochet it for you and send the finished piece, ready to use.
+              </p>
+
+              <button
+                id="add-made"
+                data-id={make.id}
+                data-name={make.title}
+                data-image={make.image_url ?? ''}
+                data-href={kitHref(make)}
+                data-price={madePrice}
+                class="mt-4 w-full rounded-pill bg-forest py-4 text-sm font-bold text-paper shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:bg-forest-deep"
+              >
+                Buy it completed · {money(madePrice)}
+              </button>
+            </div>
+          )
+        }
+
         {
           make.tags.length > 0 && (
             <div class="mt-5 flex flex-wrap gap-2">
@@ -415,6 +447,15 @@ const facts = [
       out.map((r) => r.dataset.product ?? ''),
     );
 
+    window.dispatchEvent(new Event('cart:open'));
+  });
+
+  // The finished piece is its own line: nothing to leave out, and its own price.
+  const madeButton = document.getElementById('add-made') as HTMLButtonElement | null;
+  madeButton?.addEventListener('click', () => {
+    const { id, name, price, image, href } = madeButton.dataset;
+    if (!id || !name || !href) return;
+    addToCart(id, { name, price: Number(price ?? 0), image: image || null, href }, [], 1, 'made');
     window.dispatchEvent(new Event('cart:open'));
   });
 </script>

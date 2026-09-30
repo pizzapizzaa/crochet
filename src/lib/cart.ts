@@ -19,8 +19,11 @@
 export const CART_KEY = 'zz_cart_v1';
 export const CART_EVENT = 'cart:changed';
 
-/** Every line is a kit — a make or a bundle alike. */
-export type LineKind = 'bundle';
+/**
+ * 'bundle' is a kit to make, a make or a bundle alike. 'made' is a kit bought
+ * as the completed product instead: nothing left out, and its own price.
+ */
+export type LineKind = 'bundle' | 'made';
 
 /** Enough to draw the row instantly. Re-read from the server before it counts. */
 export interface LineSnapshot {
@@ -55,7 +58,7 @@ function isLine(value: unknown): value is CartLine {
   const line = value as Record<string, unknown>;
   const snap = line.snap as Record<string, unknown> | undefined;
   return (
-    line.kind === 'bundle' &&
+    (line.kind === 'bundle' || line.kind === 'made') &&
     typeof line.id === 'string' &&
     typeof line.qty === 'number' &&
     Number.isFinite(line.qty) &&
@@ -100,10 +103,19 @@ export function cartCount(lines = readCart()): number {
   return lines.reduce((sum, l) => sum + l.qty, 0);
 }
 
-/** Adds a kit, less `omit`. Adds to the quantity when that exact line is already there. */
-export function addToCart(id: string, snap: LineSnapshot, omit: string[] = [], qty = 1): void {
+/**
+ * Adds a kit, less `omit`, or the completed product when `kind` is 'made'.
+ * Adds to the quantity when that exact line is already there.
+ */
+export function addToCart(
+  id: string,
+  snap: LineSnapshot,
+  omit: string[] = [],
+  qty = 1,
+  kind: LineKind = 'bundle',
+): void {
   const lines = readCart();
-  const line: CartLine = { kind: 'bundle', id, qty, omit: sortedOmit(omit), snap };
+  const line: CartLine = { kind, id, qty, omit: kind === 'made' ? [] : sortedOmit(omit), snap };
   const existing = lines.find((l) => keyOf(l) === keyOf(line));
   if (existing) {
     existing.qty += qty;

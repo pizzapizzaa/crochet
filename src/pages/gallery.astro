@@ -1,116 +1,125 @@
 ---
+// Rendered per request so a kit ticked "Available as complete product" in the
+// POS shows here straight away, with no rebuild in between.
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
 import SectionWave from '../components/SectionWave.astro';
-import { mockGalleryItems, mockProducts } from '../lib/mockData';
+import { completedPrice, getCompletedKits, kitHref, money } from '../lib/makes';
+import { ON_IMG_ERROR, productImage } from '../lib/images';
 
-// In production: const { data: items } = await supabase.from('gallery_items').select('*, products(*)').order('display_order');
-const items = mockGalleryItems;
-
-// Build a map of product slugs for linking
-const productSlugMap = Object.fromEntries(mockProducts.map((p) => [p.id, p.slug]));
+/*
+ * The Gallery is the finished pieces: every make and bundle the shop will
+ * also crochet and sell completed. Each tile offers both ways in: buy the
+ * piece as it is, or take the kit and make it.
+ */
+const kits = await getCompletedKits();
 ---
 
 <Layout
   title="Gallery"
-  description="Projects made with ZippyZack yarn, hooks and kits: blankets, amigurumi, bags and more."
+  description="Finished crochet pieces from ZippyZack. Buy one completed, or take the kit and make it yourself."
 >
   <!-- Header -->
-  <section class="relative bg-white py-12">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <nav class="text-xs text-brown-light mb-3 flex items-center justify-center gap-1.5">
-        <a href="/" class="hover:text-rose-dust transition-colors">Home</a>
+  <section class="relative bg-paper py-12">
+    <div class="mx-auto max-w-container px-4 text-center sm:px-6 lg:px-8">
+      <nav class="mb-3 flex items-center justify-center gap-1.5 text-xs text-ink-muted">
+        <a href="/" class="transition-colors duration-fast ease-out hover:text-mint-deep">Home</a>
         <span>/</span>
-        <span class="text-brown-warm">Gallery</span>
+        <span class="text-ink-body">Gallery</span>
       </nav>
-      <h1 class="font-display text-5xl font-semibold text-brown-dark">The Gallery</h1>
-      <p class="mt-4 text-brown-warm max-w-md mx-auto text-sm leading-relaxed">
-        Every stitch tells a story. Browse the collection and click any piece to shop or learn more.
+      <h1 class="font-display text-display-2 font-extrabold text-ink">The Gallery</h1>
+      <p class="mx-auto mt-3 max-w-xl text-ink-body">
+        Finished pieces, crocheted by hand. Buy one completed, or take the kit and make it yourself.
       </p>
     </div>
   </section>
 
-  <!-- Masonry-style gallery grid -->
   <section class="relative bg-cream-100 py-16">
     <SectionWave fill="var(--cream-100)" variant={1} />
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {
-          items.map((item) => {
-            const productSlug = item.product_id ? productSlugMap[item.product_id] : null;
-            const href = productSlug ? '/bundles' : '#';
-            return (
-              <article class="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:shadow-xl">
-                <a href={href} class="flex h-full flex-col">
+    <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
+      {
+        kits.length === 0 ? (
+          <div class="rounded-card border border-dashed border-cream-400 bg-paper/60 px-6 py-20 text-center">
+            <p class="text-4xl">🧶</p>
+            <h2 class="mt-3 font-display text-xl font-bold text-ink">No finished pieces on show yet</h2>
+            <p class="mx-auto mt-1.5 max-w-md text-sm text-ink-muted">
+              Everything here is made to be made. Pick a kit and it could be yours by the weekend.
+            </p>
+          </div>
+        ) : (
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {kits.map((kit) => {
+              const href = kitHref(kit);
+              return (
+                <article class="group flex flex-col overflow-hidden rounded-card border border-cream-300 bg-paper shadow-sm transition-all duration-base ease-out hover:-translate-y-0.5 hover:shadow-lg">
                   {/*
                     One ratio for every tile. The photos arrive at assorted
-                    sizes, and letting each set its own height was the other
-                    half of the uneven spacing.
+                    sizes, and letting each set its own height is what makes
+                    a grid look uneven.
                   */}
-                  <div class="aspect-[4/5] shrink-0 overflow-hidden">
+                  <a href={`${href}#completed`} class="relative block aspect-[4/5] overflow-hidden bg-cream-200">
                     <img
-                      src={item.image_url}
-                      alt={item.alt_text}
-                      class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      src={productImage(kit.image_url)}
+                      onerror={ON_IMG_ERROR}
+                      alt={kit.title}
+                      class="h-full w-full object-cover transition-transform duration-lazy ease-out group-hover:scale-[1.04]"
                       loading="lazy"
                     />
-                  </div>
+                    {
+                      // A make's credit travels with its photo. A bundle is the shop's own.
+                      kit.kind === 'make' && kit.author_name && (
+                        <div class="absolute inset-x-0 bottom-0 bg-photo-scrim px-3 pb-2 pt-8">
+                          <p class="truncate text-[11px] font-semibold text-cream">Design by {kit.author_name}</p>
+                        </div>
+                      )
+                    }
+                  </a>
 
-                  {/* Overlay on hover */}
-                  <div class="absolute inset-0 bg-gradient-to-t from-brown-dark/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
-                    <div>
-                      {item.is_featured && (
-                        <span class="inline-block text-xs bg-rose-dust text-white px-2.5 py-1 rounded-full mb-2 font-medium">
-                          Featured
-                        </span>
-                      )}
-                      <h3 class="text-white font-display font-semibold text-lg leading-snug">
-                        {item.title}
-                      </h3>
-                      {item.description && (
-                        <p class="text-paper/90 text-sm mt-1 leading-relaxed">{item.description}</p>
-                      )}
-                      {productSlug && (
-                        <span class="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold bg-white/20 backdrop-blur-sm text-white px-3 py-1.5 rounded-full hover:bg-rose-dust transition-colors">
-                          Shop This Piece →
-                        </span>
-                      )}
+                  <div class="flex flex-1 flex-col p-4">
+                    <h2 class="font-display text-base font-bold leading-snug text-ink">
+                      <a href={`${href}#completed`} class="transition-colors duration-fast ease-out hover:text-mint-deep">
+                        {kit.title}
+                      </a>
+                    </h2>
+                    <p class="mt-1 text-xs text-ink-muted">Completed product</p>
+
+                    <div class="mt-auto flex items-end justify-between gap-3 pt-4">
+                      <span class="font-display text-xl font-extrabold text-ink">{money(completedPrice(kit) ?? 0)}</span>
+                      <a
+                        href={`${href}#completed`}
+                        class="rounded-pill bg-btn-gradient px-4 py-2 text-xs font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
+                      >
+                        Buy it completed
+                      </a>
                     </div>
+                    <a
+                      href={href}
+                      class="mt-3 border-t border-cream-300 pt-3 text-xs font-bold text-mint-deep transition-colors duration-fast ease-out hover:text-ink"
+                    >
+                      Or make it yourself with the kit →
+                    </a>
                   </div>
-
-                  {/* Bottom card info (visible when not hovering) */}
-                  <div class="flex-1 p-4 transition-opacity duration-200 group-hover:opacity-0">
-                  <h3 class="font-display font-medium text-brown-dark text-sm leading-snug">
-                    {item.title}
-                  </h3>
-                  {item.description && (
-                    <p class="text-brown-light text-xs mt-1 truncate">{item.description}</p>
-                  )}
-                  {productSlug && (
-                    <span class="mt-2 inline-block text-xs text-rose-dust font-medium">
-                      Available in shop
-                    </span>
-                  )}
-                  </div>
-                </a>
-              </article>
-            );
-          })
-        }
-      </div>
+                </article>
+              );
+            })}
+          </div>
+        )
+      }
 
       <!-- CTA -->
-      <div class="text-center mt-16">
-        <p class="text-brown-warm text-sm mb-4">Want something custom? I love special orders.</p>
+      <div class="mt-16 text-center">
+        <p class="mb-4 text-sm text-ink-body">Want something custom? I love special orders.</p>
         <div class="flex flex-wrap items-center justify-center gap-4">
           <a
             href="/bundles"
-            class="bg-btn-gradient text-ink hover:brightness-105 font-medium px-8 py-3.5 rounded-full transition-all text-sm"
+            class="rounded-pill bg-btn-gradient px-8 py-3.5 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105"
           >
-            Shop All Items
+            Browse the Kits
           </a>
           <a
             href="/contact"
-            class="border border-brown-light/40 hover:border-rose-dust hover:text-rose-dust text-brown-warm font-medium px-8 py-3.5 rounded-full transition-all text-sm"
+            class="rounded-pill border border-cream-400 px-8 py-3.5 text-sm font-bold text-ink-body transition-colors duration-fast ease-out hover:border-mint-deep hover:text-mint-deep"
           >
             Request Custom Order
           </a>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { priceBundle, withResolvedItems } from '../src/lib/makes';
-import { parseLines, priceCart } from '../src/lib/orders';
+import { lineLabel, parseLines, priceCart } from '../src/lib/orders';
 import type { Make, MakeItemWithProduct, Product } from '../src/lib/database.types';
 
 /*
@@ -100,6 +100,15 @@ describe('parseLines', () => {
     expect(lines[0].omit).toEqual(['hook', 'scissors']);
     expect(lines[1].omit).toEqual([]);
   });
+
+  it('keeps a kit bought completed as its own line, with nothing left out', () => {
+    const lines = parseLines([
+      { kind: 'bundle', id: 'kit-1', qty: 1 },
+      { kind: 'made', id: 'kit-1', qty: 2, omit: ['hook'] },
+    ]);
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toEqual({ kind: 'made', id: 'kit-1', qty: 2, omit: [] });
+  });
 });
 
 /** Just enough of the Supabase client for priceCart's one query. */
@@ -140,5 +149,27 @@ describe('priceCart', () => {
       parseLines([{ kind: 'bundle', id: 'kit-1', qty: 1, omit: ['hook'] }]),
     );
     expect(withoutHook.problems).toEqual([]);
+  });
+
+  it('prices a completed product at its own price, whatever is on the shelf', async () => {
+    // Made to order: a sold-out yarn stops the kit, not the finished piece.
+    const soldOut = [item('yarn-a', 10, { qty: 2, stock: 0 }), ...items.slice(1)];
+    const offered = { ...kit({ completed_available: true, completed_price: 45 }), items: soldOut };
+    const priced = await priceCart(fakeAdmin([offered]), parseLines([{ kind: 'made', id: 'kit-1', qty: 2 }]));
+    expect(priced.problems).toEqual([]);
+    expect(priced.lines[0]).toMatchObject({ kind: 'made', key: 'made:kit-1:', unitPrice: 45, lineTotal: 90 });
+    expect(lineLabel(priced.lines[0])).toBe('Bundle for beginners (completed product)');
+    expect(priced.units).toEqual([]);
+  });
+
+  it('turns away a completed product the kit does not offer', async () => {
+    for (const overrides of [{}, { completed_available: true, completed_price: null }, { completed_available: false, completed_price: 45 }]) {
+      const priced = await priceCart(
+        fakeAdmin([{ ...kit(overrides), items }]),
+        parseLines([{ kind: 'made', id: 'kit-1', qty: 1 }]),
+      );
+      expect(priced.lines).toHaveLength(0);
+      expect(priced.problems[0].message).toMatch(/no longer offered as a completed product/);
+    }
   });
 });

@@ -153,6 +153,17 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect(withFlash(back, 'error', 'The kit discount must be between 0 and 99.9%.'));
   }
 
+  const completedAvailable = bool(form, 'completed_available');
+  const completedPrice = nullableNum(form, 'completed_price');
+  if (completedPrice !== null && completedPrice <= 0) {
+    return redirect(withFlash(back, 'error', 'The completed price must be more than zero, or left blank.'));
+  }
+  if (completedAvailable && completedPrice === null) {
+    return redirect(
+      withFlash(back, 'error', 'Set a completed price, or untick “Available as complete product”.'),
+    );
+  }
+
   const difficultyRaw = str(form, 'difficulty');
   const difficulty = DIFFICULTIES.includes(difficultyRaw) ? (difficultyRaw as Difficulty) : null;
 
@@ -177,6 +188,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     display_order: Math.round(num(form, 'display_order', 0)),
     is_active: bool(form, 'is_active'),
     is_featured: bool(form, 'is_featured'),
+    completed_available: completedAvailable,
+    completed_price: completedPrice,
   };
 
   const { items, duplicate } = parseItems(form);
@@ -184,41 +197,48 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     ? ' One product was listed twice — the duplicate was dropped, raise the quantity instead.'
     : '';
 
-  const makeId = isEdit ? id : null;
+  const write = (row: MakeInsert) =>
+    isEdit
+      ? admin.from('makes').update(row).eq('id', id).select('id').single()
+      : admin.from('makes').insert(row).select('id').single();
 
-  if (isEdit) {
-    const { error } = await admin.from('makes').update(payload).eq('id', id);
-    if (error) {
+  let { data: saved, error } = await write(payload);
+
+  /*
+   * Before supabase/completed-schema.sql has been run the two completed
+   * columns do not exist, and every save would fail on them. A kit that is
+   * not being offered completed is saved without them, so the POS keeps
+   * working in the gap; one that is gets told what to run.
+   */
+  if (error && /completed_(available|price)/.test(error.message)) {
+    if (completedAvailable || completedPrice !== null) {
       return redirect(
         withFlash(
           back,
           'error',
-          isUniqueViolation(error)
-            ? `Another make or bundle already uses the slug “${slug}”.`
-            : `Could not save: ${error.message}`,
+          'Selling completed products needs a database update first: run supabase/completed-schema.sql in the Supabase SQL editor, then save again.',
         ),
       );
     }
+    const { completed_available: _available, completed_price: _price, ...withoutCompleted } = payload;
+    ({ data: saved, error } = await write(withoutCompleted));
   }
 
-  let targetId = makeId;
-  if (!isEdit) {
-    const { data, error } = await admin.from('makes').insert(payload).select('id').single();
-    if (error) {
-      return redirect(
-        withFlash(
-          back,
-          'error',
-          isUniqueViolation(error)
-            ? `Another make or bundle already uses the slug “${slug}”.`
-            : `Could not create: ${error.message}`,
-        ),
-      );
-    }
-    targetId = data.id;
+  if (error || !saved) {
+    return redirect(
+      withFlash(
+        back,
+        'error',
+        error && isUniqueViolation(error)
+          ? `Another make or bundle already uses the slug “${slug}”.`
+          : `Could not ${isEdit ? 'save' : 'create'}: ${error?.message ?? 'nothing came back from the database'}`,
+      ),
+    );
   }
 
-  const itemError = await replaceItems(admin, targetId!, items);
+  const targetId = saved.id;
+
+  const itemError = await replaceItems(admin, targetId, items);
   if (itemError) {
     return redirect(
       withFlash(

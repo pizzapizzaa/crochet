@@ -151,6 +151,9 @@ const when = (iso: string | null) =>
                     {line.kind === 'bundle' && (
                       <span class="ml-1 text-xs text-ink-muted">(kit)</span>
                     )}
+                    {line.kind === 'made' && (
+                      <span class="block text-xs font-semibold text-ink">Completed product: send the finished piece, not the kit</span>
+                    )}
                     {line.omitted && line.omitted.length > 0 && (
                       <span class="block text-xs font-semibold text-ink">Leave out: {line.omitted.join(', ')}</span>
                     )}

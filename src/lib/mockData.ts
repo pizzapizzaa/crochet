@@ -1,4 +1,4 @@
-import type { Product, GalleryItem } from './database.types';
+import type { Product } from './database.types';
 
 /*
  * ZippyZack sells supplies, not finished goods — yarn on its own, yarn bundled
@@ -413,76 +413,3 @@ export const mockProducts: Product[] = mockProductSeeds.map((p) => ({
   units_sold: 0,
   cost_updated_at: null,
 }));
-
-/*
- * Finished pieces made from the kits above. product_id points at the product
- * the piece was made from, which is what the "Shop This Piece" link resolves.
- */
-export const mockGalleryItems: GalleryItem[] = [
-  {
-    id: 'g1',
-    created_at: '2026-06-22T00:00:00Z',
-    title: 'Granny Square Throw',
-    description: 'Ninety squares, one winter. Made from the starter kit.',
-    image_url: '/assets/gallery/blanket-geometric.jpg',
-    alt_text: 'Crocheted granny square blanket in mixed colours on grey fabric',
-    product_id: '11',
-    is_featured: true,
-    display_order: 1,
-  },
-  {
-    id: 'g2',
-    created_at: '2026-06-04T00:00:00Z',
-    title: 'The Bunny Family',
-    description: 'One kit, then three more. It happens.',
-    image_url: '/assets/gallery/amigurumi-bunnies.jpg',
-    alt_text: 'Two crocheted bunny toys beside a pot of dried lavender',
-    product_id: '12',
-    is_featured: true,
-    display_order: 2,
-  },
-  {
-    id: 'g3',
-    created_at: '2026-05-16T00:00:00Z',
-    title: 'Ombré Baby Blanket',
-    description: 'Pastel cotton, worked corner to corner.',
-    image_url: '/assets/gallery/blanket-rolled.jpg',
-    alt_text: 'Rolled crochet baby blanket graduating from peach to cream',
-    product_id: '2',
-    is_featured: true,
-    display_order: 3,
-  },
-  {
-    id: 'g4',
-    created_at: '2026-04-30T00:00:00Z',
-    title: 'Marigold the Cat',
-    description: 'Off-pattern, entirely on purpose.',
-    image_url: '/assets/gallery/amigurumi-cat.jpg',
-    alt_text: 'Orange crocheted cat toy with green glasses',
-    product_id: '12',
-    is_featured: false,
-    display_order: 4,
-  },
-  {
-    id: 'g5',
-    created_at: '2026-03-18T00:00:00Z',
-    title: 'Chunky Stripe Throw',
-    description: 'Two weekends in t-shirt yarn, worth every metre.',
-    image_url: '/assets/gallery/blanket-stool.jpg',
-    alt_text: 'Chunky crochet blanket in lilac and cream stripes folded over a stool',
-    product_id: '14',
-    is_featured: false,
-    display_order: 5,
-  },
-  {
-    id: 'g6',
-    created_at: '2026-02-25T00:00:00Z',
-    title: 'Shell Stitch, In Progress',
-    description: 'Merino oatmeal on a 5.0mm hook, halfway there.',
-    image_url: '/assets/gallery/project-wool-hooks.jpg',
-    alt_text: 'Cream shell-stitch crochet piece in progress with a wooden hook',
-    product_id: '1',
-    is_featured: true,
-    display_order: 6,
-  },
-];
