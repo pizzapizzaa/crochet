@@ -239,7 +239,7 @@ export async function priceCart(admin: Admin, requested: RequestedLine[]): Promi
         message:
           product.stock === 0
             ? `“${product.name}” has sold out.`
-            : `Only ${product.stock} of “${product.name}” left, but your basket needs ${rounded}.`,
+            : `There is not enough of “${product.name}” left for your basket. Try a smaller quantity.`,
       });
     }
   }
