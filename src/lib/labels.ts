@@ -382,6 +382,14 @@ function contactLine(
   };
 }
 
+/*
+ * The two Zs in the mark are the wordmark's own Z — Baloo 2 ExtraBold, outlined
+ * and centred on the origin — so the symbol and the logotype share a letter.
+ * The same path is in public/assets/logos/ and the favicon; keep them in step.
+ */
+const MARK_ZZ =
+  'M-10.52 2.52L-10.52 2.52L-2.65 -6.83L-1.52 -6.83Q-0.54 -6.02 -0.54 -4.68L-0.54 -4.68Q-0.54 -4.12 -0.8 -3.57Q-1.05 -3.02 -1.46 -2.52L-1.46 -2.52L-9.26 6.83L-10.63 6.83Q-11.01 6.51 -11.26 5.98Q-11.5 5.44 -11.5 4.74L-11.5 4.74Q-11.5 4.18 -11.21 3.6Q-10.92 3.02 -10.52 2.52ZM-1.77 6.83L-10.18 6.83L-8.12 3.62L-0.81 3.62Q-0.65 3.89 -0.52 4.29Q-0.38 4.7 -0.38 5.19L-0.38 5.19Q-0.38 6.04 -0.75 6.44Q-1.12 6.83 -1.77 6.83L-1.77 6.83ZM-9.89 -6.83L-2.24 -6.83L-3.88 -3.62L-10.88 -3.62Q-11.03 -3.89 -11.17 -4.28Q-11.3 -4.68 -11.3 -5.17L-11.3 -5.17Q-11.3 -6.02 -10.92 -6.42Q-10.54 -6.83 -9.89 -6.83L-9.89 -6.83ZM1.37 2.52L1.37 2.52L9.24 -6.83L10.36 -6.83Q11.35 -6.02 11.35 -4.68L11.35 -4.68Q11.35 -4.12 11.09 -3.57Q10.83 -3.02 10.43 -2.52L10.43 -2.52L2.62 6.83L1.26 6.83Q0.87 6.51 0.63 5.98Q0.38 5.44 0.38 4.74L0.38 4.74Q0.38 4.18 0.67 3.6Q0.96 3.02 1.37 2.52ZM10.11 6.83L1.7 6.83L3.77 3.62L11.08 3.62Q11.24 3.89 11.37 4.29Q11.5 4.7 11.5 5.19L11.5 5.19Q11.5 6.04 11.13 6.44Q10.76 6.83 10.11 6.83L10.11 6.83ZM2 -6.83L9.64 -6.83L8.01 -3.62L1.01 -3.62Q0.85 -3.89 0.72 -4.28Q0.58 -4.68 0.58 -5.17L0.58 -5.17Q0.58 -6.02 0.96 -6.42Q1.35 -6.83 2 -6.83L2 -6.83Z';
+
 /**
  * The ZippyZack mark, centred on (cx, cy) and `size` mm across. On its tile
  * it is the favicon; without, the forest ground of the label is the tile.
@@ -394,7 +402,7 @@ function mark(cx: number, cy: number, size: number, tile: boolean): string {
     (tile ? '<rect x="-32" y="-32" width="64" height="64" rx="16" fill="#005247"/>' : '') +
     '<rect x="-23" y="-23" width="46" height="46" rx="6" fill="none" stroke="#21FFA8" stroke-width="5" stroke-linejoin="round"/>' +
     '<rect x="-15" y="-15" width="30" height="30" rx="4" fill="#FFEB6C" stroke="#FFEB6C" stroke-width="5" stroke-linejoin="round" transform="rotate(45)"/>' +
-    '<path fill="none" stroke="#003B33" stroke-width="2.9" d="M-10 -6H-1.3L-10 6H-1.3M1.3 -6H10L1.3 6H10"/>' +
+    `<path fill="#003B33" d="${MARK_ZZ}"/>` +
     '</g>'
   );
 }
