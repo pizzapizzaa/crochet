@@ -11,6 +11,8 @@ import {
   mmToPx,
   setPngDpi,
   svgAtPixelSize,
+  tidyInstagram,
+  tidyWebsite,
   type LabelFonts,
 } from '../src/lib/labels';
 
@@ -115,6 +117,41 @@ describe('square bundle label', () => {
   it('reports a bundle name too long for two lines', () => {
     const label = square({ bundleName: 'An extraordinarily long bundle name '.repeat(5) });
     expect(label.warnings.join(' ')).toMatch(/bundle name is too long/);
+  });
+});
+
+describe('website and Instagram', () => {
+  it('prints the address without its protocol', () => {
+    expect(tidyWebsite(' https://www.zippyzack.com/ ')).toBe('zippyzack.com');
+    expect(tidyWebsite('zippyzack.com/shop')).toBe('zippyzack.com/shop');
+    expect(tidyWebsite('')).toBe('');
+  });
+
+  it('accepts a handle with or without the @, or a profile link', () => {
+    expect(tidyInstagram('zippyzack')).toBe('@zippyzack');
+    expect(tidyInstagram('@zippyzack')).toBe('@zippyzack');
+    expect(tidyInstagram('https://www.instagram.com/zippy.zack/?hl=en')).toBe('@zippy.zack');
+    expect(tidyInstagram(' ')).toBe('');
+  });
+
+  it('adds to both stickers only when filled in', () => {
+    const contact = { website: 'zippyzack.com', instagram: '@zippyzack' };
+    const round = (options = {}) => buildRoundLabel({ message: DEFAULT_ROUND_MESSAGE, ...options }, fonts);
+
+    for (const build of [round, square]) {
+      const bare = build();
+      const both = build(contact);
+      expect(both.warnings).toEqual([]);
+      expect(both.svg).toContain('<ellipse'); // the globe
+      expect(both.svg.length).toBeGreaterThan(build({ website: contact.website }).svg.length);
+      expect(bare.svg).not.toContain('<ellipse');
+      expect(build({ website: ' ', instagram: '' }).svg).toBe(bare.svg);
+    }
+  });
+
+  it('says so when one is too long to print in full', () => {
+    const label = square({ website: 'a-really-long-shop-address.example.com/with/a/very/long/path/as/well' });
+    expect(label.warnings.join(' ')).toMatch(/website is too long/);
   });
 });
 

@@ -115,6 +115,10 @@ export interface LabelOptions {
   colourway?: Colourway;
   /** Background carried past the cut line on every side, in mm. */
   bleedMm?: number;
+  /** Shop address, shown as typed minus the protocol. Empty leaves it off. */
+  website?: string;
+  /** Instagram handle, with or without the @ or a profile link. Empty leaves it off. */
+  instagram?: string;
 }
 
 export interface RoundLabelInput extends LabelOptions {
@@ -304,6 +308,80 @@ function arcText(
   return d ? `<path fill="${fill}" d="${d}"/>` : '';
 }
 
+/** "https://www.zippyzack.com/" → "zippyzack.com": what is worth printing. */
+export const tidyWebsite = (value: string | undefined) =>
+  clean(value)
+    .replace(/^[a-z]+:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/+$/, '');
+
+/** "@name", from a bare name, an @name or a profile link. */
+export function tidyInstagram(value: string | undefined): string {
+  const name = clean(value)
+    .replace(/^(?:[a-z]+:\/\/)?(?:www\.)?instagram\.com\//i, '')
+    .replace(/[/?#].*$/, '')
+    .replace(/^@+/, '')
+    .replace(/\s+/g, '');
+  return name ? `@${name}` : '';
+}
+
+type ContactIcon = 'globe' | 'instagram';
+
+/** A small line-drawn icon in an `s` mm box whose top-left is (x, y). */
+function contactIcon(icon: ContactIcon, x: number, y: number, s: number, colour: string): string {
+  const w = s * 0.1;
+  const stroke = `fill="none" stroke="${colour}" stroke-width="${n(w)}"`;
+  const cx = x + s / 2;
+  const cy = y + s / 2;
+  if (icon === 'instagram') {
+    return (
+      `<rect x="${n(x + w / 2)}" y="${n(y + w / 2)}" width="${n(s - w)}" height="${n(s - w)}" rx="${n(s * 0.27)}" ${stroke}/>` +
+      `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(s * 0.22)}" ${stroke}/>` +
+      `<circle cx="${n(x + s * 0.74)}" cy="${n(y + s * 0.26)}" r="${n(s * 0.065)}" fill="${colour}"/>`
+    );
+  }
+  const r = (s - w) / 2;
+  return (
+    `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r)}" ${stroke}/>` +
+    `<ellipse cx="${n(cx)}" cy="${n(cy)}" rx="${n(r * 0.45)}" ry="${n(r)}" ${stroke}/>` +
+    `<path d="M${n(cx - r)} ${n(cy)}H${n(cx + r)}" ${stroke}/>`
+  );
+}
+
+/**
+ * An icon and a line of text set as one unit, anchored like text: `y` is the
+ * baseline, and the type shrinks from `style.size` to `minSize` to stay
+ * within `maxWidth`. Past that it is cut, and `fits` says so.
+ */
+function contactLine(
+  icon: ContactIcon,
+  text: string,
+  x: number,
+  y: number,
+  style: TextStyle,
+  minSize: number,
+  maxWidth: number,
+  colour: string,
+  anchor: Anchor,
+) {
+  const fitted = { ...style };
+  const iconSize = () => capHeight(fitted.font, fitted.size) * 1.25;
+  const gap = () => fitted.size * 0.42;
+  const widthOf = (value: string) => iconSize() + gap() + textWidth(value, fitted);
+  while (fitted.size > minSize && widthOf(text) > maxWidth) fitted.size = +(fitted.size - 0.1).toFixed(1);
+  const fits = widthOf(text) <= maxWidth;
+  const shown = fits ? text : truncate(text, fitted, maxWidth - iconSize() - gap());
+  const width = widthOf(shown);
+  const start = anchor === 'middle' ? x - width / 2 : anchor === 'end' ? x - width : x;
+  const cap = capHeight(fitted.font, fitted.size);
+  return {
+    fits,
+    svg:
+      contactIcon(icon, start, y - cap / 2 - iconSize() / 2, iconSize(), colour) +
+      textPath(shown, start + iconSize() + gap(), y, fitted, colour),
+  };
+}
+
 /**
  * The ZippyZack mark, centred on (cx, cy) and `size` mm across. On its tile
  * it is the favicon; without, the forest ground of the label is the tile.
@@ -346,6 +424,16 @@ function svgDocument(title: string, sizeMm: number, bleed: number, body: string)
 const bleedOf = (options: LabelOptions) => Math.min(Math.max(options.bleedMm ?? 0, 0), 10);
 const paletteOf = (options: LabelOptions): Palette => COLOURWAYS[options.colourway ?? 'forest'];
 
+/** The website and Instagram lines an input asks for, in print order. */
+function contactsOf(options: LabelOptions) {
+  const contacts: { icon: ContactIcon; text: string; name: string }[] = [];
+  const website = tidyWebsite(options.website);
+  const instagram = tidyInstagram(options.instagram);
+  if (website) contacts.push({ icon: 'globe', text: website, name: 'The website' });
+  if (instagram) contacts.push({ icon: 'instagram', text: instagram, name: 'The Instagram handle' });
+  return contacts;
+}
+
 // ── round: thank-you sticker ───────────────────────────────────────────────
 
 /** A 7 cm round sticker: the logo, with a message arched over it. */
@@ -386,8 +474,24 @@ export function buildRoundLabel(input: RoundLabelInput, fonts: LabelFonts): Labe
     body += arcText(tagline, c, c, band + capHeight(style.font, style.size) / 2, style, palette.muted, 'bottom');
   }
 
-  body += mark(c, 28.2, palette.markTile ? 20 : 17.5, palette.markTile);
-  body += wordmark(c, 47.4, 7.6, fonts, palette, 'middle').svg;
+  // The logo sits in the middle; with a website or handle under it, it moves
+  // up and tightens to give them the room.
+  const contacts = contactsOf(input);
+  const lift = [0, 2.6, 4][contacts.length];
+  const markSize = (palette.markTile ? 20 : 17.5) - contacts.length * 0.9;
+  body += mark(c, 28.2 - lift + contacts.length * 0.5, markSize, palette.markTile);
+  const wordmarkY = 47.4 - lift;
+  body += wordmark(c, wordmarkY, 7.6 - contacts.length * 0.2, fonts, palette, 'middle').svg;
+
+  // Each line gets the width of the circle at its own height, inside the lettering.
+  const inner = band - 4.2;
+  contacts.forEach((contact, i) => {
+    const y = wordmarkY + 5 + i * 4.1;
+    const chord = 2 * Math.sqrt(Math.max(inner * inner - (y - c) * (y - c), 0));
+    const line = contactLine(contact.icon, contact.text, c, y, { font: fonts.sansBold, size: 2.7 }, 1.8, chord, palette.muted, 'middle');
+    if (!line.fits) warnings.push(`${contact.name} is too long for the sticker, so it has been cut short.`);
+    body += line.svg;
+  });
 
   return { svg: svgDocument(message || 'ZippyZack sticker', size, bleed, body), sizeMm: size + bleed * 2, warnings };
 }
@@ -495,7 +599,18 @@ export function buildSquareLabel(input: SquareLabelInput, fonts: LabelFonts): La
   body += mark(left + markSize / 2, 18, markSize, palette.markTile);
   const lockupX = left + markSize + 3.4;
   body += wordmark(lockupX, 19.4, 8.6, fonts, palette, 'start').svg;
-  body += textPath(DEFAULT_TAGLINE, lockupX + 0.3, 23.6, { font: fonts.sans, size: 2.3, tracking: 0.22 }, palette.muted);
+  const taglineStyle: TextStyle = { font: fonts.sans, size: 2.3, tracking: 0.22 };
+  body += textPath(DEFAULT_TAGLINE, lockupX + 0.3, 23.6, taglineStyle, palette.muted);
+
+  // Website and Instagram go in the header's empty right-hand side.
+  const contacts = contactsOf(input);
+  const contactRoom = right - (lockupX + 0.3 + textWidth(DEFAULT_TAGLINE, taglineStyle)) - 4;
+  contacts.forEach((contact, i) => {
+    const y = (contacts.length === 1 ? 19.2 : 16.4) + i * 5.4;
+    const line = contactLine(contact.icon, contact.text, right, y, { font: fonts.sansBold, size: 3 }, 1.9, contactRoom, palette.text, 'end');
+    if (!line.fits) warnings.push(`${contact.name} is too long for the label, so it has been cut short.`);
+    body += line.svg;
+  });
   body += `<path d="M${n(left)} 29.5H${n(right)}" stroke="${palette.stitch}" stroke-width="0.3" opacity="0.45"/>`;
 
   // Bundle name: on one line if it can be without getting small — that

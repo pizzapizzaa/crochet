@@ -148,6 +148,18 @@ const tab =
 
       <!-- Shared options -->
       <div class="space-y-4 rounded-card border border-cream-300 bg-paper p-5 shadow-sm">
+        <div class="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+          <div>
+            <label class={label} for="label-website">Website</label>
+            <input id="label-website" name="website" type="text" maxlength="60" placeholder="zippyzack.com" class={field} />
+          </div>
+          <div>
+            <label class={label} for="label-instagram">Instagram</label>
+            <input id="label-instagram" name="instagram" type="text" maxlength="40" placeholder="@zippyzack" class={field} />
+          </div>
+          <p class="text-xs text-ink-muted sm:col-span-2">Printed on both stickers. Leave either empty to leave it off.</p>
+        </div>
+
         <div>
           <span class={label}>Colour</span>
           <div class="flex flex-wrap gap-2">
@@ -333,6 +345,8 @@ const tab =
     const options = {
       colourway: isColourway(colourway) ? colourway : undefined,
       bleedMm: value('bleed') ? BLEED_MM : 0,
+      website: value('website'),
+      instagram: value('instagram'),
     };
     return kind === 'round'
       ? buildRoundLabel({ ...options, message: value('roundMessage'), tagline: value('roundTagline') }, fonts)
