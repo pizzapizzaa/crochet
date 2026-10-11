@@ -8,12 +8,13 @@ import '../styles/design-system.css';
 
 export interface Props {
   title: string;
-  section?: 'dashboard' | 'orders' | 'products' | 'makes' | 'materials' | 'categories' | 'labels';
+  section?: 'dashboard' | 'orders' | 'products' | 'makes' | 'materials' | 'categories' | 'labels' | 'pattern-designer';
+  workspace?: boolean;
   /** Set on the login screen, which has no nav. */
   bare?: boolean;
 }
 
-const { title, section, bare = false } = Astro.props;
+const { title, section, bare = false, workspace = false } = Astro.props;
 
 const navLinks = [
   {
@@ -57,6 +58,12 @@ const navLinks = [
     label: 'Labels',
     href: '/pos/labels',
     icon: 'M7 7h.01M3 5a2 2 0 012-2h6.2a2 2 0 011.4.6l7.8 7.8a2 2 0 010 2.8l-6.2 6.2a2 2 0 01-2.8 0l-7.8-7.8A2 2 0 013 11.2V5z',
+  },
+  {
+    key: 'pattern-designer',
+    label: 'Pattern designer',
+    href: '/pos/pattern-designer',
+    icon: 'M4 4h16v16H4zM8 8h.01M12 8h4M8 12h8M8 16h4',
   },
 ];
 ---
@@ -150,7 +157,7 @@ const navLinks = [
 
           {/* Content */}
           <main class="min-w-0 flex-1">
-            <div class="mx-auto max-w-container px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            <div class={workspace ? 'px-3 py-4 sm:px-4 lg:px-5' : 'mx-auto max-w-container px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}>
               <slot />
             </div>
           </main>

@@ -33,6 +33,26 @@ export type OrderEventKind = 'status' | 'payment' | 'stock' | 'attention' | 'not
 export interface Database {
   public: {
     Tables: {
+      pattern_designs: {
+        Row: {
+          id: string;
+          title: string;
+          document: Json;
+          revision: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          title: string;
+          document: Json;
+          revision?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['pattern_designs']['Insert']>;
+        Relationships: [];
+      };
       categories: {
         Row: {
           id: string;

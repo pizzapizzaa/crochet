@@ -10,4 +10,9 @@ export default defineConfig({
   security: {
     checkOrigin: false,
   },
+  vite: {
+    optimizeDeps: {
+      include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-moveable', 'lucide-react'],
+    },
+  },
 });

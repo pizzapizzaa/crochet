@@ -13,6 +13,7 @@ A handcrafted crochet storefront built with **Astro**, **Tailwind CSS**, **Supab
 | `/store/[slug]` | Individual product page with images, details, related items |
 | `/gallery` | Masonry photo gallery linking to store items |
 | `/pattern-generator` | Interactive crochet pattern calculator (React island) |
+| `/pos/pattern-designer` | Free-placement stitch chart editor with autosave and artwork exports |
 | `/pos/makes/import` | Bulk Pinterest pin importer (back office) |
 | `/pos/products/import` | Import a product from a shop link (back office) |
 
@@ -83,6 +84,7 @@ In your Supabase dashboard, open the **SQL Editor** and run each file in
 | 6 | `import-schema.sql` | Indexes the bulk importers use to spot what is already imported |
 | 7 | `bundles-schema.sql` | Bundles beside makes (`makes.kind`), and items a customer can skip (`make_items.can_opt_out`) |
 | 8 | `completed-schema.sql` | Kits that can also be bought finished (`makes.completed_available`, `makes.completed_price`) |
+| 9 | `pattern-designs-schema.sql` | Private editable stitch designs with revision-checked saves |
 
 Step 5 is required for the orders screens to work — without it the POS cannot
 read `needs_attention`, `tracking_number` or the order history.
@@ -127,6 +129,25 @@ Visit `http://localhost:4321`
 Every push to `main` triggers an automatic deployment.
 
 ---
+
+## Pattern designer
+
+Open `/pos/pattern-designer` from the back-office navigation. This uses the
+existing admin login. Run `supabase/pattern-designs-schema.sql` in the Supabase
+SQL Editor to enable cloud storage; no public storage bucket is needed.
+
+Stitches are individually editable, with drag placement, free rotation,
+multi-selection, size/colour controls, undo/redo, and a zoomable white artboard.
+Save writes immediately, and autosave checks for pending changes every five
+seconds while the page is active. Revision checks prevent another tab from
+silently overwriting a newer cloud save.
+
+Changes also produce local recovery drafts in this browser. Open patterns
+includes those drafts when cloud storage is unavailable. Local drafts are not
+a cross-device backup and can be lost if browser storage is cleared. Export a
+JSON backup to preserve editable progress independently of cloud storage.
+SVG, PNG, and vector PDF exports contain only the artwork, not editor controls
+or the current zoom/pan. PNG/SVG optionally support a transparent background.
 
 ## Bringing things in from elsewhere
 

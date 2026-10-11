@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+import PosLayout from '../../layouts/PosLayout.astro';
+import PatternDesigner from '../../components/pos/PatternDesigner';
+import { isAuthed, loginUrl } from '../../lib/auth';
+
+if (!isAuthed(Astro.cookies)) return Astro.redirect(loginUrl(Astro.url));
+---
+
+<PosLayout title="Pattern designer" section="pattern-designer" workspace>
+  <PatternDesigner client:only="react" />
+</PosLayout>
