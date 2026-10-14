@@ -17,23 +17,20 @@ import {
   withFlash,
 } from '../../../lib/posForms';
 import { canonicalPinUrl, isPinterestUrl, pinIdFrom } from '../../../lib/pinterest';
+import { DIFFICULTIES } from '../../../lib/database.types';
 import type { Difficulty, Json, MakeInsert, MakeKind } from '../../../lib/database.types';
 
-  const formPath = isEdit ? `/pos/makes/${id}` : `/pos/makes/new${kind === 'bundle' ? '?kind=bundle' : ''}`;
 /*
  * Create or update a kit — a make or a bundle — and its items in one submit.
  *
-      withFlash(formPath, 'error', 'Supabase is not connected — set SUPABASE_SERVICE_ROLE_KEY in .env.'),
- * it and the name of whoever made it. A bundle is the shop's own and has
- * neither. Everything else is the same.
+ * A make is somebody else's design and has to carry its pin and its author;
+ * a bundle is the shop's own and has neither. Everything else is the same.
  *
  * The bundle arrives as parallel arrays — item_product_id[], item_quantity[]
  * and so on, one entry per row of the editor. Every field is an <input> or a
  * <select> so the arrays always line up; a checkbox would drop out of the
- * submission when unticked and silently shift every row after it.
-  if (!title) return redirect(withFlash(formPath, 'error', `Give the ${noun} a title.`));
-
-const DIFFICULTIES = ['Beginner', 'Easy', 'Intermediate', 'Advanced'];
+ * submission when unticked and silently shift every array after it by one.
+ */
 
 interface ParsedItem {
   product_id: string;
@@ -65,7 +62,6 @@ function parseItems(form: FormData): { items: ParsedItem[]; duplicate: boolean }
     const parsed = Number(quantities[i] ?? '1');
     items.push({
       product_id: productId,
-      // Quantity is a multiplier on price, so a bad value must not become 0.
       quantity: Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * 100) / 100 : 1,
       note: (notes[i] ?? '').trim() || null,
       can_opt_out: skippable[i] === 'yes',
@@ -76,17 +72,21 @@ function parseItems(form: FormData): { items: ParsedItem[]; duplicate: boolean }
   return { items, duplicate };
 }
 
-/** Wipe and rewrite the bundle. Fewer moving parts than diffing, same result. */
+/** Replace the kit's items inside one database transaction. */
 async function replaceItems(
   admin: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
   makeId: string,
   items: ParsedItem[],
 ): Promise<string | null> {
-  const { error } = await admin.rpc('replace_make_items', {
-    p_make_id: makeId,
-    p_items: items as unknown as Json,
-  });
-  return error?.message ?? null;
+  try {
+    const { error } = await admin.rpc('replace_make_items', {
+      p_make_id: makeId,
+      p_items: items as unknown as Json,
+    });
+    return error?.message ?? null;
+  } catch (cause) {
+    return cause instanceof Error ? cause.message : 'The database request failed.';
+  }
 }
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -207,7 +207,17 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       ? admin.from('makes').update(row).eq('id', id).select('id').single()
       : admin.from('makes').insert(row).select('id').single();
 
-  let { data: saved, error } = await write(payload);
+  let saved: { id: string } | null = null;
+  let error: { code?: string; message: string } | null = null;
+  try {
+    const result = await write(payload);
+    saved = result.data;
+    error = result.error;
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : 'The database request failed.';
+    console.error('Make save request failed', { kind, isEdit, message });
+    return redirect(withFlash(formPath, 'error', `Could not ${isEdit ? 'save' : 'create'}: ${message}`));
+  }
 
   /*
    * Before supabase/completed-schema.sql has been run the two completed
@@ -219,20 +229,28 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     if (completedAvailable || completedPrice !== null) {
       return redirect(
         withFlash(
-          back,
+          formPath,
           'error',
           'Selling completed products needs a database update first: run supabase/completed-schema.sql in the Supabase SQL editor, then save again.',
         ),
       );
     }
     const { completed_available: _available, completed_price: _price, ...withoutCompleted } = payload;
-    ({ data: saved, error } = await write(withoutCompleted));
+    try {
+      const result = await write(withoutCompleted);
+      saved = result.data;
+      error = result.error;
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'The database request failed.';
+      console.error('Make save retry failed', { kind, isEdit, message });
+      return redirect(withFlash(formPath, 'error', `Could not ${isEdit ? 'save' : 'create'}: ${message}`));
+    }
   }
 
   if (error && /kind.*(column|schema cache)|(column|schema cache).*kind/i.test(error.message)) {
     return redirect(
       withFlash(
-        back,
+        formPath,
         'error',
         'The database is missing makes.kind. Run supabase/bundles-schema.sql in the Supabase SQL editor, then retry. If it was already run, refresh the PostgREST schema cache.',
       ),

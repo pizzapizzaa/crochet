@@ -36,6 +36,10 @@ comment on column public.makes.completed_available is
 comment on column public.makes.completed_price is
   'What the finished piece sells for. Required while completed_available is true.';
 
+notify pgrst, 'reload schema';
+
+notify pgrst, 'reload schema';
+
 -- Sanity check
 -- select kind, title, completed_available, completed_price
 --   from public.makes
