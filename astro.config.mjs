@@ -1,16 +1,14 @@
 import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
+import tailwind from '@tailwindcss/vite';
 import react from '@astrojs/react';
 import vercel from '@astrojs/vercel';
 
 export default defineConfig({
-  integrations: [tailwind(), react()],
+  integrations: [react()],
   output: 'static',
   adapter: vercel(),
-  security: {
-    checkOrigin: false,
-  },
   vite: {
+    plugins: [tailwind()],
     optimizeDeps: {
       include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-moveable', 'lucide-react'],
     },

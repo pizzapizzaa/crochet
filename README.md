@@ -69,6 +69,11 @@ write a product into the catalogue. Generate one with:
 node -e "console.log(crypto.randomUUID().replace(/-/g,'') + crypto.randomUUID().replace(/-/g,''))"
 ```
 
+`PUBLIC_SITE_URL` is optional. Set it to the canonical shop origin if it differs
+from `https://zippyzack.com`. `SESSION_SECRET` is also optional; if omitted,
+server-side signing uses the service-role key, so rotating that key invalidates
+existing admin and receipt sessions.
+
 ### 3. Set up the database
 
 In your Supabase dashboard, open the **SQL Editor** and run each file in
@@ -80,14 +85,19 @@ In your Supabase dashboard, open the **SQL Editor** and run each file in
 | 2 | `pos-schema.sql` | `categories` and the columns the back office edits |
 | 3 | `makes-schema.sql` | `makes` and `make_items` — the bundles |
 | 4 | `shop-schema.sql` | Checkout columns and `commit_order()` |
-| 5 | `fulfilment-schema.sql` | Delivery tracking, `order_events`, refunds, `restock_order()` |
+| 5 | `fulfilment-schema.sql` | Delivery tracking, `order_events`, refunds, `restock_order()`, and request throttling |
 | 6 | `import-schema.sql` | Indexes the bulk importers use to spot what is already imported |
 | 7 | `bundles-schema.sql` | Bundles beside makes (`makes.kind`), and items a customer can skip (`make_items.can_opt_out`) |
 | 8 | `completed-schema.sql` | Kits that can also be bought finished (`makes.completed_available`, `makes.completed_price`) |
 | 9 | `pattern-designs-schema.sql` | Private editable stitch designs with revision-checked saves |
 
-Step 5 is required for the orders screens to work — without it the POS cannot
-read `needs_attention`, `tracking_number` or the order history.
+Step 7 is required before creating or editing makes and bundles. It adds the
+`makes.kind` column and the atomic `replace_make_items()` save function; it also
+requests a PostgREST schema-cache reload after applying the migration.
+
+Step 5 is required for the orders screens and request throttling. The sign-in,
+checkout, image-generation, order-lookup and import limits fail closed until it
+has been run.
 
 If your database predates the payOS switch it may still carry `paypal_order_id`,
 `paypal_capture_id` and `stripe_session_id`, and be missing the columns checkout
@@ -122,6 +132,8 @@ Visit `http://localhost:4321`
    - `SUPABASE_SERVICE_ROLE_KEY` — the back office cannot write without it
    - `ADMIN_PASSWORD` — what you sign in to `/pos` with
    - `POS_IMPORT_TOKEN` — only if you use the Chrome extension
+  - `PUBLIC_SITE_URL` — only if the canonical origin differs from `https://zippyzack.com`
+  - `SESSION_SECRET` — optional; set a random secret to separate session signing from the service-role key
 5. Deploy!
 
 ### Subsequent deploys

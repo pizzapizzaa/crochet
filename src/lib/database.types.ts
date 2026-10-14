@@ -428,6 +428,14 @@ export interface Database {
         Args: { p_order_id: string };
         Returns: undefined;
       };
+      consume_rate_limit: {
+        Args: { p_bucket: string; p_limit: number; p_window_seconds: number };
+        Returns: boolean;
+      };
+      replace_make_items: {
+        Args: { p_make_id: string; p_items: Json };
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
   };

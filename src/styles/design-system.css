@@ -8,6 +8,8 @@
    modifiers (CSS vars holding hex cannot).
    ============================================================ */
 @import "./tokens/fonts.css";
+@import "tailwindcss";
+@config "../../tailwind.config.mjs";
 @import "./tokens/colors.css";
 @import "./tokens/typography.css";
 @import "./tokens/spacing.css";

@@ -164,6 +164,9 @@ begin
    where id = p_order_id;
 end $$;
 
+revoke all on function public.commit_order(uuid, text) from public, anon, authenticated;
+grant execute on function public.commit_order(uuid, text) to service_role;
+
 -- ── 4. ROW LEVEL SECURITY ────────────────────────────────────────────
 -- Orders stay closed to the public key entirely. Every read and write goes
 -- through a server route holding the service-role key, which bypasses RLS.

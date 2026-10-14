@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { priceBundle, withResolvedItems } from '../src/lib/makes';
 import { lineLabel, parseLines, priceCart } from '../src/lib/orders';
+import { createSignedToken, verifySignedToken } from '../src/lib/auth';
+import { rateLimitBucket } from '../src/lib/rateLimit';
 import type { Make, MakeItemWithProduct, Product } from '../src/lib/database.types';
 
 /*
@@ -108,6 +110,47 @@ describe('parseLines', () => {
     ]);
     expect(lines).toHaveLength(2);
     expect(lines[1]).toEqual({ kind: 'made', id: 'kit-1', qty: 2, omit: [] });
+  });
+});
+
+describe('findOrder email matching', () => {
+  it('escapes SQL ILIKE wildcard characters in email addresses', async () => {
+    let pattern = '';
+    const query = {
+      select: () => query,
+      eq: () => query,
+      ilike: (_column: string, value: string) => {
+        pattern = value;
+        return query;
+      },
+      maybeSingle: async () => ({ data: null }),
+    };
+    const admin = { from: () => query } as never;
+
+    const { findOrder } = await import('../src/lib/orders');
+    await findOrder(admin, 'ZZ-ABC234', '  a%_\\@example.com  ');
+
+    expect(pattern).toBe('a\\%\\_\\\\@example.com');
+  });
+});
+
+describe('signed session tokens', () => {
+  it('hides the payload and rejects tampering or a different purpose', () => {
+    const token = createSignedToken('admin-session', 'admin', 60, 'test-secret');
+    expect(token).toBeTruthy();
+    expect(token).not.toContain('test-secret');
+    expect(verifySignedToken('admin-session', token!, 'test-secret')).toBe('admin');
+    expect(verifySignedToken('order-receipt', token!, 'test-secret')).toBeNull();
+    expect(verifySignedToken('admin-session', `${token}x`, 'test-secret')).toBeNull();
+  });
+});
+
+describe('rate limit buckets', () => {
+  it('stores a scoped keyed digest instead of the client address', () => {
+    const bucket = rateLimitBucket('login', '192.0.2.8', 'test-secret');
+    expect(bucket).toMatch(/^[a-f0-9]{64}$/);
+    expect(bucket).not.toContain('192.0.2.8');
+    expect(rateLimitBucket('checkout', '192.0.2.8', 'test-secret')).not.toBe(bucket);
   });
 });
 

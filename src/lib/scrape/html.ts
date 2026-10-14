@@ -15,6 +15,7 @@ export const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36';
 
 const TIMEOUT_MS = 12000;
+const MAX_REDIRECTS = 5;
 
 /** A product page is tens of kilobytes; a megabyte of it is more than enough. */
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
@@ -54,11 +55,83 @@ export function isFetchableUrl(raw: string): boolean {
     const url = new URL(raw);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
     const host = url.hostname.toLowerCase();
-    if (!host || (!host.includes('.') && !host.includes(':'))) return false;
+    if (!host || url.username || url.password || host.includes(':') || !host.includes('.')) return false;
     return !PRIVATE_HOST.some((re) => re.test(host));
   } catch {
     return false;
   }
+}
+
+/** Fetch a public URL while validating every redirect destination before contact. */
+export async function fetchPublic(
+  raw: string,
+  init: RequestInit = {},
+  timeoutMs = TIMEOUT_MS,
+): Promise<{ response: Response; finalUrl: string } | null> {
+  let current: URL;
+  try {
+    current = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (!isFetchableUrl(current.href)) return null;
+
+  const signal = AbortSignal.timeout(timeoutMs);
+  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
+    const response = await fetch(current.href, { ...init, redirect: 'manual', signal });
+    if (![301, 302, 303, 307, 308].includes(response.status)) {
+      return { response, finalUrl: current.href };
+    }
+
+    const location = response.headers.get('location');
+      if (!location || redirects === MAX_REDIRECTS) {
+        await response.body?.cancel();
+        return null;
+      }
+
+    let next: URL;
+    try {
+      next = new URL(location, current);
+    } catch {
+        await response.body?.cancel();
+      return null;
+    }
+      if (!isFetchableUrl(next.href)) {
+        await response.body?.cancel();
+        return null;
+      }
+      await response.body?.cancel();
+    current = next;
+  }
+  return null;
+}
+
+export async function readBoundedBody(response: Response, maxBytes: number): Promise<Uint8Array | null> {
+  const declaredLength = Number(response.headers.get('content-length') ?? '0');
+  if (declaredLength > maxBytes) return null;
+  if (!response.body) return new Uint8Array();
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.byteLength;
+    if (length > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
 }
 
 export interface FetchedPage {
@@ -69,37 +142,25 @@ export interface FetchedPage {
 }
 
 export async function fetchPage(url: string): Promise<FetchedPage> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': BROWSER_UA,
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    });
+  const fetched = await fetchPublic(url, {
+    headers: {
+      'User-Agent': BROWSER_UA,
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+  });
+  if (!fetched) return { html: '', finalUrl: url, status: 0 };
+  const { response: res, finalUrl } = fetched;
 
-    if (!res.ok) return { html: '', finalUrl: res.url || url, status: res.status };
+  if (!res.ok) return { html: '', finalUrl, status: res.status };
 
-    // A redirect is a second address, and it gets the same refusal as the
-    // first: "scrape this" must not become a way to read a private network.
-    if (res.url && !isFetchableUrl(res.url)) {
-      return { html: '', finalUrl: res.url, status: 0 };
-    }
-
-    const buffer = await res.arrayBuffer();
-    const bytes = new Uint8Array(buffer.byteLength > MAX_HTML_BYTES ? buffer.slice(0, MAX_HTML_BYTES) : buffer);
-    return {
-      html: new TextDecoder('utf-8', { fatal: false }).decode(bytes),
-      finalUrl: res.url || url,
-      status: res.status,
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  const bytes = await readBoundedBody(res, MAX_HTML_BYTES);
+  if (!bytes) return { html: '', finalUrl, status: 0 };
+  return {
+    html: new TextDecoder('utf-8', { fatal: false }).decode(bytes),
+    finalUrl,
+    status: res.status,
+  };
 }
 
 const NAMED_ENTITIES: Record<string, string> = {

@@ -2,10 +2,8 @@
 /*
  * Order lookup.
  *
- * A plain GET form: the number and email go in the query string and this page
- * either redirects to the receipt or says it found nothing. No accounts, no
- * session — the pair of facts *is* the credential, which is why the failure
- * message below never distinguishes "no such order" from "wrong email".
+ * A POST form checks the order number and email, then grants a short-lived,
+ * order-scoped receipt cookie. Personal information never enters the URL.
  *
  * Reachable from the header, the footer and the receipt. It used to be linked
  * from nowhere but the receipt, which meant the page for finding a lost order
@@ -15,22 +13,37 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import { setOrderReceiptAccess } from '../../lib/auth';
 import { findOrder } from '../../lib/orders';
+import { consumeRateLimit } from '../../lib/rateLimit';
 import { SHOP_EMAIL } from '../../lib/shop';
 
-const number = (Astro.url.searchParams.get('number') ?? '').trim();
-const email = (Astro.url.searchParams.get('email') ?? '').trim();
-const searched = number !== '' && email !== '';
+let number = '';
+let searched = false;
+let lookupError: string | null = null;
 
-if (searched) {
+if (Astro.request.method === 'POST') {
   const admin = getSupabaseAdmin();
-  const order = admin ? await findOrder(admin, number, email) : null;
-  if (order) {
-    return Astro.redirect(
-      `/order/${order.order_number}?email=${encodeURIComponent(order.customer_email)}`,
-    );
+  const rate = admin
+    ? await consumeRateLimit(admin, 'order-lookup', Astro.clientAddress, 20, 60)
+    : 'unavailable';
+  if (rate !== 'allowed') {
+    lookupError = rate === 'limited' ? 'Too many lookups. Try again shortly.' : 'Order lookup is temporarily unavailable.';
+  } else {
+    const form = await Astro.request.formData();
+    number = (form.get('number')?.toString() ?? '').trim().toUpperCase();
+    const email = (form.get('email')?.toString() ?? '').trim().toLowerCase();
+    searched = number !== '' && email !== '';
+    const order = admin ? await findOrder(admin, number, email) : null;
+    if (order) {
+      if (setOrderReceiptAccess(Astro.cookies, order.order_number, order.id)) {
+        return Astro.redirect(`/order/${order.order_number}`);
+      }
+      lookupError = 'Order lookup is temporarily unavailable. Please contact the shop.';
+    }
   }
 }
+Astro.response.headers.set('Cache-Control', 'private, no-store');
 ---
 
 <Layout title="Track your order" description="Look up an order with its number and your email.">
@@ -45,25 +58,25 @@ if (searched) {
     </div>
 
     <form
-      method="GET"
+      method="POST"
       action="/orders/track"
       class="mt-8 rounded-card border border-cream-300 bg-paper p-6 shadow-sm sm:p-8"
     >
       {
-        searched && (
+        searched && !lookupError && (
           <div class="mb-5 rounded-field border border-lemon-soft bg-lemon-wash px-4 py-3 text-sm text-ink-body">
             No order matches that number and email together. Both have to be exactly as they were
             when you ordered.
           </div>
         )
       }
+      {lookupError && <p class="mb-5 rounded-field bg-lemon-wash px-4 py-3 text-sm text-ink-body">{lookupError}</p>}
 
       <label class="block">
         <span class="text-xs font-bold uppercase tracking-eyebrow text-ink-muted">Order number</span>
         <input
           name="number"
           required
-          value={number}
           placeholder="ZZ-7K3P9M"
           autocomplete="off"
           class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 font-mono text-sm uppercase text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
@@ -76,7 +89,6 @@ if (searched) {
           name="email"
           type="email"
           required
-          value={email}
           autocomplete="email"
           class="mt-1.5 w-full rounded-field border border-cream-300 bg-cream-50 px-4 py-3 text-sm text-ink placeholder-ink-faint focus:border-mint-mid focus:outline-none focus:ring-2 focus:ring-mint/40"
         />

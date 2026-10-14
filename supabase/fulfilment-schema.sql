@@ -22,9 +22,66 @@
 --      ones the app calls it with — see section 8
 --   7. Backfills the payOS checkout columns if an older PayPal-era schema is
 --      what is actually deployed — see section 0
+--   8. Adds a database-backed request limiter for serverless routes
 -- =========================================================
 
 create extension if not exists "pgcrypto";
+
+-- ── REQUEST LIMITS ──────────────────────────────────────────────────
+create table if not exists public.rate_limit_buckets (
+  bucket text primary key check (bucket ~ '^[0-9a-f]{64}$'),
+  window_started_at timestamptz not null,
+  attempts integer not null check (attempts > 0)
+);
+create index if not exists rate_limit_buckets_window_started_at_idx
+  on public.rate_limit_buckets (window_started_at);
+
+alter table public.rate_limit_buckets enable row level security;
+revoke all on public.rate_limit_buckets from public, anon, authenticated;
+grant all on public.rate_limit_buckets to service_role;
+
+create or replace function public.consume_rate_limit(
+  p_bucket text,
+  p_limit integer,
+  p_window_seconds integer
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_attempts integer;
+begin
+  if p_bucket !~ '^[0-9a-f]{64}$' or p_limit < 1 or p_window_seconds < 1 then
+    return false;
+  end if;
+
+  insert into public.rate_limit_buckets as current_bucket (bucket, window_started_at, attempts)
+  values (p_bucket, now(), 1)
+  on conflict (bucket) do update
+     set window_started_at = case
+           when current_bucket.window_started_at <= now() - make_interval(secs => p_window_seconds)
+             then now()
+           else current_bucket.window_started_at
+         end,
+         attempts = case
+           when current_bucket.window_started_at <= now() - make_interval(secs => p_window_seconds)
+             then 1
+           else current_bucket.attempts + 1
+         end
+  returning attempts into current_attempts;
+
+  if random() < 0.01 then
+    delete from public.rate_limit_buckets
+     where window_started_at < now() - interval '1 day';
+  end if;
+
+  return current_attempts <= p_limit;
+end $$;
+
+revoke all on function public.consume_rate_limit(text, integer, integer) from public, anon, authenticated;
+grant execute on function public.consume_rate_limit(text, integer, integer) to service_role;
 
 -- ── 0. THE PAYOS COLUMNS THIS FILE STANDS ON ─────────────────────────
 -- These belong to shop-schema.sql and are repeated here because a database
@@ -320,6 +377,13 @@ begin
 
   update public.orders set stock_committed = false where id = p_order_id;
 end $$;
+
+revoke all on function public.draw_order_stock(uuid) from public, anon, authenticated;
+grant execute on function public.draw_order_stock(uuid) to service_role;
+revoke all on function public.commit_order(uuid, text) from public, anon, authenticated;
+grant execute on function public.commit_order(uuid, text) to service_role;
+revoke all on function public.restock_order(uuid) from public, anon, authenticated;
+grant execute on function public.restock_order(uuid) to service_role;
 
 -- ── 11. THE COLUMNS NOBODY USES ANY MORE ─────────────────────────────
 -- A database built from the older PayPal-era schema still carries

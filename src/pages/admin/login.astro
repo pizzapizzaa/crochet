@@ -2,34 +2,44 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
-import { setSession } from '../../lib/auth';
+import { isAuthed, setSession } from '../../lib/auth';
+import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import { consumeRateLimit } from '../../lib/rateLimit';
 
 const adminPassword = import.meta.env.ADMIN_PASSWORD;
-const expectedToken = adminPassword ? btoa(adminPassword) : null;
+let loginError: string | null = null;
 
 // Handle POST submission directly in this page
 if (Astro.request.method === 'POST') {
-  const formData = await Astro.request.formData();
-  const password = formData.get('password')?.toString() ?? '';
-
   if (!adminPassword) {
     return new Response('Server misconfiguration: ADMIN_PASSWORD is not set.', { status: 500 });
   }
 
-  if (password === adminPassword) {
-    setSession(Astro.cookies, btoa(adminPassword));
-    return Astro.redirect('/pattern-generator');
-  }
+  const admin = getSupabaseAdmin();
+  const rate = admin
+    ? await consumeRateLimit(admin, 'admin-login', Astro.clientAddress, 10, 900)
+    : 'unavailable';
 
-  // Wrong password — fall through to render with error
-  var loginError = true;
+  if (rate !== 'allowed') {
+    loginError = rate === 'limited' ? 'Too many attempts. Try again in 15 minutes.' : 'Sign-in is temporarily unavailable.';
+  } else {
+    const formData = await Astro.request.formData();
+    const password = formData.get('password')?.toString() ?? '';
+
+    if (password === adminPassword) {
+      if (!setSession(Astro.cookies)) {
+        return new Response('Server misconfiguration: SESSION_SECRET is not set.', { status: 500 });
+      }
+      return Astro.redirect('/pattern-generator');
+    }
+    // Wrong password — fall through to render with error.
+    loginError = 'Incorrect password. Please try again.';
+  }
 } else {
   // If already authenticated, skip login
-  const authCookie = Astro.cookies.get('admin_auth')?.value;
-  if (expectedToken && authCookie === expectedToken) {
+  if (isAuthed(Astro.cookies)) {
     return Astro.redirect('/pattern-generator');
   }
-  var loginError = false;
 }
 ---
 

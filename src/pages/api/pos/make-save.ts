@@ -17,12 +17,13 @@ import {
   withFlash,
 } from '../../../lib/posForms';
 import { canonicalPinUrl, isPinterestUrl, pinIdFrom } from '../../../lib/pinterest';
-import type { Difficulty, MakeInsert, MakeItemInsert, MakeKind } from '../../../lib/database.types';
+import type { Difficulty, Json, MakeInsert, MakeKind } from '../../../lib/database.types';
 
+  const formPath = isEdit ? `/pos/makes/${id}` : `/pos/makes/new${kind === 'bundle' ? '?kind=bundle' : ''}`;
 /*
  * Create or update a kit — a make or a bundle — and its items in one submit.
  *
- * A make is somebody else's design, so it cannot be saved without the link to
+      withFlash(formPath, 'error', 'Supabase is not connected — set SUPABASE_SERVICE_ROLE_KEY in .env.'),
  * it and the name of whoever made it. A bundle is the shop's own and has
  * neither. Everything else is the same.
  *
@@ -30,7 +31,7 @@ import type { Difficulty, MakeInsert, MakeItemInsert, MakeKind } from '../../../
  * and so on, one entry per row of the editor. Every field is an <input> or a
  * <select> so the arrays always line up; a checkbox would drop out of the
  * submission when unticked and silently shift every row after it.
- */
+  if (!title) return redirect(withFlash(formPath, 'error', `Give the ${noun} a title.`));
 
 const DIFFICULTIES = ['Beginner', 'Easy', 'Intermediate', 'Advanced'];
 
@@ -81,12 +82,10 @@ async function replaceItems(
   makeId: string,
   items: ParsedItem[],
 ): Promise<string | null> {
-  const { error: clearError } = await admin.from('make_items').delete().eq('make_id', makeId);
-  if (clearError) return clearError.message;
-  if (items.length === 0) return null;
-
-  const rows: MakeItemInsert[] = items.map((i) => ({ ...i, make_id: makeId }));
-  const { error } = await admin.from('make_items').insert(rows);
+  const { error } = await admin.rpc('replace_make_items', {
+    p_make_id: makeId,
+    p_items: items as unknown as Json,
+  });
   return error?.message ?? null;
 }
 
@@ -104,7 +103,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const admin = getSupabaseAdmin();
   if (!admin) {
     return redirect(
-      withFlash(back, 'error', 'Supabase is not connected — set SUPABASE_SERVICE_ROLE_KEY in .env.'),
+      withFlash(formPath, 'error', 'Supabase is not connected — set SUPABASE_SERVICE_ROLE_KEY in .env.'),
     );
   }
 
@@ -112,12 +111,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const pinterestUrlRaw = str(form, 'pinterest_url');
   const authorName = str(form, 'author_name');
 
-  if (!title) return redirect(withFlash(back, 'error', `Give the ${noun} a title.`));
+  if (!title) return redirect(withFlash(formPath, 'error', `Give the ${noun} a title.`));
 
   let pinterestUrl: string | null = null;
   if (kind === 'make') {
     if (!pinterestUrlRaw) {
-      return redirect(withFlash(back, 'error', 'A make needs the link to the design it came from.'));
+      return redirect(withFlash(formPath, 'error', 'A make needs the link to the design it came from.'));
     }
     // A pin is tidied to its canonical address; any other design page is kept
     // as given, as long as it is a web address someone can follow.
@@ -126,41 +125,41 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     } else if (/^https?:\/\/[^\s]+\.[^\s]+/i.test(pinterestUrlRaw)) {
       pinterestUrl = pinterestUrlRaw;
     } else {
-      return redirect(withFlash(back, 'error', 'That link is not a web address — paste the pin or pattern page.'));
+      return redirect(withFlash(formPath, 'error', 'That link is not a web address — paste the pin or pattern page.'));
     }
     // Attribution is the whole point of storing the source, so it is required
     // here and not just encouraged. If the scrape found no name, the shop owner
     // types one in — "unknown" is a choice they make deliberately.
     if (!authorName) {
-      return redirect(withFlash(back, 'error', 'Credit whoever made the design — that is what the source field is for.'));
+      return redirect(withFlash(formPath, 'error', 'Credit whoever made the design — that is what the source field is for.'));
     }
   }
 
   const slug = slugify(str(form, 'slug') || title);
   if (!slug) {
     return redirect(
-      withFlash(back, 'error', 'That title produces an empty URL slug — add some letters or numbers.'),
+      withFlash(formPath, 'error', 'That title produces an empty URL slug — add some letters or numbers.'),
     );
   }
 
   const bundlePrice = nullableNum(form, 'bundle_price');
   if (bundlePrice !== null && bundlePrice < 0) {
-    return redirect(withFlash(back, 'error', 'The kit price cannot be negative.'));
+    return redirect(withFlash(formPath, 'error', 'The kit price cannot be negative.'));
   }
 
   const discount = num(form, 'bundle_discount_pct', 0);
   if (discount < 0 || discount >= 100) {
-    return redirect(withFlash(back, 'error', 'The kit discount must be between 0 and 99.9%.'));
+    return redirect(withFlash(formPath, 'error', 'The kit discount must be between 0 and 99.9%.'));
   }
 
   const completedAvailable = bool(form, 'completed_available');
   const completedPrice = nullableNum(form, 'completed_price');
   if (completedPrice !== null && completedPrice <= 0) {
-    return redirect(withFlash(back, 'error', 'The completed price must be more than zero, or left blank.'));
+    return redirect(withFlash(formPath, 'error', 'The completed price must be more than zero, or left blank.'));
   }
   if (completedAvailable && completedPrice === null) {
     return redirect(
-      withFlash(back, 'error', 'Set a completed price, or untick “Available as complete product”.'),
+      withFlash(formPath, 'error', 'Set a completed price, or untick “Available as complete product”.'),
     );
   }
 
@@ -193,6 +192,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   };
 
   const { items, duplicate } = parseItems(form);
+  if (bool(form, 'is_active') && items.length === 0) {
+    return redirect(
+      withFlash(formPath, 'error', `Add at least one product before publishing this ${noun}, or save it as a draft.`),
+    );
+  }
   const dupeNote = duplicate
     ? ' One product was listed twice — the duplicate was dropped, raise the quantity instead.'
     : '';
@@ -224,6 +228,16 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     ({ data: saved, error } = await write(withoutCompleted));
   }
 
+  if (error && /kind.*(column|schema cache)|(column|schema cache).*kind/i.test(error.message)) {
+    return redirect(
+      withFlash(
+        back,
+        'error',
+        'The database is missing makes.kind. Run supabase/bundles-schema.sql in the Supabase SQL editor, then retry. If it was already run, refresh the PostgREST schema cache.',
+      ),
+    );
+  }
+
   if (error || !saved) {
     return redirect(
       withFlash(
@@ -240,11 +254,28 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const itemError = await replaceItems(admin, targetId, items);
   if (itemError) {
+    const errorBack = isEdit ? `/pos/makes/${targetId}` : formPath;
+    if (!isEdit) {
+      const { error: cleanupError } = await admin.from('makes').delete().eq('id', targetId);
+      if (cleanupError) console.error('Could not remove make after item-save failure', targetId, cleanupError.message);
+    }
+
+    if (/replace_make_items|schema cache/i.test(itemError)) {
+      return redirect(
+        withFlash(
+          errorBack,
+          'error',
+          'The database is missing the atomic kit-item save function. Run supabase/bundles-schema.sql in the Supabase SQL editor, then retry.',
+        ),
+      );
+    }
     return redirect(
       withFlash(
-        `/pos/makes/${targetId}`,
+        errorBack,
         'error',
-        `Saved “${title}”, but its items did not stick: ${itemError}`,
+        isEdit
+          ? `Saved “${title}”, but its items were unchanged: ${itemError}`
+          : `Could not create “${title}” because its items were not saved: ${itemError}`,
       ),
     );
   }

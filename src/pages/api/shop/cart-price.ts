@@ -2,6 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { consumeRateLimit, rateLimitResponse } from '../../../lib/rateLimit';
 import { parseLines, priceCart } from '../../../lib/orders';
 
 /*
@@ -11,11 +12,13 @@ import { parseLines, priceCart } from '../../../lib/orders';
  * adding up the prices in localStorage, so what the customer is shown is what
  * the server would charge. Public and read-only — it writes nothing.
  */
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   const admin = getSupabaseAdmin();
   if (!admin) {
     return json({ error: 'The shop is not connected right now.' }, 503);
   }
+  const limited = rateLimitResponse(await consumeRateLimit(admin, 'cart-price', clientAddress, 120, 60));
+  if (limited) return limited;
 
   let body: unknown;
   try {

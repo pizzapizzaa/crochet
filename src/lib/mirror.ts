@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 import { slugify } from './posForms';
-import { isFetchableUrl } from './scrape/html';
+import { fetchPublic, isFetchableUrl, readBoundedBody } from './scrape/html';
 
 /*
  * Keeping our own copy of a picture we found somewhere else.
@@ -92,39 +92,27 @@ async function fetchBytes(
   // "fetch this picture" pointed at a private address is a probe, not a photo.
   if (!isFetchableUrl(url)) return null;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      redirect: 'follow',
+    const fetched = await fetchPublic(url, {
       headers: {
         Accept: 'image/avif,image/webp,image/png,image/jpeg,*/*',
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36',
         ...(referer ? { Referer: referer } : {}),
       },
-    });
+    }, FETCH_TIMEOUT_MS);
+    if (!fetched) return null;
+    const { response: res } = fetched;
     if (!res.ok) return null;
-    // redirect: 'follow' means the URL we checked is not necessarily the URL
-    // we fetched. A hop into a private address is refused at the far end too.
-    if (res.url && !isFetchableUrl(res.url)) return null;
 
     const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
     if (!EXT_BY_TYPE[type]) return null;
 
-    // Trust the header when it is there, so an oversized file is refused
-    // before we spend the bandwidth reading it.
-    const declared = Number(res.headers.get('content-length') ?? '0');
-    if (declared > MAX_BYTES) return null;
-
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength === 0 || bytes.byteLength > MAX_BYTES) return null;
+    const bytes = await readBoundedBody(res, MAX_BYTES);
+    if (!bytes || bytes.byteLength === 0) return null;
     return { bytes, type };
   } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 

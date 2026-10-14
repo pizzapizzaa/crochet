@@ -2,8 +2,10 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { isAuthed } from '../../lib/auth';
+import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import { consumeRateLimit, rateLimitResponse } from '../../lib/rateLimit';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   // Every call spends on the paid Gemini key, so it is gated like the page
   // that makes it. JSON rather than guardApi's plain text: the page reads
   // `error` off the body.
@@ -13,6 +15,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  const admin = getSupabaseAdmin();
+  if (!admin) return new Response(JSON.stringify({ error: 'Request protection is unavailable.' }), { status: 503 });
+  const limited = rateLimitResponse(await consumeRateLimit(admin, 'image-generation', clientAddress, 5, 60));
+  if (limited) return limited;
 
   const apiKey = import.meta.env.GEMINI_API_KEY;
   if (!apiKey) {

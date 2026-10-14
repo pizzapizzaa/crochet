@@ -333,11 +333,13 @@ export async function findOrder(
   const address = email.trim().toLowerCase();
   if (!trimmed || !address) return null;
 
+  const exactAddressPattern = address.replace(/[\\%_]/g, '\\$&');
+
   const { data } = await admin
     .from('orders')
     .select('*')
     .eq('order_number', trimmed)
-    .ilike('customer_email', address)
+    .ilike('customer_email', exactAddressPattern)
     .maybeSingle();
 
   return (data as Order) ?? null;

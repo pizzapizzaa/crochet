@@ -2,6 +2,8 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { authorizeImport, jsonFor, preflight } from '../../../lib/apiAuth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { consumeRateLimit, rateLimitResponse } from '../../../lib/rateLimit';
 import { scrapeYarn, yarnFromText } from '../../../lib/scrape/yarn';
 
 /*
@@ -27,7 +29,7 @@ export const OPTIONS: APIRoute = ({ request }) => preflight(request);
 const textOf = (value: unknown) => (typeof value === 'string' ? value.slice(0, MAX_TEXT) : '');
 const shortOf = (value: unknown, max: number) => (typeof value === 'string' ? value.trim().slice(0, max) || null : null);
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
@@ -37,6 +39,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const { denied } = authorizeImport(request, cookies, body.token);
   if (denied) return denied;
+  const admin = getSupabaseAdmin();
+  if (!admin) return jsonFor(request, { error: 'Request protection is unavailable.' }, 503);
+  const limited = rateLimitResponse(await consumeRateLimit(admin, 'yarn-lookup', clientAddress, 30, 60));
+  if (limited) return jsonFor(request, { error: limited.status === 429 ? 'Too many requests. Try again shortly.' : 'Request protection is unavailable.' }, limited.status);
 
   if (body.browser && typeof body.browser === 'object') {
     const page = body.browser as Record<string, unknown>;

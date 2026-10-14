@@ -35,9 +35,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
 export const GET: APIRoute = async ({ request, cookies }) => {
   const secret = import.meta.env.CRON_SECRET;
-  const authorised =
-    isAuthed(cookies) ||
-    (Boolean(secret) && request.headers.get('authorization') === `Bearer ${secret}`);
+  const authorised = Boolean(secret) && request.headers.get('authorization') === `Bearer ${secret}`;
 
   if (!authorised) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {

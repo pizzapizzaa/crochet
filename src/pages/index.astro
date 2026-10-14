@@ -55,20 +55,9 @@ const categories = [
 
 const trustPoints = ['Project-Ready Kits', 'Ships Worldwide', 'Quality Yarn & Tools'];
 
-const patternTools = [
-  { icon: '🧮', label: 'Stitch Calculator' },
-  { icon: '📏', label: 'Gauge Guide' },
-  { icon: '🪝', label: 'Hook Size Chart' },
-  { icon: '🔢', label: 'Row Counter' },
-  { icon: '📄', label: 'Pattern Export' },
-  { icon: '🧶', label: 'Yarn Weight' },
-];
-
 // Shared button recipes. Primary sits on a LIGHT gradient, so its label is ink.
 const btnPrimary =
   'inline-flex items-center gap-2 rounded-pill bg-btn-gradient px-8 py-4 text-sm font-bold text-ink shadow-sm transition-all duration-fast ease-out hover:-translate-y-0.5 hover:brightness-105 active:scale-[.97]';
-const btnSecondary =
-  'inline-flex items-center gap-2 rounded-pill border border-cream-300 bg-paper px-8 py-4 text-sm font-bold text-ink shadow-xs transition-all duration-fast ease-out hover:-translate-y-0.5 active:scale-[.97]';
 const btnSoft =
   'inline-flex items-center gap-2 rounded-pill bg-mint-wash px-8 py-4 text-sm font-bold text-mint-deep transition-all duration-fast ease-out hover:-translate-y-0.5 hover:bg-mint-soft active:scale-[.97]';
 const btnGhost =
@@ -300,53 +289,6 @@ const btnGhost =
       </div>
       <div class="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {featuredKits.map((kit) => <MakeCard make={kit} />)}
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Pattern generator — the one full-bleed --btn-gradient band.
-       It is a LIGHT gradient, so everything on it is ink dark.
-       ============================================================ -->
-  <section class="relative bg-btn-gradient py-[88px] text-ink">
-    <SectionWave gradient={[["0%", "#21FFA8"], ["52%", "#8CFAC4"], ["100%", "#FFEB6C"]]} fill="#8CFAC4" variant={0} />
-    <div
-      class="mx-auto grid max-w-container items-center gap-12 px-4 py-2 sm:px-6 lg:grid-cols-2 lg:px-8"
-    >
-      <div>
-        <span class="zz-eyebrow zz-eyebrow--on-accent">Free Tool</span>
-        <h2 class="mt-2 font-display text-display-2 font-extrabold text-ink">
-          Generate your own crochet pattern
-        </h2>
-        <p class="mt-4 max-w-md text-[17px] leading-relaxed text-forest-deep/90">
-          Use my free pattern generator to calculate stitch counts, plan your hook size, and export
-          a printable pattern. No experience needed.
-        </p>
-        <div class="mt-8">
-          <a href="/pattern-generator" class={btnSecondary}>
-            Try Pattern Generator
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 8l4 4m0 0l-4 4m4-4H3"
-              />
-            </svg>
-          </a>
-        </div>
-      </div>
-
-      <!-- Glass tiles: paper at 55% + 6px blur keeps ink labels above 4.5:1. -->
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {
-          patternTools.map((tool) => (
-            <div class="zz-glass rounded-card px-3 py-4 text-center">
-              <div class="text-[22px]">{tool.icon}</div>
-              <p class="mt-1.5 text-micro font-bold text-ink">{tool.label}</p>
-            </div>
-          ))
-        }
       </div>
     </div>
   </section>

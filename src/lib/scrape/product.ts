@@ -1,7 +1,9 @@
 import {
   absoluteUrl,
   documentTitle,
+  fetchPublic,
   fetchPage,
+  readBoundedBody,
   isFetchableUrl,
   guessCurrency,
   metaContent,
@@ -62,6 +64,7 @@ export interface ScrapeOutcome {
 }
 
 const MAX_IMAGES = 10;
+const MAX_SHOPIFY_JSON_BYTES = 2 * 1024 * 1024;
 
 /** The shop's own name for itself when the page is unreadable: its hostname. */
 function hostLabel(url: string): string {
@@ -269,13 +272,13 @@ async function fromShopify(url: string): Promise<Partial<ProductDraft> | null> {
   }
 
   try {
-    const res = await fetch(jsonUrl, {
-      headers: { Accept: 'application/json' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10000),
-    });
+    const fetched = await fetchPublic(jsonUrl, { headers: { Accept: 'application/json' } }, 10000);
+    if (!fetched) return null;
+    const { response: res } = fetched;
     if (!res.ok) return null;
-    const body = (await res.json()) as { product?: Node };
+    const bytes = await readBoundedBody(res, MAX_SHOPIFY_JSON_BYTES);
+    if (!bytes) return null;
+    const body = JSON.parse(new TextDecoder().decode(bytes)) as { product?: Node };
     const product = body.product;
     if (!product || typeof product !== 'object') return null;
 

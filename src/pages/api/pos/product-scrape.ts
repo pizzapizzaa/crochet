@@ -2,6 +2,8 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { authorizeImport, jsonFor, preflight } from '../../../lib/apiAuth';
+import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { consumeRateLimit, rateLimitResponse } from '../../../lib/rateLimit';
 import { formatSource, normaliseCode, toUsd } from '../../../lib/currency';
 import { draftFromBrowser, scrapeProduct } from '../../../lib/scrape/product';
 import type { ProductDraft } from '../../../lib/scrape/product';
@@ -56,7 +58,7 @@ function conversionFor(draft: ProductDraft) {
   };
 }
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   // Body first: the token may be in it, which is how the extension gets to
   // send a request no preflight stands in front of.
   let body: Record<string, unknown>;
@@ -68,6 +70,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const { denied } = authorizeImport(request, cookies, body.token);
   if (denied) return denied;
+  const admin = getSupabaseAdmin();
+  if (!admin) return jsonFor(request, { error: 'Request protection is unavailable.' }, 503);
+  const limited = rateLimitResponse(await consumeRateLimit(admin, 'product-scrape', clientAddress, 30, 60));
+  if (limited) return jsonFor(request, { error: limited.status === 429 ? 'Too many requests. Try again shortly.' : 'Request protection is unavailable.' }, limited.status);
 
   // The extension's route: the page is already parsed, so nothing is fetched.
   if (body.browser && typeof body.browser === 'object') {

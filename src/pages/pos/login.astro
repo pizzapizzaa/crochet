@@ -2,9 +2,10 @@
 export const prerender = false;
 
 import PosLayout from '../../layouts/PosLayout.astro';
-import { isAuthed, expectedToken, setSession } from '../../lib/auth';
+import { isAuthed, setSession } from '../../lib/auth';
+import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import { consumeRateLimit } from '../../lib/rateLimit';
 
-const token = expectedToken();
 const redirectTo = Astro.url.searchParams.get('next') ?? '/pos';
 // Only ever bounce back inside the POS — an open redirect here would be a
 // nasty thing to leave on a login screen.
@@ -13,17 +14,27 @@ const safeNext = redirectTo.startsWith('/pos') ? redirectTo : '/pos';
 let error: string | null = null;
 
 if (Astro.request.method === 'POST') {
-  if (!token) {
+  if (!import.meta.env.ADMIN_PASSWORD) {
     error = 'ADMIN_PASSWORD is not set on the server.';
   } else {
-    const formData = await Astro.request.formData();
-    const password = formData.get('password')?.toString() ?? '';
+    const admin = getSupabaseAdmin();
+    const rate = admin
+      ? await consumeRateLimit(admin, 'admin-login', Astro.clientAddress, 10, 900)
+      : 'unavailable';
 
-    if (password === import.meta.env.ADMIN_PASSWORD) {
-      setSession(Astro.cookies, token);
-      return Astro.redirect(safeNext);
+    if (rate !== 'allowed') {
+      error = rate === 'limited' ? 'Too many attempts. Try again in 15 minutes.' : 'Sign-in is temporarily unavailable.';
+    } else {
+      const formData = await Astro.request.formData();
+      const password = formData.get('password')?.toString() ?? '';
+
+      if (password === import.meta.env.ADMIN_PASSWORD) {
+        if (setSession(Astro.cookies)) return Astro.redirect(safeNext);
+        error = 'SESSION_SECRET is not set on the server.';
+      } else {
+        error = 'That password is not right. Try again.';
+      }
     }
-    error = 'That password is not right. Try again.';
   }
 } else if (isAuthed(Astro.cookies)) {
   return Astro.redirect(safeNext);

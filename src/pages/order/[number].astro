@@ -2,10 +2,8 @@
 /*
  * The receipt.
  *
- * Reached straight after paying with the email in the query string, or later
- * from /orders/track. Either way the order number alone is not enough — it is
- * printed on packing slips and forwarded in emails, so the address the order
- * was placed under has to match before anything is shown.
+ * Reached after payment or order lookup using a short-lived, signed,
+ * order-scoped cookie. An order number alone is not enough to read a receipt.
  *
  * The timeline is built by lib/fulfilment.ts, the same function the POS reads,
  * so "shipped" cannot mean one thing on this page and another behind the till.
@@ -14,8 +12,8 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
+import { orderReceiptId } from '../../lib/auth';
 import {
-  findOrder,
   formatAddress,
   orderItems,
   settleOrder,
@@ -29,10 +27,19 @@ import type { Order } from '../../lib/database.types';
 import { ON_IMG_ERROR, productImage } from '../../lib/images';
 
 const { number } = Astro.params;
-const email = Astro.url.searchParams.get('email') ?? '';
-
 const admin = getSupabaseAdmin();
-let order: Order | null = admin && email ? await findOrder(admin, number!, email) : null;
+const receiptOrderId = number ? orderReceiptId(Astro.cookies, number) : null;
+let order: Order | null = null;
+if (admin && number && receiptOrderId) {
+  const { data } = await admin
+    .from('orders')
+    .select('*')
+    .eq('order_number', number.toUpperCase())
+    .eq('id', receiptOrderId)
+    .maybeSingle();
+  order = (data as Order | null) ?? null;
+}
+Astro.response.headers.set('Cache-Control', 'private, no-store');
 
 /*
  * The customer coming back from payOS is a hint that a transfer may have
@@ -47,11 +54,17 @@ if (admin && order && order.payment_status === 'unpaid' && order.provider_order_
     const payment = await readPayment(Number(order.provider_order_code));
     if (payment.paid) {
       await settleOrder(admin, order.id, payment.reference);
-      order = await findOrder(admin, number!, email);
+      const { data } = await admin
+        .from('orders')
+        .select('*')
+        .eq('order_number', number!.toUpperCase())
+        .eq('id', receiptOrderId!)
+        .maybeSingle();
+      order = (data as Order | null) ?? null;
     }
   } catch (cause) {
     // Never break the receipt over this — the webhook will still settle it.
-    console.error('payOS reconcile failed', order.order_number, String(cause));
+    console.error('payOS reconcile failed', number, String(cause));
   }
 }
 
@@ -81,8 +94,8 @@ const awaiting = Boolean(order) && order!.payment_status === 'unpaid';
           <p class="text-4xl">🔍</p>
           <h1 class="mt-3 font-display text-2xl font-extrabold text-ink">We cannot find that order</h1>
           <p class="mx-auto mt-2 max-w-md text-sm text-ink-muted">
-            An order number only opens with the email address it was placed under. Check both, or
-            look it up again below.
+            A valid receipt link is needed to see order details. Look it up with your order number
+            and email address below.
           </p>
           <a
             href="/orders/track"

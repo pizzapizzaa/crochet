@@ -1,4 +1,6 @@
 import type { AstroCookies } from 'astro';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { Buffer } from 'node:buffer';
 
 /*
  * The POS reuses the admin account that already gates the pattern generator:
@@ -7,21 +9,51 @@ import type { AstroCookies } from 'astro';
  * /api/admin-logout signs you out of both.
  */
 export const AUTH_COOKIE = 'admin_auth';
+export const ORDER_RECEIPT_COOKIE = 'order_receipt';
 export const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours
+export const ORDER_RECEIPT_MAX_AGE = 60 * 60 * 24 * 7;
+const SESSION_SECRET = import.meta.env.SESSION_SECRET || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 
-/** The cookie value we expect for a valid session, or null if unconfigured. */
-export function expectedToken(): string | null {
-  const password = import.meta.env.ADMIN_PASSWORD;
-  return password ? btoa(password) : null;
+export function createSignedToken(
+  purpose: string,
+  payload: string,
+  maxAgeSeconds: number,
+  secret = SESSION_SECRET,
+): string | null {
+  if (!secret || !purpose || !payload || payload.includes('.') || maxAgeSeconds < 1) return null;
+  const expiresAt = Math.floor(Date.now() / 1000) + maxAgeSeconds;
+  const nonce = randomBytes(24).toString('base64url');
+  const unsigned = `v1.${expiresAt}.${payload}.${nonce}`;
+  const signature = createHmac('sha256', secret).update(`${purpose}.${unsigned}`).digest('base64url');
+  return `${unsigned}.${signature}`;
+}
+
+export function verifySignedToken(purpose: string, token: string, secret = SESSION_SECRET): string | null {
+  if (!secret || !purpose) return null;
+  const parts = token.split('.');
+  if (parts.length !== 5 || parts[0] !== 'v1') return null;
+
+  const [version, expiresAt, payload, nonce, signature] = parts;
+  const expiry = Number(expiresAt);
+  if (version !== 'v1' || !payload || !nonce || !Number.isInteger(expiry) || expiry <= Date.now() / 1000) {
+    return null;
+  }
+
+  const unsigned = `${version}.${expiresAt}.${payload}.${nonce}`;
+  const expected = createHmac('sha256', secret).update(`${purpose}.${unsigned}`).digest();
+  const received = Buffer.from(signature, 'base64url');
+  return received.length === expected.length && timingSafeEqual(received, expected) ? payload : null;
 }
 
 export function isAuthed(cookies: AstroCookies): boolean {
-  const expected = expectedToken();
-  if (!expected) return false;
-  return cookies.get(AUTH_COOKIE)?.value === expected;
+  const token = cookies.get(AUTH_COOKIE)?.value;
+  return Boolean(token && verifySignedToken('admin-session', token) === 'admin');
 }
 
-export function setSession(cookies: AstroCookies, token: string): void {
+export function setSession(cookies: AstroCookies): boolean {
+  const token = createSignedToken('admin-session', 'admin', SESSION_MAX_AGE);
+  if (!token) return false;
+
   cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,
     secure: import.meta.env.PROD,
@@ -29,6 +61,26 @@ export function setSession(cookies: AstroCookies, token: string): void {
     path: '/',
     maxAge: SESSION_MAX_AGE,
   });
+  return true;
+}
+
+export function setOrderReceiptAccess(cookies: AstroCookies, orderNumber: string, orderId: string): boolean {
+  const token = createSignedToken(`order-receipt:${orderNumber}`, orderId, ORDER_RECEIPT_MAX_AGE);
+  if (!token) return false;
+
+  cookies.set(ORDER_RECEIPT_COOKIE, token, {
+    httpOnly: true,
+    secure: import.meta.env.PROD,
+    sameSite: 'lax',
+    path: `/order/${orderNumber}`,
+    maxAge: ORDER_RECEIPT_MAX_AGE,
+  });
+  return true;
+}
+
+export function orderReceiptId(cookies: AstroCookies, orderNumber: string): string | null {
+  const token = cookies.get(ORDER_RECEIPT_COOKIE)?.value;
+  return token ? verifySignedToken(`order-receipt:${orderNumber}`, token) : null;
 }
 
 export function clearSession(cookies: AstroCookies): void {

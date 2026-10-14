@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { authorizeImport, jsonFor, preflight } from '../../../lib/apiAuth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { consumeRateLimit, rateLimitResponse } from '../../../lib/rateLimit';
 import { copySlug, slugify } from '../../../lib/posForms';
 import { mirrorImages } from '../../../lib/mirror';
 import { conversionNote, formatSource, toUsd } from '../../../lib/currency';
@@ -72,7 +73,7 @@ async function fallbackCategory(
   return data ?? null;
 }
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   // Body first: the token may be in it, which is how the extension gets to
   // send a request no preflight stands in front of.
   let body: Record<string, unknown>;
@@ -93,6 +94,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       500,
     );
   }
+  const limited = rateLimitResponse(await consumeRateLimit(admin, 'product-import', clientAddress, 20, 60));
+  if (limited) return jsonFor(request, { error: limited.status === 429 ? 'Too many requests. Try again shortly.' : 'Request protection is unavailable.' }, limited.status);
 
   /*
    * Three ways in, in order of how much the caller has already done:

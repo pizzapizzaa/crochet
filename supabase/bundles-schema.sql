@@ -93,7 +93,44 @@ group by m.id, m.kind;
 
 alter view public.make_bundle_totals set (security_invoker = on);
 
--- ── 5. Sanity check ──────────────────────────────────────────────────
+-- ── 5. ATOMIC KIT ITEMS ──────────────────────────────────────────────
+create or replace function public.replace_make_items(p_make_id uuid, p_items jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if jsonb_typeof(p_items) is distinct from 'array' then
+    raise exception 'Kit items must be a JSON array';
+  end if;
+
+  if not exists (select 1 from public.makes where id = p_make_id) then
+    raise exception 'Make % does not exist', p_make_id;
+  end if;
+
+  delete from public.make_items where make_id = p_make_id;
+
+  insert into public.make_items (
+    make_id, product_id, quantity, note, can_opt_out, display_order
+  )
+  select
+    p_make_id,
+    (item->>'product_id')::uuid,
+    (item->>'quantity')::numeric,
+    nullif(item->>'note', ''),
+    coalesce((item->>'can_opt_out')::boolean, false),
+    (item->>'display_order')::integer
+  from jsonb_array_elements(p_items) as entry(item);
+end $$;
+
+revoke all on function public.replace_make_items(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.replace_make_items(uuid, jsonb) to service_role;
+
+-- PostgREST caches columns and RPC signatures; refresh after the migration.
+notify pgrst, 'reload schema';
+
+-- ── 6. Sanity check ──────────────────────────────────────────────────
 -- select m.kind, m.title, t.item_count, t.opt_out_count, t.items_subtotal
 --   from public.makes m join public.make_bundle_totals t on t.make_id = m.id
 --  order by m.kind, m.display_order;

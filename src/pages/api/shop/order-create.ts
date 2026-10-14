@@ -1,7 +1,9 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
+import { setOrderReceiptAccess } from '../../../lib/auth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
+import { consumeRateLimit, rateLimitResponse } from '../../../lib/rateLimit';
 import {
   CURRENCY,
   orderNumber,
@@ -11,7 +13,7 @@ import {
   type ShippingAddress,
 } from '../../../lib/orders';
 import { isPayOSConfigured, newOrderCode, PROVIDER, startPayment } from '../../../lib/payos';
-import { PAYMENT_WINDOW_MINUTES } from '../../../lib/shop';
+import { PAYMENT_WINDOW_MINUTES, SHOP_DOMAIN } from '../../../lib/shop';
 import type { OrderInsert } from '../../../lib/database.types';
 
 /*
@@ -27,12 +29,14 @@ import type { OrderInsert } from '../../../lib/database.types';
  * polite one — it stops someone being sent to a payment page for something
  * that has sold out. The one in the database is the one that counts.
  */
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   const admin = getSupabaseAdmin();
   if (!admin) return json({ error: 'The shop is not connected right now.' }, 503);
   if (!isPayOSConfigured) {
     return json({ error: 'Payments are not switched on yet. Please get in touch.' }, 503);
   }
+  const limited = rateLimitResponse(await consumeRateLimit(admin, 'checkout', clientAddress, 10, 900));
+  if (limited) return limited;
 
   let body: Record<string, unknown>;
   try {
@@ -129,7 +133,7 @@ export const POST: APIRoute = async ({ request }) => {
       priced,
       name,
       email,
-      origin: new URL(request.url).origin,
+      origin: (import.meta.env.PUBLIC_SITE_URL || `https://${SHOP_DOMAIN}`).replace(/\/+$/, ''),
       expiresAt,
     });
 
@@ -137,6 +141,11 @@ export const POST: APIRoute = async ({ request }) => {
       .from('orders')
       .update({ provider_payment_id: payment.paymentId })
       .eq('id', created.id);
+
+    if (!setOrderReceiptAccess(cookies, created.order_number, created.id)) {
+      console.error('Could not sign order receipt access', created.order_number);
+      return json({ error: 'We could not finish that order. Please contact the shop.' }, 500);
+    }
 
     return json({
       orderNumber: created.order_number,

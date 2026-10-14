@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { pageText, parseYarnSpecs, scrapeYarn, yarnFromText } from '../src/lib/scrape/yarn';
+import { fetchPublic } from '../src/lib/scrape/html';
 import iLoveThisYarn from './fixtures/yarn/hobbylobby-i-love-this-yarn.html?raw';
 import braidedBasics from './fixtures/yarn/hobbylobby-braided-basics-xxl.html?raw';
 import taobaoLoginWall from './fixtures/yarn/taobao-login-wall.html?raw';
@@ -26,6 +27,22 @@ function servePage(html: string, url: string) {
 }
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe('public server fetch redirects', () => {
+  it('refuses a private redirect before making a request to it', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, {
+      status: 302,
+      headers: { location: 'http://127.0.0.1/admin' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchPublic('https://shop.example/products/yarn');
+
+    expect(result).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1]?.redirect).toBe('manual');
+  });
+});
 
 describe('Hobby Lobby', () => {
   it('reads I Love This Yarn in grams, metres and stitches per 5cm', async () => {

@@ -88,7 +88,7 @@ export async function startPayment(input: StartPaymentInput): Promise<StartedPay
   if (!payos) throw new Error('payOS is not configured.');
 
   const amountVnd = usdToVnd(input.priced.total);
-  const back = `${input.origin}/order/${input.orderNumber}?email=${encodeURIComponent(input.email)}`;
+  const back = `${input.origin}/order/${input.orderNumber}`;
 
   const response = await payos.paymentRequests.create({
     orderCode: input.orderCode,
