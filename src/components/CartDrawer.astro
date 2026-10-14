@@ -114,7 +114,7 @@
 
   function open() {
     lastFocused = document.activeElement as HTMLElement;
-    drawer.classList.remove('hidden');
+    drawer.classList.remove('hidden', 'pointer-events-none');
     drawer.classList.add('pointer-events-auto');
     // One frame of the closed position first, or the transition has nothing to
     // animate from and the panel simply appears.
@@ -130,10 +130,11 @@
   function close() {
     scrim.classList.replace('opacity-100', 'opacity-0');
     panel.classList.add('translate-x-full');
+    drawer.classList.remove('pointer-events-auto');
+    drawer.classList.add('pointer-events-none');
     document.body.style.overflow = '';
     window.setTimeout(() => {
       drawer.classList.add('hidden');
-      drawer.classList.remove('pointer-events-auto');
     }, 220);
     lastFocused?.focus();
   }
