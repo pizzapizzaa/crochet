@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /*
  * Helpers shared by the /api/pos/* routes. Everything the POS submits is a
  * plain HTML form, so every value arrives as a string — these turn that back
@@ -12,6 +14,13 @@ export function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
+}
+
+/** Stable ASCII slug for names that contain no transliterable characters. */
+export function generatedProductSlug(name: string, sourceUrl: string, sku: string): string {
+  const identity = `${name}\0${sourceUrl}\0${sku}`;
+  const digest = createHash('sha256').update(identity).digest('hex').slice(0, 12);
+  return `product-${digest}`;
 }
 
 export function str(form: FormData, key: string): string {

@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { authorizeImport, jsonFor, preflight } from '../../../lib/apiAuth';
 import { getSupabaseAdmin } from '../../../lib/supabaseAdmin';
 import { consumeRateLimit, rateLimitResponse } from '../../../lib/rateLimit';
-import { copySlug, slugify } from '../../../lib/posForms';
+import { copySlug, generatedProductSlug, slugify } from '../../../lib/posForms';
 import { mirrorImages } from '../../../lib/mirror';
 import { conversionNote, formatSource, toUsd } from '../../../lib/currency';
 import { draftFromBrowser, scrapeProduct, tidySourceUrl } from '../../../lib/scrape/product';
@@ -223,10 +223,16 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
     draft?.description ??
     `Imported from ${siteName ?? 'another shop'}. Description still to be written.`;
 
-  const slugStem = slugify(text(body.slug, 80) ?? name);
-  if (!slugStem) {
-    return jsonFor(request, { error: 'That name produces an empty URL slug.' }, 422);
-  }
+  const sourceHandle = (() => {
+    try {
+      return new URL(sourceUrl).pathname.split('/').filter(Boolean).at(-1) ?? '';
+    } catch {
+      return '';
+    }
+  })();
+  const slugStem = [text(body.slug, 80), name, text(body.sku, 60), sourceHandle]
+    .map((candidate) => slugify(candidate ?? ''))
+    .find(Boolean) ?? generatedProductSlug(name, sourceUrl, text(body.sku, 60) ?? '');
   const { data: slugRows } = await admin.from('products').select('slug');
   const slug = copySlug(slugStem, (slugRows ?? []).map((r) => r.slug));
 
