@@ -99,6 +99,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const kind: MakeKind = str(form, 'kind') === 'bundle' ? 'bundle' : 'make';
   const noun = kind === 'bundle' ? 'bundle' : 'make';
   const back = safeNext(form, isEdit ? `/pos/makes/${id}` : `/pos/makes/new${kind === 'bundle' ? '?kind=bundle' : ''}`);
+  const formPath = isEdit ? `/pos/makes/${id}` : `/pos/makes/new${kind === 'bundle' ? '?kind=bundle' : ''}`;
 
   const admin = getSupabaseAdmin();
   if (!admin) {
