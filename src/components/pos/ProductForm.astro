@@ -352,6 +352,9 @@ const card = 'rounded-card border border-cream-300 bg-paper p-5 shadow-sm';
       .slice(0, 80);
   });
 
+  // Also fill a title that arrived prefilled or was restored by the browser.
+  if (!slugTouched && nameInput?.value) nameInput.dispatchEvent(new Event('input'));
+
   // Image list preview + uploader.
   const imagesField = document.getElementById('images') as HTMLTextAreaElement | null;
   const preview = document.getElementById('image-preview');
