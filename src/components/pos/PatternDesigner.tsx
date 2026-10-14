@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Moveable from 'react-moveable';
-import { Copy, Download, FilePlus2, FolderOpen, Hand, MousePointer2, Redo2, Save, Trash2, Undo2, Upload, ZoomIn, ZoomOut, Maximize, ArrowUp, ArrowDown } from 'lucide-react';
-import { SYMBOL_NAMES } from '../../lib/crochet/chart';
-import { canvasPoint, DESIGN_KINDS, emptyPattern, parsePattern, patternSvg, stitchSvg, zoomAt, type DesignerStitch, type PatternDocument } from '../../lib/patternDesigner';
+import { Copy, Download, FilePlus2, FolderOpen, Hand, MousePointer2, Redo2, Save, Trash2, Undo2, Upload, ZoomIn, ZoomOut, Maximize, ArrowUp, ArrowDown, Minus, Plus, Type } from 'lucide-react';
+import { canvasPoint, DESIGN_KINDS, DESIGN_NAMES, DESIGN_SHORT_NAMES, emptyPattern, parsePattern, patternSvg, stitchSvg, zoomAt, type DesignerKind, type DesignerStitch, type PatternDocument } from '../../lib/patternDesigner';
 import './PatternDesigner.css';
 
 type DesignSummary = { id: string; title: string; revision: number; updated_at: string; local?: boolean };
@@ -13,7 +12,9 @@ const DRAFT_PREFIX = 'zippyzack-pattern:';
 const LAST_DESIGN = 'zippyzack-pattern-last';
 const uuid = () => crypto.randomUUID();
 const clone = (doc: PatternDocument) => structuredClone(doc);
-const dimensions = (stitch: DesignerStitch) => ({ width: stitch.size * 2, height: stitch.size * 4 });
+const dimensions = (stitch: DesignerStitch) => stitch.kind === 'text'
+  ? { width: Math.max(stitch.size * 2, (stitch.text?.length ?? 0) * stitch.size * 0.62 + 12), height: stitch.size * 1.5 }
+  : { width: stitch.size * 2, height: stitch.size * 4 };
 
 async function request(path = '', options?: RequestInit) {
   const response = await fetch(`${API}${path}`, { ...options, signal: AbortSignal.timeout(15000) });
@@ -283,10 +284,19 @@ export default function PatternDesigner() {
   }
 
   function add(kind: DesignerStitch['kind'], point?: { x: number; y: number }) {
+    if (kind === 'text') return addText(point);
     const centre = point ?? canvasPoint({ x: (stage.current?.clientWidth ?? 800) / 2, y: (stage.current?.clientHeight ?? 600) / 2 }, docRef.current.viewport);
     const stitch: DesignerStitch = { id: uuid(), kind, x: Math.max(0, Math.min(doc.width, centre.x)), y: Math.max(0, Math.min(doc.height, centre.y)), angle: 0, size: 24, colour: '#1f2a2a' };
     change({ ...docRef.current, stitches: [...docRef.current.stitches, stitch] });
     setSelection([stitch.id]);
+    setMode('select');
+  }
+
+  function addText(point?: { x: number; y: number }) {
+    const centre = point ?? canvasPoint({ x: (stage.current?.clientWidth ?? 800) / 2, y: (stage.current?.clientHeight ?? 600) / 2 }, docRef.current.viewport);
+    const text: DesignerStitch = { id: uuid(), kind: 'text', x: Math.max(0, Math.min(doc.width, centre.x)), y: Math.max(0, Math.min(doc.height, centre.y)), angle: 0, size: 24, colour: '#1f2a2a', text: 'Text' };
+    change({ ...docRef.current, stitches: [...docRef.current.stitches, text] });
+    setSelection([text.id]);
     setMode('select');
   }
 
@@ -305,6 +315,11 @@ export default function PatternDesigner() {
 
   function editSelected(patch: Partial<DesignerStitch>) {
     change({ ...docRef.current, stitches: docRef.current.stitches.map(stitch => selection.includes(stitch.id) ? { ...stitch, ...patch } : stitch) });
+  }
+
+  function adjustSelectedSize(amount: number) {
+    if (!first) return;
+    editSelected({ size: Math.max(4, Math.min(500, first.size + amount)) });
   }
 
   function startGesture() { gesture.current = clone(docRef.current); }
@@ -470,7 +485,7 @@ export default function PatternDesigner() {
 
   return <section className="pattern-designer" aria-label="Pattern designer">
     <header className="designer-header">
-      <div><h1>Pattern designer</h1><span className="designer-count">{doc.stitches.length} {doc.stitches.length === 1 ? 'stitch' : 'stitches'}</span></div>
+      <div><h1>Pattern designer</h1><span className="designer-count">{doc.stitches.length} {doc.stitches.length === 1 ? 'element' : 'elements'}</span></div>
       <div className="designer-file-actions">
         {iconButton('New pattern', FilePlus2, () => newDesign())}
         {iconButton('Open patterns', FolderOpen, () => { setLibraryOpen(true); void refreshLibrary(); })}
@@ -505,21 +520,23 @@ export default function PatternDesigner() {
     </div>
     <div className="designer-workspace">
       <aside className="designer-palette" aria-label="Stitch palette">
-        <h2>Stitches</h2>
-        <div className="designer-symbols">{DESIGN_KINDS.map(kind => <button key={kind} type="button" draggable title={SYMBOL_NAMES[kind]} aria-label={`Add ${SYMBOL_NAMES[kind]}`} onClick={() => add(kind)} onDragStart={event => { event.dataTransfer.setData('application/x-crochet-stitch', kind); event.dataTransfer.effectAllowed = 'copy'; }}>
+        <h2>Stitches &amp; marks</h2>
+        <div className="designer-symbols">{DESIGN_KINDS.map(kind => <button key={kind} type="button" draggable title={DESIGN_NAMES[kind]} aria-label={`Add ${DESIGN_NAMES[kind]}`} onClick={() => add(kind)} onDragStart={event => { event.dataTransfer.setData('application/x-crochet-stitch', kind); event.dataTransfer.effectAllowed = 'copy'; }}>
           <svg viewBox="-24 -48 48 96" aria-hidden="true" dangerouslySetInnerHTML={{ __html: stitchSvg({ id: '', kind, x: 0, y: 0, angle: 0, size: 24, colour: '#1f2a2a' }) }} />
-          <span>{kind}</span>
+          <span>{DESIGN_SHORT_NAMES[kind]}</span>
         </button>)}</div>
+        <button type="button" className="designer-add-text" onClick={() => addText()}><Type size={15} /> Add Text</button>
       </aside>
       <div ref={stage} className={`designer-stage ${mode === 'pan' ? 'is-panning' : ''}`} tabIndex={0} aria-label="Pattern canvas" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }} onDrop={event => {
         event.preventDefault();
         const kind = event.dataTransfer.getData('application/x-crochet-stitch');
-        if (DESIGN_KINDS.includes(kind as DesignerStitch['kind'])) add(kind as DesignerStitch['kind'], canvasPoint(pointAt(event), docRef.current.viewport));
+        if (DESIGN_KINDS.includes(kind as DesignerKind)) add(kind as DesignerKind, canvasPoint(pointAt(event), docRef.current.viewport));
       }}>
         <div ref={board} className={`designer-board ${grid ? 'with-grid' : ''}`} style={{ width: doc.width, height: doc.height, transform: `translate(${doc.viewport.x}px, ${doc.viewport.y}px) scale(${doc.viewport.zoom})` }}>
           {doc.stitches.map(stitch => {
             const size = dimensions(stitch);
-            return <div key={stitch.id} data-stitch-id={stitch.id} role="button" tabIndex={0} aria-label={`${SYMBOL_NAMES[stitch.kind]} stitch`} aria-pressed={selection.includes(stitch.id)} className={`designer-stitch ${selection.includes(stitch.id) ? 'selected' : ''}`} style={{ width: size.width, height: size.height, left: stitch.x - size.width / 2, top: stitch.y - size.height / 2, transform: `rotate(${stitch.angle}deg)` }} onPointerDown={event => {
+            const name = stitch.kind === 'text' ? `Text: ${stitch.text ?? ''}` : DESIGN_NAMES[stitch.kind];
+            return <div key={stitch.id} data-stitch-id={stitch.id} role="button" tabIndex={0} aria-label={name} aria-pressed={selection.includes(stitch.id)} className={`designer-stitch ${stitch.kind === 'text' ? 'designer-text-stitch' : ''} ${selection.includes(stitch.id) ? 'selected' : ''}`} style={{ width: size.width, height: size.height, left: stitch.x - size.width / 2, top: stitch.y - size.height / 2, transform: `rotate(${stitch.angle}deg)` }} onPointerDown={event => {
               if (mode === 'pan') return;
               if (!selection.includes(stitch.id)) {
                 setSelection(event.shiftKey ? [...selection, stitch.id] : [stitch.id]);
@@ -527,7 +544,9 @@ export default function PatternDesigner() {
               }
               else if (event.shiftKey) setSelection(selection.filter(id => id !== stitch.id));
             }} onKeyDown={event => { if (event.key === 'Enter') setSelection(event.shiftKey ? [...new Set([...selection, stitch.id])] : [stitch.id]); }}>
-              <svg viewBox="-24 -48 48 96" aria-hidden="true" dangerouslySetInnerHTML={{ __html: stitchSvg(stitch) }} />
+              {stitch.kind === 'text'
+                ? <span className="designer-canvas-text" style={{ fontSize: stitch.size, color: stitch.colour }}>{stitch.text}</span>
+                : <svg viewBox="-24 -48 48 96" aria-hidden="true" dangerouslySetInnerHTML={{ __html: stitchSvg(stitch) }} />}
             </div>;
           })}
         </div>
@@ -541,8 +560,9 @@ export default function PatternDesigner() {
             <label>X<input type="number" value={Math.round(first.x * 10) / 10} min={-100000} max={100000} onChange={event => { const value = Number(event.target.value); if (Number.isFinite(value) && Math.abs(value) <= 100000) editSelected({ x: value }); }} /></label>
             <label>Y<input type="number" value={Math.round(first.y * 10) / 10} min={-100000} max={100000} onChange={event => { const value = Number(event.target.value); if (Number.isFinite(value) && Math.abs(value) <= 100000) editSelected({ y: value }); }} /></label>
           </div>}
+          {first.kind === 'text' && <label>Text<input aria-label="Text content" type="text" maxLength={120} value={first.text ?? ''} onChange={event => editSelected({ text: event.target.value.slice(0, 120) })} /></label>}
           <label>Rotation<input aria-label="Stitch rotation" type="number" step="0.1" value={Math.round(first.angle * 10) / 10} onChange={event => { const value = Number(event.target.value); if (Number.isFinite(value)) editSelected({ angle: ((value % 360) + 360) % 360 }); }} /></label>
-          <label>Size<input aria-label="Stitch size" type="number" min={4} max={500} value={first.size} onChange={event => { const value = Number(event.target.value); if (value >= 4 && value <= 500) editSelected({ size: value }); }} /></label>
+          <label>{first.kind === 'text' ? 'Text size' : 'Symbol size'}<div className="designer-size-control"><button type="button" className="designer-icon" aria-label="Decrease selected size" onClick={() => adjustSelectedSize(-2)} disabled={first.size <= 4}><Minus size={14} /></button><input aria-label={first.kind === 'text' ? 'Text size' : 'Symbol size'} type="number" min={4} max={500} value={first.size} onChange={event => { const value = Number(event.target.value); if (value >= 4 && value <= 500) editSelected({ size: value }); }} /><button type="button" className="designer-icon" aria-label="Increase selected size" onClick={() => adjustSelectedSize(2)} disabled={first.size >= 500}><Plus size={14} /></button></div></label>
           <label>Colour<input aria-label="Stitch colour" type="color" value={first.colour} onChange={event => editSelected({ colour: event.target.value })} /></label>
           <div className="designer-tool-group">
             {iconButton('Bring selection to front', ArrowUp, () => change({ ...docRef.current, stitches: [...docRef.current.stitches.filter(stitch => !selection.includes(stitch.id)), ...selected] }))}

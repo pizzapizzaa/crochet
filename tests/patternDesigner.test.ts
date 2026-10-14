@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { APIContext } from 'astro';
-import { canvasPoint, emptyPattern, parsePattern, patternSvg, stitchSvg, zoomAt } from '../src/lib/patternDesigner';
+import { canvasPoint, DESIGN_KINDS, DESIGN_NAMES, emptyPattern, parsePattern, patternSvg, stitchSvg, zoomAt } from '../src/lib/patternDesigner';
 import { DELETE, GET, PUT } from '../src/pages/api/pos/pattern-designs/[...id]';
 
 const mocks = vi.hoisted(() => ({
@@ -22,6 +22,26 @@ describe('pattern designer document', () => {
     const doc = emptyPattern();
     doc.stitches.push({ id: 'one', kind: 'dc', x: 123.5, y: 201, angle: 37.8, size: 30, colour: '#123456' });
     expect(parsePattern(JSON.parse(JSON.stringify(doc)))).toEqual(doc);
+  });
+
+  it('includes the reference stitch and instruction symbols in the palette', () => {
+    for (const kind of ['dtr', 'sc2tog', 'dc3tog', 'dc-inc', 'dc3-cluster', 'dc5-popcorn', 'dc5-shell', 'ch3-picot', 'fpdc', 'bpdc', 'blo', 'flo', 'crossed-dc', 'magic-loop', 'start', 'end'] as const) {
+      expect(DESIGN_KINDS).toContain(kind);
+      expect(DESIGN_NAMES[kind]).toBeTruthy();
+      expect(stitchSvg({ id: kind, kind, x: 0, y: 0, angle: 0, size: 24, colour: '#123456' })).toContain('#123456');
+    }
+  });
+
+  it('adds editable system-font text and escapes it in SVG exports', () => {
+    const doc = emptyPattern();
+    doc.stitches.push({ id: 'text-1', kind: 'text', text: '<Hook & yarn>', x: 40, y: 50, angle: 0, size: 32, colour: '#123456' });
+
+    const parsed = parsePattern(JSON.parse(JSON.stringify(doc)));
+    expect(parsed.stitches[0].text).toBe('<Hook & yarn>');
+    const svg = patternSvg(parsed);
+    expect(svg).toContain('font-family="system-ui, sans-serif"');
+    expect(svg).toContain('&lt;Hook &amp; yarn&gt;');
+    expect(svg).toContain('font-size="32"');
   });
 
   it('exports artwork bounds and transforms, never viewport or controls', () => {
