@@ -5,7 +5,7 @@ import { SHOW_MATERIALS_PAGE, SHOW_REQUEST_PRODUCT } from '../lib/shop';
 const navLinks = [
   { label: 'Home', href: '/' },
   { label: 'Bundles', href: '/bundles' },
-  { label: 'Makes', href: '/makes' },
+  { label: 'Make it yourself', href: '/makes' },
   ...(SHOW_MATERIALS_PAGE ? [{ label: 'Materials', href: '/store' }] : []),
   { label: 'Gallery', href: '/gallery' },
   ...(SHOW_REQUEST_PRODUCT ? [{ label: 'Request Product', href: '/request-product' }] : []),
@@ -15,7 +15,7 @@ const navLinks = [
  * Vercel serves a prerendered route with a trailing slash, so /gallery/ never
  * equalled the '/gallery' in the list and the whole nav went dark on that page.
  * Normalising both sides fixes it, and treating a nested route as its section
- * keeps Bundles lit on /bundles/<slug> and Makes lit on /makes/<slug>.
+ * keeps Bundles lit on /bundles/<slug> and Make it yourself lit on /makes/<slug>.
  */
 const trim = (path: string) => (path.length > 1 ? path.replace(/\/+$/, '') : path);
 const currentPath = trim(Astro.url.pathname);
