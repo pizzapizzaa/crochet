@@ -88,6 +88,26 @@ describe('rows from before the bundles migration', () => {
     expect(make.kind).toBe('make');
     expect(make.items[0].can_opt_out).toBe(true);
   });
+
+  it('orders required items before skippable items while preserving each group order', () => {
+    const make = withResolvedItems({
+      id: 'mixed',
+      title: 'Mixed kit',
+      items: [
+        { product_id: 'optional-late', quantity: 1, can_opt_out: true, display_order: 4, product: product('optional-late', 4) },
+        { product_id: 'required-late', quantity: 1, can_opt_out: false, display_order: 3, product: product('required-late', 3) },
+        { product_id: 'optional-early', quantity: 1, can_opt_out: true, display_order: 2, product: product('optional-early', 2) },
+        { product_id: 'required-early', quantity: 1, can_opt_out: false, display_order: 1, product: product('required-early', 1) },
+      ],
+    });
+
+    expect(make.items.map((i) => i.product_id)).toEqual([
+      'required-early',
+      'required-late',
+      'optional-early',
+      'optional-late',
+    ]);
+  });
 });
 
 describe('parseLines', () => {

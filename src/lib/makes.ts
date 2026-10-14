@@ -35,6 +35,9 @@ import type {
 /** Rows are selected with the bundle nested one level deep. */
 const SELECT_WITH_ITEMS = '*, items:make_items(*, product:products(*))';
 
+const compareKitItems = (a: MakeItemWithProduct, b: MakeItemWithProduct) =>
+  Number(a.can_opt_out) - Number(b.can_opt_out) || a.display_order - b.display_order;
+
 export interface BundlePricing {
   /** Every item in the kit, in display order. */
   items: MakeItemWithProduct[];
@@ -82,7 +85,7 @@ export function priceBundle(
   items: MakeItemWithProduct[],
   omit: Iterable<string> = [],
 ): BundlePricing {
-  const ordered = [...items].sort((a, b) => a.display_order - b.display_order);
+  const ordered = [...items].sort(compareKitItems);
   const skippable = ordered.filter((i) => i.can_opt_out);
   const leaveOut = new Set(omit);
   const omitted = skippable.filter((i) => leaveOut.has(i.product_id));
@@ -149,7 +152,7 @@ export function withResolvedItems(row: Record<string, unknown>): MakeWithBundle 
   const items = raw
     .filter((i) => i.product !== null)
     .map((i) => normaliseItem(i) as unknown as MakeItemWithProduct)
-    .sort((a, b) => a.display_order - b.display_order);
+    .sort(compareKitItems);
   return { ...(normaliseMake(row) as unknown as Make), items };
 }
 
