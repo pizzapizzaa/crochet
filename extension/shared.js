@@ -40,6 +40,23 @@ export function normaliseShopUrl(raw) {
   }
 }
 
+/** Request access only to the configured shop and its www/apex redirect peer. */
+export async function requestShopAccess(raw) {
+  const origin = normaliseShopUrl(raw);
+  if (!origin) return false;
+
+  const url = new URL(origin);
+  if (url.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(url.hostname)) {
+    return false;
+  }
+
+  const hosts = new Set([url.host]);
+  if (url.hostname.startsWith('www.')) hosts.add(url.host.slice(4));
+  else if (!['localhost', '127.0.0.1'].includes(url.hostname)) hosts.add(`www.${url.host}`);
+  const origins = [...hosts].map((host) => `${url.protocol}//${host}/*`);
+  return chrome.permissions.request({ origins });
+}
+
 /**
  * POST to the shop. Content-Type is text/plain so the request stays a CORS
  * simple request; the shop reads the body as JSON regardless of what it is

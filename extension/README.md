@@ -31,11 +31,13 @@ because the shop refuses anything that is not a browser.
    Redeploy so the running site picks it up.
 
 2. Open `chrome://extensions`, turn on **Developer mode**, choose **Load
-   unpacked**, and pick this `extension/` folder.
+  unpacked**, and pick this `extension/` folder. When updating an existing
+  unpacked install, press its **Reload** button first.
 
 3. Click the extension, then **Open settings**. Enter your shop address
-   (`https://yourshop.com`, no `/pos`) and the same token. Press **Test the
-   connection** — it should come back with how many categories it found.
+  (`https://yourshop.com`, no `/pos`) and the same token. Press **Test the
+  connection** and allow access to that shop when Chrome prompts. It should
+  come back with how many categories it found.
 
 Optionally set a default category, a markup and a stock level there too, so an
 import is genuinely one click.
@@ -104,6 +106,7 @@ shop's write access — treat it like a password, and if it leaks, change
 | `activeTab` | Read the page you are on, only when you click the button. |
 | `scripting` | Run the reader inside that page. |
 | `storage` | Remember your shop address, token and defaults. |
+| Optional host access | Connect only to the configured shop origin and its `www`/apex redirect peer. Chrome asks when you test or save settings. |
 
-No host permissions and no background script: it has no access to any tab until
-you press the button, and nothing runs when the popup is closed.
+No background script: nothing runs when the popup is closed. The extension
+does not request access to supplier tabs until you press its button.

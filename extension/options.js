@@ -1,4 +1,4 @@
-import { callShop, loadSettings, normaliseShopUrl, saveSettings } from './shared.js';
+import { callShop, loadSettings, normaliseShopUrl, requestShopAccess, saveSettings } from './shared.js';
 
 /*
  * Settings, and a Test button — because the two ways this goes wrong (wrong
@@ -48,6 +48,9 @@ $('test').addEventListener('click', async () => {
   }
   note('test-note', 'Asking the shop…');
   try {
+    if (!await requestShopAccess(settings.shopUrl)) {
+      throw new Error('Allow this extension to connect to your shop, then try again.');
+    }
     const count = await loadCategories(settings, settings.categoryId);
     note(
       'test-note',
@@ -63,6 +66,10 @@ $('save').addEventListener('click', async () => {
   const settings = current();
   if (settings.shopUrl && !normaliseShopUrl(settings.shopUrl)) {
     note('save-note', 'That shop address is not a web address.', 'warn');
+    return;
+  }
+  if (settings.shopUrl && !await requestShopAccess(settings.shopUrl)) {
+    note('save-note', 'Allow this extension to connect to your shop before saving.', 'warn');
     return;
   }
   await saveSettings({ ...settings, shopUrl: normaliseShopUrl(settings.shopUrl) });
