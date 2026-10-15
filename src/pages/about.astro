@@ -3,11 +3,11 @@ import Layout from '../layouts/Layout.astro';
 
 const founderPhotos = [
   {
-    src: '/assets/homepage-photos/pexels-rdne-10474396.jpg',
+    src: '/assets/gallery/founder_01.jpg',
     alt: 'Hands working on a crochet project with an orange hook',
   },
   {
-    src: '/assets/homepage-photos/pexels-arina-krasnikova-5709862.jpg',
+    src: '/assets/gallery/founder_02.jpg',
     alt: 'Soft yarn arranged on a wooden tray',
   },
 ];
@@ -85,8 +85,16 @@ const galleryPhotos = [
         </div>
       </section>
 
-      <section class="founder-story" aria-labelledby="story-title">
-        <h2 id="story-title">A little about me.</h2>
+      <section class="founder-story" aria-label="Founder story">
+        <img
+          class="founder-story-photo"
+          src="/assets/gallery/founder_03.jpg"
+          alt="A person climbing an indoor bouldering wall"
+          width="720"
+          height="1080"
+          loading="lazy"
+          decoding="async"
+        />
         <div class="story-copy">
           <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae justo eget magna fermentum iaculis. Amet consectetur adipiscing elit pellentesque habitant morbi tristique senectus et netus.</p>
           <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
@@ -98,7 +106,7 @@ const galleryPhotos = [
         <div class="gallery-heading">
           <div>
             <p class="section-label">Work, crochet & everything in between</p>
-            <h2 id="gallery-title">This is <em>me.</em></h2>
+            <h2 id="gallery-title">the story of ZippyZack</h2>
           </div>
           <p class="gallery-intro">Lorem ipsum dolor sit amet, consectetur adipiscing elit. A collection of moments, in and out of the studio.</p>
         </div>
@@ -134,7 +142,7 @@ const galleryPhotos = [
   .about-container { width: min(1180px, calc(100% - 64px)); margin-inline: auto; }
   .about-page :is(h1, h2, h3) { color: var(--about-text); letter-spacing: 0; }
   .founder { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 40px; }
-  .section-label { margin: 0 0 24px; font-size: 13px; font-weight: 700; color: var(--mint-soft); }
+  .section-label { margin: 0 0 24px; font-size: 16px; font-weight: 700; color: var(--mint-soft); }
   .founder h1 { margin: 0; font-family: var(--font-display); font-size: 78px; font-weight: 600; line-height: 1.08; letter-spacing: 0; }
   .founder h1 em { font-family: var(--font-serif); font-weight: 400; }
   .founder-photos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); aspect-ratio: 1.05; gap: 18px; }
@@ -142,8 +150,8 @@ const galleryPhotos = [
   .founder-photo--1 { grid-area: 1 / 1 / 4 / 4; object-position: 45% center; }
   .founder-photo--2 { grid-area: 3 / 3 / 6 / 6; border: 6px solid var(--about-background); }
   .founder-story { display: grid; grid-template-columns: 1fr 1.6fr; gap: 72px; margin-top: 64px; padding: 48px 0 64px; border-top: 1px solid rgb(247 248 244 / 16%); }
-  .founder-story h2 { margin: 0; font-family: var(--font-serif); font-size: 32px; font-style: italic; font-weight: 400; }
-  .story-copy { max-width: 660px; }
+  .founder-story-photo { grid-column: 1; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; }
+  .story-copy { grid-column: 2; max-width: 660px; }
   .story-copy p { margin: 0 0 20px; color: var(--about-muted); font-size: 17px; line-height: 1.8; }
   .story-copy p:last-child { margin-bottom: 0; }
   .work-gallery { padding-top: 48px; border-top: 1px solid rgb(247 248 244 / 16%); }
@@ -173,6 +181,7 @@ const galleryPhotos = [
     .founder h1 { font-size: 48px; }
     .founder-photos { width: min(100%, 480px); justify-self: center; gap: 12px; }
     .founder-story { grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 40px; padding: 32px 0 40px; }
+    .story-copy { grid-column: 1; }
     .story-copy p { font-size: 16px; }
     .work-gallery { padding-top: 32px; }
     .gallery-heading { display: block; margin-bottom: 32px; }
