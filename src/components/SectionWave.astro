@@ -127,7 +127,7 @@ const shape = edge === 'top' ? `${line}L1460 200L-20 200Z` : `${line}L1460 -160L
 
 // Top edges sit entirely above the parent, bottom edges entirely below, so the
 // parent's own rectangle is never covered by its own wave.
-const place = edge === 'top' ? 'bottom-full' : 'top-full';
+const place = edge === 'top' ? 'bottom-[calc(100%-1px)]' : 'top-[calc(100%-1px)]';
 
 /*
  * The same shape again, as a mask, so a backdrop blur can be cut to the wave

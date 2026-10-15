@@ -26,30 +26,8 @@ const isActive = (href: string) => {
 };
 ---
 
-<!--
-  Sticky, translucent: paper at ~90% + 10px backdrop blur. The header is the
-  only fixed element in the system besides modals.
-
-  Its bottom edge is crocheted rather than ruled — the hairline cream border
-  that used to close it was the one machine-made line at the top of every page.
-  The wave is the same frosted surface as the bar rather than solid paper: at
-  90% blurred against 100% opaque, the two read as two different sheets, and
-  the join between them came out as exactly the straight line the wave is there
-  to replace. It shows most on a phone, where the bar spends the whole scroll
-  over the mint and lemon bands. The strand along the crest stays fully opaque,
-  which is the part of the edge that has to be crisp.
-
-  ── WHY THE BLUR IS ON THE SHEET AND NOT ON <header> ────────────────────────
-  A backdrop filter clips to the box it is set on, and WebKit is stricter about
-  it than Blink: descendants that hang outside are liable to be clipped away
-  with it. The wave hangs entirely *below* the bar, so on <header> it was one
-  Safari quirk away from not existing on a phone at all. Filtering an inner
-  sheet keeps the frosted bar and puts the wave outside the clip — and keeps
-  the filter off the sticky element itself, which is the combination iOS is
-  worst at compositing mid-scroll.
--->
 <header class="sticky top-0 z-50">
-  <div class="bg-paper/90 backdrop-blur-[10px]">
+  <div class="bg-paper">
     <div class="mx-auto max-w-container px-4 sm:px-6 lg:px-8">
       <div class="flex h-16 items-center justify-between md:h-20">
         <!-- Lockup: granny-square mark + Baloo 2 wordmark -->
@@ -258,8 +236,6 @@ const isActive = (href: string) => {
 
   <SectionWave
     fill="var(--paper)"
-    fillOpacity={0.9}
-    blur="10px"
     edge="bottom"
     variant={0}
     height="h-6 sm:h-9"
