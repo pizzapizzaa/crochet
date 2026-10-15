@@ -1,0 +1,190 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const founderPhotos = [
+  {
+    src: '/assets/homepage-photos/pexels-rdne-10474396.jpg',
+    alt: 'Hands working on a crochet project with an orange hook',
+  },
+  {
+    src: '/assets/homepage-photos/pexels-arina-krasnikova-5709862.jpg',
+    alt: 'Soft yarn arranged on a wooden tray',
+  },
+];
+
+const galleryPhotos = [
+  {
+    src: '/assets/gallery/project-wool-hooks.jpg',
+    alt: 'Yarn and crochet hooks ready for a project',
+    category: 'At the worktable',
+    title: 'Where it all begins',
+    description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+  },
+  {
+    src: '/assets/homepage-photos/pexels-rdne-10474396.jpg',
+    alt: 'A crochet project being made by hand',
+    category: 'Crocheting',
+    title: 'One stitch at a time',
+    description: 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+  },
+  {
+    src: '/assets/gallery/blanket-geometric.jpg',
+    alt: 'A finished crochet blanket with a geometric pattern',
+    category: 'Finished work',
+    title: 'Colour comes together',
+    description: 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.',
+  },
+  {
+    src: '/assets/homepage-photos/pexels-arina-krasnikova-5709862.jpg',
+    alt: 'A selection of yarn photographed on a wooden tray',
+    category: 'Studio moments',
+    title: 'A little material inspiration',
+    description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean euismod bibendum laoreet, proin gravida dolor sit amet.',
+  },
+  {
+    src: '/assets/gallery/blanket-stool.jpg',
+    alt: 'A handmade blanket styled on a stool',
+    category: 'Behind the scenes',
+    title: 'Ready for its close-up',
+    description: 'Sed ut perspiciatis unde omnis iste natus error sit voluptatem. Nemo enim ipsam voluptatem quia voluptas sit aspernatur.',
+  },
+  {
+    src: '/assets/gallery/blanket-rolled.jpg',
+    alt: 'A rolled handmade blanket showing its crochet texture',
+    category: 'The details',
+    title: 'Made with care',
+    description: 'Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.',
+  },
+];
+---
+
+<Layout
+  title="About ZippyZack"
+  description="Meet the founder behind ZippyZack and explore a collection of crochet projects, creative work, and studio moments."
+  image={founderPhotos[0].src}
+>
+  <div class="about-page">
+    <div class="about-container">
+      <section class="founder" aria-labelledby="founder-title">
+        <div class="founder-heading">
+          <p class="section-label">The person behind the yarn</p>
+          <h1 id="founder-title">About<br /><span>ZippyZack's</span><br /><em>Founder</em></h1>
+        </div>
+        <div class="founder-photos">
+          {founderPhotos.map((photo, index) => (
+            <img
+              class:list={['founder-photo', `founder-photo--${index + 1}`]}
+              src={photo.src}
+              alt={photo.alt}
+              width="720"
+              height="900"
+              fetchpriority={index === 0 ? 'high' : 'auto'}
+              decoding="async"
+            />
+          ))}
+        </div>
+      </section>
+
+      <section class="founder-story" aria-labelledby="story-title">
+        <h2 id="story-title">A little about me.</h2>
+        <div class="story-copy">
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae justo eget magna fermentum iaculis. Amet consectetur adipiscing elit pellentesque habitant morbi tristique senectus et netus.</p>
+          <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+          <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.</p>
+        </div>
+      </section>
+
+      <section class="work-gallery" aria-labelledby="gallery-title">
+        <div class="gallery-heading">
+          <div>
+            <p class="section-label">Work, crochet & everything in between</p>
+            <h2 id="gallery-title">This is <em>me.</em></h2>
+          </div>
+          <p class="gallery-intro">Lorem ipsum dolor sit amet, consectetur adipiscing elit. A collection of moments, in and out of the studio.</p>
+        </div>
+        <div class="gallery-grid">
+          {galleryPhotos.map((photo) => (
+            <figure class="gallery-item">
+              <img src={photo.src} alt={photo.alt} width="720" height="900" loading="lazy" decoding="async" />
+              <figcaption>
+                <p class="photo-category">{photo.category}</p>
+                <h3>{photo.title}</h3>
+                <p class="photo-description">{photo.description}</p>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .about-page {
+    --about-background: #001405;
+    --about-text: #f7f8f4;
+    --about-muted: #c1c8c1;
+    color: var(--about-text);
+    background-color: var(--about-background);
+    background-image: linear-gradient(118deg, transparent 49.9%, rgb(168 255 220 / 4%) 50%, transparent 50.1%), linear-gradient(28deg, transparent 49.9%, rgb(247 248 244 / 3%) 50%, transparent 50.1%);
+    background-size: 780px 960px, 1100px 860px;
+    padding: 88px 0 128px;
+    letter-spacing: 0;
+  }
+  .about-container { width: min(1180px, calc(100% - 64px)); margin-inline: auto; }
+  .about-page :is(h1, h2, h3) { color: var(--about-text); letter-spacing: 0; }
+  .founder { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 40px; }
+  .section-label { margin: 0 0 24px; font-size: 13px; font-weight: 700; color: var(--mint-soft); }
+  .founder h1 { margin: 0; font-family: var(--font-display); font-size: 78px; font-weight: 600; line-height: 1.08; letter-spacing: 0; }
+  .founder h1 em { font-family: var(--font-serif); font-weight: 400; }
+  .founder-photos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); aspect-ratio: 1.05; gap: 18px; }
+  .founder-photo { width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: 16px; }
+  .founder-photo--1 { grid-area: 1 / 1 / 4 / 4; object-position: 45% center; }
+  .founder-photo--2 { grid-area: 3 / 3 / 6 / 6; border: 6px solid var(--about-background); }
+  .founder-story { display: grid; grid-template-columns: 1fr 1.6fr; gap: 72px; margin-top: 64px; padding: 48px 0 64px; border-top: 1px solid rgb(247 248 244 / 16%); }
+  .founder-story h2 { margin: 0; font-family: var(--font-serif); font-size: 32px; font-style: italic; font-weight: 400; }
+  .story-copy { max-width: 660px; }
+  .story-copy p { margin: 0 0 20px; color: var(--about-muted); font-size: 17px; line-height: 1.8; }
+  .story-copy p:last-child { margin-bottom: 0; }
+  .work-gallery { padding-top: 48px; border-top: 1px solid rgb(247 248 244 / 16%); }
+  .gallery-heading { display: flex; align-items: end; justify-content: space-between; gap: 40px; margin-bottom: 48px; }
+  .gallery-heading .section-label { margin-bottom: 16px; }
+  .gallery-heading h2 { margin: 0; font-family: var(--font-display); font-size: 64px; line-height: 1.1; font-weight: 600; }
+  .gallery-heading h2 em { font-family: var(--font-serif); color: var(--mint-soft); font-weight: 400; }
+  .gallery-intro { max-width: 330px; margin: 0; color: var(--about-muted); font-size: 15px; line-height: 1.7; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 48px 28px; }
+  .gallery-item { margin: 0; min-width: 0; }
+  .gallery-item:nth-child(3n + 2) { padding-top: 48px; }
+  .gallery-item img { width: 100%; aspect-ratio: 4 / 5; height: auto; object-fit: cover; border-radius: 16px; }
+  .gallery-item:nth-child(3n) img { aspect-ratio: 1; }
+  .gallery-item figcaption { padding-top: 20px; }
+  .photo-category { margin: 0 0 8px; font-size: 12px; font-weight: 700; color: var(--mint-soft); }
+  .gallery-item h3 { margin: 0 0 10px; font-family: var(--font-display); font-size: 23px; font-weight: 600; line-height: 1.25; }
+  .photo-description { margin: 0; color: var(--about-muted); font-size: 14px; line-height: 1.7; }
+  @media (max-width: 1023px) {
+    .founder h1 { font-size: 58px; }
+    .founder-story { gap: 40px; }
+    .gallery-heading h2 { font-size: 52px; }
+  }
+  @media (max-width: 767px) {
+    .about-page { padding: 56px 0 88px; }
+    .about-container { width: calc(100% - 40px); }
+    .founder { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+    .founder h1 { font-size: 48px; }
+    .founder-photos { width: min(100%, 480px); justify-self: center; gap: 12px; }
+    .founder-story { grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 40px; padding: 32px 0 40px; }
+    .story-copy p { font-size: 16px; }
+    .work-gallery { padding-top: 32px; }
+    .gallery-heading { display: block; margin-bottom: 32px; }
+    .gallery-heading h2 { font-size: 46px; }
+    .gallery-intro { margin-top: 20px; }
+    .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; }
+    .gallery-item:nth-child(3n + 2) { padding-top: 0; }
+    .gallery-item h3 { font-size: 20px; }
+  }
+  @media (max-width: 479px) {
+    .gallery-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+    .gallery-item img { aspect-ratio: 4 / 3; }
+    .gallery-item:nth-child(3n) img { aspect-ratio: 4 / 3; }
+  }
+</style>
