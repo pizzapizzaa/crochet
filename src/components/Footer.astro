@@ -7,11 +7,10 @@ const exploreLinks = [
   { label: 'Makes', href: '/makes' },
   ...(SHOW_MATERIALS_PAGE ? [{ label: 'Materials', href: '/store' }] : []),
   { label: 'Gallery', href: '/gallery' },
-  { label: 'Pattern Generator', href: '/pattern-generator' },
+  { label: 'About ZippyZack', href: '/about' },
 ];
 
 const infoLinks = [
-  { label: 'About ZippyZack', href: '/about' },
   { label: 'Track My Order', href: '/orders/track' },
   { label: 'Shipping & Returns', href: '/shipping' },
   { label: 'Care Instructions', href: '/care' },
@@ -118,7 +117,7 @@ const socials = [
 
       <!-- Info -->
       <div>
-        <h4 class="mb-4 font-display text-base font-bold text-cream">Info</h4>
+        <h4 class="mb-4 font-display text-base font-bold text-cream">More Info</h4>
         <ul class="space-y-2.5">
           {
             infoLinks.map((link) => (
