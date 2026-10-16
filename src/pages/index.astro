@@ -4,13 +4,15 @@
 export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
+import PreLaunch from '../components/PreLaunch.astro';
 import SectionWave from '../components/SectionWave.astro';
 import MakeCard from '../components/MakeCard.astro';
 import { getBundles, getMakes } from '../lib/makes';
 import { SHOW_REQUEST_PRODUCT } from '../lib/shop';
 
 // The shop sells kits, so the featured row is kits: bundles first, then makes.
-const [bundles, makes] = await Promise.all([getBundles(), getMakes()]);
+const prelaunch = true;
+const [bundles, makes] = prelaunch ? [[], []] : await Promise.all([getBundles(), getMakes()]);
 const allKits = [...bundles, ...makes];
 const featured = allKits.filter((k) => k.is_featured);
 const featuredKits = (featured.length > 0 ? featured : allKits).slice(0, 3);
@@ -64,7 +66,7 @@ const btnGhost =
   'group inline-flex items-center gap-2 rounded-pill px-4 py-2 text-sm font-bold text-ink-body transition-all duration-fast ease-out hover:bg-cream-200';
 ---
 
-<Layout
+{prelaunch ? <PreLaunch /> : <Layout
   title="Welcome"
   description="Quality yarn kits and crochet tools for every project. Everything you need to create."
 >
@@ -380,4 +382,4 @@ const btnGhost =
       <p class="mt-3 text-xs text-ink-muted">No spam. Unsubscribe any time.</p>
     </div>
   </section>
-</Layout>
+</Layout>}

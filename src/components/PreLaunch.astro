@@ -1,0 +1,155 @@
+---
+import SectionWave from './SectionWave.astro';
+import '../styles/design-system.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Crocheting ZippyZack. Launch date: January 2027." />
+    <meta name="theme-color" content="#005247" />
+    <meta property="og:title" content="Crocheting ZippyZack" />
+    <meta property="og:description" content="Launch date: January 2027" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="/assets/logos/favicon-original.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&family=Newsreader:ital,wght@1,400&display=swap" rel="stylesheet" />
+    <title>Crocheting ZippyZack | Launching January 2027</title>
+  </head>
+  <body>
+    <main class="launch" aria-labelledby="launch-title">
+      <div class="top-wave" aria-hidden="true">
+        <SectionWave fill="#005247" edge="bottom" variant={1} strand="#FFEB6C" strandHighlight="#FFF4AE" />
+      </div>
+
+      <div class="brand">
+        <img src="/assets/logos/zippyzack-mark.svg" alt="" width="48" height="48" />
+        <span>ZippyZack</span>
+      </div>
+
+      <div class="announcement">
+        <h1 id="launch-title"><span class="making">crocheting</span><span class="name">ZippyZack</span></h1>
+        <p class="launch-date">Launch date: <time datetime="2027-01">January 2027</time></p>
+      </div>
+
+      <div class="rolling-lane" aria-hidden="true">
+        <div class="traveller">
+          <div class="thread"></div>
+          <div class="yarn-ball">
+            <span class="winding winding-one"></span>
+            <span class="winding winding-two"></span>
+            <span class="winding winding-three"></span>
+          </div>
+          <div class="ball-shadow"></div>
+        </div>
+      </div>
+
+      <div class="waves" aria-hidden="true">
+        <div class="wave-band wave-mint">
+          <SectionWave fill="#C8F5DE" variant={2} strand="#005247" strandHighlight="#21FFA8" />
+        </div>
+        <div class="wave-band wave-lemon">
+          <SectionWave fill="#FFEB6C" variant={0} strand="#005247" strandHighlight="#FFFBEA" />
+        </div>
+        <div class="wave-band wave-forest">
+          <SectionWave fill="#005247" variant={1} strand="#21FFA8" strandHighlight="#C8F5DE" />
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) { margin: 0; }
+  .launch {
+    --ball-size: 108px;
+    position: relative;
+    isolation: isolate;
+    min-height: 480px;
+    height: 100svh;
+    overflow: hidden;
+    background: #FFFBEA;
+    color: #005247;
+    font-family: 'Nunito Sans', sans-serif;
+    letter-spacing: 0;
+  }
+  .launch::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    content: '';
+    opacity: .26;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23005247' opacity='.14' filter='url(%23n)' d='M0 0h180v180H0z'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .top-wave { position: absolute; inset: 0 0 auto; height: 12px; background: #005247; }
+  .brand { position: absolute; top: 62px; left: 6%; display: flex; align-items: center; gap: 10px; }
+  .brand img { width: 44px; height: 44px; object-fit: contain; }
+  .brand span { font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 800; }
+  .announcement { position: absolute; top: 27%; left: 24px; right: 24px; text-align: center; }
+  h1 { margin: 0; }
+  .making { display: block; color: #007F5F; font-family: 'Newsreader', Georgia, serif; font-size: 54px; font-style: italic; font-weight: 400; line-height: 1.2; }
+  .name { display: block; margin-top: 10px; font-family: 'Baloo 2', sans-serif; font-size: 112px; font-weight: 800; line-height: 1.12; }
+  .launch-date { margin: 26px 0 0; font-size: 18px; line-height: 1.5; }
+  time { font-weight: 800; white-space: nowrap; }
+  .rolling-lane { position: absolute; inset: auto 0 23%; height: var(--ball-size); }
+  .traveller { position: absolute; left: calc(-1 * var(--ball-size) - 20px); width: var(--ball-size); height: var(--ball-size); animation: travel 18s linear infinite; }
+  .yarn-ball {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border: 2px solid #005247;
+    border-radius: 50%;
+    background: repeating-linear-gradient(38deg, transparent 0 5px, #00524755 6px 7px, #C8F5DE88 8px 10px), #21FFA8;
+    box-shadow: inset -12px -9px 0 #00524726, inset 7px 5px 0 #FFFFFF44;
+    animation: roll 18s linear infinite;
+  }
+  .winding { position: absolute; display: block; border: 2px solid #005247A6; border-radius: 48%; background: repeating-linear-gradient(90deg, #21FFA8 0 5px, #00524799 6px 7px, #C8F5DE 8px 9px); }
+  .winding-one { width: 60%; height: 140%; top: -20%; left: 19%; transform: rotate(39deg); }
+  .winding-two { width: 145%; height: 46%; left: -22%; top: 26%; transform: rotate(29deg); }
+  .winding-three { width: 42%; height: 115%; top: -22%; left: -9%; transform: rotate(-29deg); }
+  .thread { position: absolute; right: 50%; bottom: 2px; width: 150vw; height: 24px; border-bottom: 3px solid #005247; border-radius: 50%; }
+  .ball-shadow { position: absolute; bottom: -6px; left: 10%; width: 80%; height: 9px; background: #00524718; border-radius: 50%; filter: blur(3px); }
+  .waves { position: absolute; inset: auto 0 0; height: 17%; min-height: 110px; }
+  .wave-band { position: absolute; inset-inline: 0; bottom: 0; }
+  .wave-mint { height: 100%; background: #C8F5DE; }
+  .wave-lemon { height: 68%; background: #FFEB6C; }
+  .wave-forest { height: 30%; background: #005247; }
+  @keyframes travel { to { transform: translateX(calc(100vw + var(--ball-size) * 2 + 40px)); } }
+  @keyframes roll { to { transform: rotate(1440deg); } }
+  @media (min-width: 1600px) { .announcement { top: 30%; } }
+  @media (max-width: 600px) {
+    .launch { --ball-size: 82px; min-height: 600px; }
+    .brand { top: 48px; left: 24px; }
+    .brand img { width: 36px; height: 36px; }
+    .brand span { font-size: 23px; }
+    .announcement { top: 29%; left: 16px; right: 16px; }
+    .making { font-size: 38px; }
+    .name { margin-top: 12px; font-size: 64px; }
+    .launch-date { margin-top: 24px; font-size: 16px; }
+    .rolling-lane { bottom: 25%; }
+  }
+  @media (max-width: 350px) { .name { font-size: 54px; } }
+  @media (max-height: 700px) {
+    .launch { --ball-size: 68px; min-height: 480px; }
+    .brand { top: 38px; }
+    .brand img { width: 32px; height: 32px; }
+    .brand span { font-size: 22px; }
+    .announcement { top: 24%; }
+    .making { font-size: 34px; }
+    .name { font-size: 72px; margin-top: 4px; }
+    .launch-date { font-size: 15px; margin-top: 14px; }
+    .rolling-lane { bottom: 23%; }
+    .waves { min-height: 68px; }
+  }
+  @media (max-height: 700px) and (max-width: 600px) { .name { font-size: 54px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .traveller { animation: none; left: calc(50% - var(--ball-size) / 2); }
+    .yarn-ball { animation: none; transform: rotate(25deg); }
+  }
+</style>
